@@ -4,31 +4,28 @@
  * Tailwind v4 is loaded via the Vite plugin (see astro.config.mjs). The
  * `@import "tailwindcss"` directive below is what activates utilities.
  *
- * Starlight ships its own design tokens on `:root` (`--sl-color-*`,
- * `--sl-text-*`, etc.). We layer Tailwind on top and add a Mongez brand
- * palette derived from the logo (fire + ice + bolt) for selective
- * accenting — without overriding Starlight's defaults wholesale.
+ * Layered approach:
+ *   1. Tailwind utilities (via @import)
+ *   2. Mongez brand palette as :root CSS vars (always available)
+ *   3. Starlight design-token overrides (accent → brand ice)
+ *   4. Brand UI touches: circular logo, hero glow, header strip,
+ *      code-block accent, heading underlines, selection, focus ring
  */
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────────────
  * Mongez brand palette — derived from the logo
- * ─────────────────────────────────────────────────────────────────────
- *  ice      — the cool side of the bolt (cyan/blue family)
- *  fire     — the warm side of the bolt (orange/red family)
- *  bolt     — the dark central bolt (deep navy)
- *
- * Use these as building blocks for any Mongez-branded element: glows,
- * gradients, accent bars. Don't tear out Starlight's defaults — those
- * stay so the docs theme remains familiar.
  * ──────────────────────────────────────────────────────────────────── */
 :root {
+  --mongez-ice-50:  #f0f9ff;
   --mongez-ice-100: #e1f5fe;
+  --mongez-ice-200: #b3e5fc;
   --mongez-ice-300: #4fc3f7;
   --mongez-ice-500: #2196f3;
   --mongez-ice-700: #0d47a1;
 
   --mongez-fire-100: #ffe0b2;
+  --mongez-fire-200: #ffcc80;
   --mongez-fire-300: #ff9800;
   --mongez-fire-500: #ff6e40;
   --mongez-fire-700: #bf360c;
@@ -38,16 +35,69 @@
   /* Composite glows — re-use across hero logo, focus rings, etc. */
   --mongez-glow-ice:  0 0 24px rgba(79, 195, 247, 0.45);
   --mongez-glow-fire: 0 0 32px rgba(255, 110, 64, 0.35);
+
+  /* Signature gradient — fire → bolt → ice. Used for header strip,
+   * code-block top borders, and heading underlines. */
+  --mongez-gradient: linear-gradient(
+    90deg,
+    var(--mongez-fire-300) 0%,
+    var(--mongez-fire-500) 25%,
+    var(--mongez-bolt) 50%,
+    var(--mongez-ice-500) 75%,
+    var(--mongez-ice-300) 100%
+  );
 }
 
 /* ─────────────────────────────────────────────────────────────────────
- * Hero logo — fire + ice dual-color glow
+ * Starlight accent override — Mongez ice replaces the default purple
+ *
+ * This is the big one. Every Starlight link, button, focus state,
+ * active sidebar item, and tab now resolves to the brand ice palette.
+ * Light and dark themes both pick up the same hue with the contrast
+ * adjusted for each background.
+ * ──────────────────────────────────────────────────────────────────── */
+:root,
+:root[data-theme="light"] {
+  --sl-color-accent-low:  var(--mongez-ice-100);
+  --sl-color-accent:      var(--mongez-ice-500);
+  --sl-color-accent-high: var(--mongez-ice-700);
+  --sl-color-text-accent: var(--sl-color-accent);
+}
+
+:root[data-theme="dark"] {
+  --sl-color-accent-low:  var(--mongez-ice-700);
+  --sl-color-accent:      var(--mongez-ice-300);
+  --sl-color-accent-high: var(--mongez-ice-200);
+  --sl-color-text-accent: var(--sl-color-accent);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Circular logo — applied everywhere the logo appears
+ *
+ * The lightning bolt + fire/ice cluster reads cleanly inside a circle.
+ * Subtle brand-tinted backdrop gives the bolt a visible "coin" so it
+ * doesn't float on top of the page background, especially in dark mode.
+ * ──────────────────────────────────────────────────────────────────── */
+.mongez-hero-logo,
+.site-title img,
+a.site-title img,
+[class*="SiteTitle"] img {
+  border-radius: 50%;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Hero logo — fire + ice dual-color glow on the circular bolt
  * ──────────────────────────────────────────────────────────────────── */
 .mongez-hero-logo {
   display: block;
   width: 260px;
   height: 260px;
   max-width: 100%;
+  background: radial-gradient(
+    circle at center,
+    rgba(30, 39, 64, 0.04) 0%,
+    transparent 70%
+  );
   filter:
     drop-shadow(var(--mongez-glow-ice))
     drop-shadow(var(--mongez-glow-fire));
@@ -56,17 +106,13 @@
 
 .mongez-hero-logo:hover {
   filter:
-    drop-shadow(0 0 32px rgba(79, 195, 247, 0.65))
-    drop-shadow(0 0 40px rgba(255, 110, 64, 0.55));
-  transform: scale(1.02);
+    drop-shadow(0 0 32px rgba(79, 195, 247, 0.7))
+    drop-shadow(0 0 40px rgba(255, 110, 64, 0.6));
+  transform: scale(1.04) rotate(-2deg);
 }
 
 /* ─────────────────────────────────────────────────────────────────────
  * Hero region — subtle brand-tinted backdrop
- *
- * Two soft radial washes (ice top-left, fire bottom-right) give the
- * splash hero a quietly-branded canvas without overpowering content.
- * Starlight wraps the splash hero in `.hero` so we hook on that.
  * ──────────────────────────────────────────────────────────────────── */
 .hero {
   background:
@@ -75,13 +121,12 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────
- * Site header — thin fire-to-ice accent line under the top bar
+ * Site header — full-width brand gradient strip under the top bar
  *
- * One-pixel gradient strip that ties the entire chrome to the brand
- * palette. Visible but unobtrusive — picks up the bolt's energy.
+ * Brand cue across every page, not just the homepage. The gradient
+ * runs fire → bolt → ice, mirroring the logo's left-to-right palette.
  * ──────────────────────────────────────────────────────────────────── */
 header.header {
-  border-bottom: 1px solid var(--sl-color-hairline);
   position: relative;
 }
 
@@ -92,28 +137,111 @@ header.header::after {
   right: 0;
   bottom: -1px;
   height: 2px;
-  background: linear-gradient(
-    90deg,
-    var(--mongez-ice-300) 0%,
-    var(--mongez-ice-500) 35%,
-    var(--mongez-bolt) 50%,
-    var(--mongez-fire-500) 65%,
-    var(--mongez-fire-300) 100%
-  );
-  opacity: 0.55;
+  background: var(--mongez-gradient);
+  opacity: 0.7;
   pointer-events: none;
 }
 
 /* ─────────────────────────────────────────────────────────────────────
  * Site title logo — modest glow next to the wordmark
- *
- * Starlight renders the configured logo as an <img> in the site title
- * area. Give it the same dual-color treatment as the hero, scaled down
- * so it doesn't overwhelm the title text.
  * ──────────────────────────────────────────────────────────────────── */
 .site-title img,
-a.site-title img {
+a.site-title img,
+[class*="SiteTitle"] img {
   filter:
-    drop-shadow(0 0 6px rgba(79, 195, 247, 0.5))
-    drop-shadow(0 0 8px rgba(255, 110, 64, 0.35));
+    drop-shadow(0 0 6px rgba(79, 195, 247, 0.55))
+    drop-shadow(0 0 8px rgba(255, 110, 64, 0.4));
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Code blocks — brand-gradient top accent
+ *
+ * 2px gradient strip across the top of every Expressive Code frame
+ * ties code samples to the brand. Subtle enough to recede behind the
+ * code, distinctive enough to register subconsciously.
+ * ──────────────────────────────────────────────────────────────────── */
+.expressive-code {
+  position: relative;
+}
+
+.expressive-code .frame {
+  position: relative;
+  overflow: hidden;
+}
+
+.expressive-code .frame::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--mongez-gradient);
+  opacity: 0.75;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Headings — H2s get a short brand-gradient underline
+ *
+ * Visible Mongez signature on every section break. 48px wide so it
+ * reads as a discrete accent mark, not a full underline.
+ * ──────────────────────────────────────────────────────────────────── */
+.sl-markdown-content h2 {
+  position: relative;
+  padding-bottom: 0.3em;
+}
+
+.sl-markdown-content h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 48px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--mongez-ice-500) 0%,
+    var(--mongez-fire-500) 100%
+  );
+  border-radius: 1px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Text selection — branded highlight
+ * ──────────────────────────────────────────────────────────────────── */
+::selection {
+  background: rgba(79, 195, 247, 0.4);
+  color: inherit;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Focus rings — brand-colored, more visible than the default
+ *
+ * Helps keyboard users orient + signals brand identity on every
+ * interactive element.
+ * ──────────────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--mongez-ice-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Card hover — subtle brand-gradient border accent
+ *
+ * Starlight's <Card> components get a fire→ice gradient hint on hover.
+ * Only active on devices with hover capability (skips touch).
+ * ──────────────────────────────────────────────────────────────────── */
+@media (hover: hover) {
+  .sl-link-card:hover,
+  [class*="card"]:hover {
+    border-color: transparent;
+    background-image:
+      linear-gradient(var(--sl-color-bg), var(--sl-color-bg)),
+      var(--mongez-gradient);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+  }
 }

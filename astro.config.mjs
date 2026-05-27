@@ -17,6 +17,10 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   site: "https://mongez.js.org",
 
+  // Default Astro port (4321) is already used locally by the warlock.js
+  // docs dev server. Bind one above to keep both running side-by-side.
+  server: { port: 4322 },
+
   vite: {
     plugins: [tailwindcss()],
   },
@@ -26,7 +30,11 @@ export default defineConfig({
       title: "Mongez",
       description:
         "Production TypeScript packages for state, routing, forms, networking, configuration, encryption, and more — 24 focused packages, designed to read equally well to humans and AI coding agents.",
-      logo: { src: "./src/assets/mongez.png", replacesTitle: false },
+      logo: {
+        src: "./src/assets/mongez.png",
+        alt: "Mongez — production TypeScript packages",
+        replacesTitle: false,
+      },
       // Starlight 0.30 uses the object form `{ github: url }`.
       // The array form `[{ icon, label, href }]` only landed in 0.32+.
       social: {

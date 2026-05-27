@@ -1,22 +1,27 @@
 /*
  * Global styles for the Mongez docs site.
  *
- * Tailwind v4 is loaded via the Vite plugin (see astro.config.mjs). The
- * `@import "tailwindcss"` directive below is what activates utilities.
+ * Design system: Vibrant & Block-based + Dark Mode (OLED).
+ * Typography: JetBrains Mono (display) + IBM Plex Sans (body).
+ * Palette: Mongez fire/ice/bolt derived from the logo.
  *
- * Layered approach:
- *   1. Tailwind utilities (via @import)
- *   2. Mongez brand palette as :root CSS vars (always available)
- *   3. Starlight design-token overrides (accent → brand ice)
- *   4. Brand UI touches: circular logo, hero glow, header strip,
- *      code-block accent, heading underlines, selection, focus ring
+ * Layering order matters:
+ *   1. Google Fonts (must come BEFORE Tailwind for the @font-face
+ *      declarations to register before Tailwind's reset runs)
+ *   2. Tailwind utilities
+ *   3. Brand palette + Starlight font overrides (always-on vars)
+ *   4. Starlight color overrides per theme (light + dark)
+ *   5. Brand UI: hero, sidebar, header, code blocks, headings
  */
+
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
-/* ─────────────────────────────────────────────────────────────────────
- * Mongez brand palette — derived from the logo
- * ──────────────────────────────────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════════════
+ * BRAND PALETTE + FONT OVERRIDES
+ * ════════════════════════════════════════════════════════════════════ */
 :root {
+  /* Fire/ice/bolt — derived from the Mongez logo */
   --mongez-ice-50:  #f0f9ff;
   --mongez-ice-100: #e1f5fe;
   --mongez-ice-200: #b3e5fc;
@@ -32,12 +37,13 @@
 
   --mongez-bolt: #1e2740;
 
-  /* Composite glows — re-use across hero logo, focus rings, etc. */
+  /* Composite glows */
   --mongez-glow-ice:  0 0 24px rgba(79, 195, 247, 0.45);
   --mongez-glow-fire: 0 0 32px rgba(255, 110, 64, 0.35);
 
-  /* Signature gradient — fire → bolt → ice. Used for header strip,
-   * code-block top borders, and heading underlines. */
+  /* Signature gradient — used for header strip, code-block rails,
+   * heading underlines. Always reused so the same five-stop sweep
+   * becomes a recognizable Mongez cue. */
   --mongez-gradient: linear-gradient(
     90deg,
     var(--mongez-fire-300) 0%,
@@ -46,16 +52,31 @@
     var(--mongez-ice-500) 75%,
     var(--mongez-ice-300) 100%
   );
+
+  /* Vertical variant for sidebar rails */
+  --mongez-gradient-vertical: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--mongez-fire-500) 25%,
+    var(--mongez-bolt) 50%,
+    var(--mongez-ice-500) 75%,
+    transparent 100%
+  );
+
+  /* Typography — Developer Mono pair */
+  --sl-font: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --sl-font-mono: "JetBrains Mono", ui-monospace, "SF Mono", "Menlo",
+    "Cascadia Mono", Consolas, monospace;
+  --sl-font-system: var(--sl-font);
+  --sl-font-system-mono: var(--sl-font-mono);
 }
 
-/* ─────────────────────────────────────────────────────────────────────
- * Starlight accent override — Mongez ice replaces the default purple
- *
- * This is the big one. Every Starlight link, button, focus state,
- * active sidebar item, and tab now resolves to the brand ice palette.
- * Light and dark themes both pick up the same hue with the contrast
- * adjusted for each background.
- * ──────────────────────────────────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════════════
+ * STARLIGHT THEME OVERRIDES — light + dark
+ * ════════════════════════════════════════════════════════════════════ */
+
+/* Light theme — clean, brand-tinted */
 :root,
 :root[data-theme="light"] {
   --sl-color-accent-low:  var(--mongez-ice-100);
@@ -64,44 +85,113 @@
   --sl-color-text-accent: var(--sl-color-accent);
 }
 
+/* Dark theme — deeper OLED base + brand-tinted hairlines */
 :root[data-theme="dark"] {
+  /* Backgrounds — three-tier depth (page, surface, nav/sidebar) */
+  --sl-color-bg:         #0a0e14;
+  --sl-color-bg-nav:     #0c1219;
+  --sl-color-bg-sidebar: #0c1219;
+
+  /* Brand-tinted hairlines so the dividers carry brand identity */
+  --sl-color-hairline:        rgba(79, 195, 247, 0.08);
+  --sl-color-hairline-light:  rgba(79, 195, 247, 0.14);
+  --sl-color-hairline-shade:  rgba(79, 195, 247, 0.05);
+
+  /* Accent — ice cyan for every link, focus, active state */
   --sl-color-accent-low:  var(--mongez-ice-700);
   --sl-color-accent:      var(--mongez-ice-300);
   --sl-color-accent-high: var(--mongez-ice-200);
   --sl-color-text-accent: var(--sl-color-accent);
+
+  /* Text — slightly brighter against the deeper bg for readability */
+  --sl-color-white:        #f1f5f9;
+  --sl-color-gray-1:       #cbd5e1;
+  --sl-color-gray-2:       #94a3b8;
+  --sl-color-gray-3:       #64748b;
 }
 
-/* ─────────────────────────────────────────────────────────────────────
- * Circular logo — applied everywhere the logo appears
+/* ═════════════════════════════════════════════════════════════════════
+ * GLOBAL — body rendering + reduced-motion respect
+ * ════════════════════════════════════════════════════════════════════ */
+body {
+  font-feature-settings: "ss01" on, "cv11" on; /* IBM Plex stylistic alts */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+ * HERO — fixed rectangle bug + grid backdrop + halo
  *
- * The lightning bolt + fire/ice cluster reads cleanly inside a circle.
- * Subtle brand-tinted backdrop gives the bolt a visible "coin" so it
- * doesn't float on top of the page background, especially in dark mode.
- * ──────────────────────────────────────────────────────────────────── */
-.mongez-hero-logo,
-.site-title img,
-a.site-title img,
-[class*="SiteTitle"] img {
-  border-radius: 50%;
+ * Previous version put `background` directly on the <img>, which
+ * showed through the logo PNG's transparent areas as a visible
+ * square. Removed entirely. Halo + ambient energy now come from:
+ *   - a soft radial wash on the .hero container
+ *   - a subtle dot-grid pattern (technical / developer aesthetic)
+ *   - the drop-shadow filter on the logo itself (already there)
+ * ════════════════════════════════════════════════════════════════════ */
+.hero {
+  position: relative;
+  background:
+    radial-gradient(ellipse 50% 70% at 25% 30%, rgba(79, 195, 247, 0.10), transparent 60%),
+    radial-gradient(ellipse 50% 70% at 80% 70%, rgba(255, 110, 64, 0.08), transparent 60%);
+  overflow: hidden;
 }
 
-/* ─────────────────────────────────────────────────────────────────────
- * Hero logo — fire + ice dual-color glow on the circular bolt
- * ──────────────────────────────────────────────────────────────────── */
+/* Dot grid — developer-aesthetic backdrop. Masked to fade toward
+ * edges so it doesn't compete with the hero text. */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(79, 195, 247, 0.15) 1px,
+    transparent 0
+  );
+  background-size: 24px 24px;
+  mask-image: radial-gradient(
+    ellipse 70% 80% at 50% 50%,
+    black 30%,
+    transparent 80%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 70% 80% at 50% 50%,
+    black 30%,
+    transparent 80%
+  );
+  pointer-events: none;
+  opacity: 0.6;
+  z-index: 0;
+}
+
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Hero logo — clean transparent PNG with dual-color glow.
+ * Critical: NO background here. The previous radial-gradient bg
+ * bled through the logo's transparent corners as a visible square. */
 .mongez-hero-logo {
   display: block;
   width: 260px;
   height: 260px;
   max-width: 100%;
-  background: radial-gradient(
-    circle at center,
-    rgba(30, 39, 64, 0.04) 0%,
-    transparent 70%
-  );
+  border-radius: 50%;
   filter:
     drop-shadow(var(--mongez-glow-ice))
     drop-shadow(var(--mongez-glow-fire));
-  transition: filter 0.4s ease, transform 0.4s ease;
+  transition: filter 0.3s ease, transform 0.3s ease;
 }
 
 .mongez-hero-logo:hover {
@@ -111,23 +201,28 @@ a.site-title img,
   transform: scale(1.04) rotate(-2deg);
 }
 
-/* ─────────────────────────────────────────────────────────────────────
- * Hero region — subtle brand-tinted backdrop
- * ──────────────────────────────────────────────────────────────────── */
-.hero {
-  background:
-    radial-gradient(ellipse 60% 70% at 20% 10%, rgba(79, 195, 247, 0.10), transparent 60%),
-    radial-gradient(ellipse 60% 70% at 80% 90%, rgba(255, 110, 64, 0.08), transparent 60%);
+/* Hero tagline — lighter weight, slightly larger, brand-tinted */
+.hero .tagline {
+  font-weight: 300;
+  font-size: clamp(1.05rem, 1vw + 0.9rem, 1.35rem);
+  line-height: 1.5;
+  letter-spacing: -0.01em;
 }
 
-/* ─────────────────────────────────────────────────────────────────────
- * Site header — full-width brand gradient strip under the top bar
- *
- * Brand cue across every page, not just the homepage. The gradient
- * runs fire → bolt → ice, mirroring the logo's left-to-right palette.
- * ──────────────────────────────────────────────────────────────────── */
+/* Hero title — JetBrains Mono for max technical character */
+.hero h1 {
+  font-family: var(--sl-font-mono);
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+ * SITE HEADER — brand-toned + signature gradient strip
+ * ════════════════════════════════════════════════════════════════════ */
 header.header {
   position: relative;
+  background: var(--sl-color-bg-nav);
+  backdrop-filter: saturate(140%);
 }
 
 header.header::after {
@@ -138,28 +233,114 @@ header.header::after {
   bottom: -1px;
   height: 2px;
   background: var(--mongez-gradient);
-  opacity: 0.7;
+  opacity: 0.75;
   pointer-events: none;
 }
 
-/* ─────────────────────────────────────────────────────────────────────
- * Site title logo — modest glow next to the wordmark
- * ──────────────────────────────────────────────────────────────────── */
+/* Site title logo — circular + dual glow */
 .site-title img,
 a.site-title img,
 [class*="SiteTitle"] img {
+  border-radius: 50%;
   filter:
     drop-shadow(0 0 6px rgba(79, 195, 247, 0.55))
     drop-shadow(0 0 8px rgba(255, 110, 64, 0.4));
+  transition: filter 0.3s ease;
 }
 
-/* ─────────────────────────────────────────────────────────────────────
- * Code blocks — brand-gradient top accent
+.site-title:hover img,
+a.site-title:hover img,
+[class*="SiteTitle"]:hover img {
+  filter:
+    drop-shadow(0 0 8px rgba(79, 195, 247, 0.8))
+    drop-shadow(0 0 10px rgba(255, 110, 64, 0.6));
+}
+
+/* Site title text — mono for technical character */
+.site-title,
+a.site-title {
+  font-family: var(--sl-font-mono);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+ * SIDEBAR — branded background + vertical accent rail + active-link bar
  *
- * 2px gradient strip across the top of every Expressive Code frame
- * ties code samples to the brand. Subtle enough to recede behind the
- * code, distinctive enough to register subconsciously.
- * ──────────────────────────────────────────────────────────────────── */
+ * The sidebar gets:
+ *   1. A distinct background tone (slightly elevated from page bg)
+ *   2. A vertical fire→bolt→ice gradient rail along the right edge
+ *   3. A 3px gradient bar on the active link's left edge
+ *   4. Subtle brand-tinted hover background
+ * ════════════════════════════════════════════════════════════════════ */
+nav.sidebar,
+.sidebar-pane {
+  position: relative;
+  background: var(--sl-color-bg-sidebar);
+}
+
+/* Vertical accent rail — right edge of sidebar */
+nav.sidebar::after,
+.sidebar-pane::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 1px;
+  background: var(--mongez-gradient-vertical);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Sidebar links — base */
+.sidebar-content a {
+  position: relative;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Sidebar links — hover (subtle ice tint) */
+.sidebar-content a:hover {
+  background-color: rgba(79, 195, 247, 0.06);
+}
+
+/* Sidebar links — active page (left-edge gradient bar + brand tint) */
+.sidebar-content a[aria-current="page"],
+.sidebar-content a[aria-current="true"] {
+  background-color: rgba(79, 195, 247, 0.10);
+  font-weight: 600;
+}
+
+.sidebar-content a[aria-current="page"]::before,
+.sidebar-content a[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  background: linear-gradient(
+    180deg,
+    var(--mongez-fire-500),
+    var(--mongez-ice-500)
+  );
+  border-radius: 0 2px 2px 0;
+}
+
+/* Sidebar group headings — small, uppercased, brand-tinted */
+.sidebar-content [class*="group-label"],
+.sidebar-content summary {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+ * CODE BLOCKS — top-gradient strip + left rail
+ *
+ * The same five-stop fire→bolt→ice gradient runs across the top of
+ * every code block. A 2px vertical rail on the left edge reinforces
+ * the signature. Mono font is JetBrains Mono via the global var.
+ * ════════════════════════════════════════════════════════════════════ */
 .expressive-code {
   position: relative;
 }
@@ -177,20 +358,62 @@ a.site-title img,
   right: 0;
   height: 2px;
   background: var(--mongez-gradient);
-  opacity: 0.75;
+  opacity: 0.8;
   pointer-events: none;
   z-index: 2;
 }
 
-/* ─────────────────────────────────────────────────────────────────────
- * Headings — H2s get a short brand-gradient underline
+.expressive-code .frame::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    var(--mongez-fire-500) 0%,
+    var(--mongez-bolt) 50%,
+    var(--mongez-ice-500) 100%
+  );
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Inline code — subtle brand-tinted background */
+:root[data-theme="dark"] :not(pre) > code:not([class*="language-"]) {
+  background: rgba(79, 195, 247, 0.08);
+  border: 1px solid rgba(79, 195, 247, 0.15);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+ * HEADINGS — display-grade hierarchy with brand accents
  *
- * Visible Mongez signature on every section break. 48px wide so it
- * reads as a discrete accent mark, not a full underline.
- * ──────────────────────────────────────────────────────────────────── */
+ * H1 / H2 use JetBrains Mono for technical character. H2s get a
+ * short brand-gradient underline as a section-break accent.
+ * ════════════════════════════════════════════════════════════════════ */
+.sl-markdown-content h1,
+.sl-markdown-content h2 {
+  font-family: var(--sl-font-mono);
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+
+.sl-markdown-content h3,
+.sl-markdown-content h4 {
+  font-family: var(--sl-font);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 .sl-markdown-content h2 {
   position: relative;
-  padding-bottom: 0.3em;
+  padding-bottom: 0.35em;
+  margin-top: 2.5em;
 }
 
 .sl-markdown-content h2::after {
@@ -208,40 +431,120 @@ a.site-title img,
   border-radius: 1px;
 }
 
-/* ─────────────────────────────────────────────────────────────────────
- * Text selection — branded highlight
- * ──────────────────────────────────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════════════
+ * TEXT SELECTION + FOCUS RINGS — branded
+ * ════════════════════════════════════════════════════════════════════ */
 ::selection {
   background: rgba(79, 195, 247, 0.4);
   color: inherit;
 }
 
-/* ─────────────────────────────────────────────────────────────────────
- * Focus rings — brand-colored, more visible than the default
- *
- * Helps keyboard users orient + signals brand identity on every
- * interactive element.
- * ──────────────────────────────────────────────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--mongez-ice-500);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-/* ─────────────────────────────────────────────────────────────────────
- * Card hover — subtle brand-gradient border accent
+/* ═════════════════════════════════════════════════════════════════════
+ * CARDS — brand-gradient border on hover
  *
- * Starlight's <Card> components get a fire→ice gradient hint on hover.
- * Only active on devices with hover capability (skips touch).
- * ──────────────────────────────────────────────────────────────────── */
+ * Two-background-layer trick: render the gradient as the "border"
+ * by stacking a content-fill background over the gradient layer
+ * via background-clip:padding-box / border-box.
+ * ════════════════════════════════════════════════════════════════════ */
 @media (hover: hover) {
+  .sl-link-card,
+  .card,
+  article[class*="card"] {
+    transition: transform 0.2s ease, border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
   .sl-link-card:hover,
-  [class*="card"]:hover {
+  .card:hover,
+  article[class*="card"]:hover {
     border-color: transparent;
     background-image:
       linear-gradient(var(--sl-color-bg), var(--sl-color-bg)),
       var(--mongez-gradient);
     background-origin: border-box;
     background-clip: padding-box, border-box;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -8px rgba(33, 150, 243, 0.25);
   }
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+ * SCROLLBAR — branded thin scrollbar (WebKit + Firefox)
+ * ════════════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] {
+  scrollbar-color: rgba(79, 195, 247, 0.3) transparent;
+  scrollbar-width: thin;
+}
+
+:root[data-theme="dark"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+:root[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    var(--mongez-fire-500),
+    var(--mongez-ice-500)
+  );
+  border-radius: 8px;
+  border: 2px solid var(--sl-color-bg);
+  background-clip: padding-box;
+}
+
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  border-width: 1px;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+ * HERO ACTION BUTTONS — branded primary
+ *
+ * The primary "Explore the ecosystem" button gets a gradient fill
+ * instead of flat accent — makes the hero CTA visually distinctive.
+ * ════════════════════════════════════════════════════════════════════ */
+.hero .action.primary,
+.hero a[class*="primary"] {
+  background: linear-gradient(
+    135deg,
+    var(--mongez-ice-500) 0%,
+    var(--mongez-ice-300) 100%
+  );
+  border: none;
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow:
+    0 4px 14px rgba(33, 150, 243, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero .action.primary:hover,
+.hero a[class*="primary"]:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 20px rgba(33, 150, 243, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.hero .action.secondary,
+.hero a[class*="secondary"] {
+  border: 1px solid rgba(79, 195, 247, 0.4);
+  background: rgba(79, 195, 247, 0.06);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.hero .action.secondary:hover,
+.hero a[class*="secondary"]:hover {
+  background: rgba(79, 195, 247, 0.12);
+  border-color: rgba(79, 195, 247, 0.6);
 }

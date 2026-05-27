@@ -25,7 +25,7 @@ export default defineConfig({
     starlight({
       title: "Mongez",
       description:
-        "A family of focused TypeScript packages for production apps — state management, routing, forms, utilities, localization, caching, and build tooling.",
+        "Production TypeScript packages for state, routing, forms, networking, configuration, encryption, and more — 24 focused packages, designed to read equally well to humans and AI coding agents.",
       logo: { src: "./src/assets/logo.svg", replacesTitle: false },
       // Starlight 0.30 uses the object form `{ github: url }`.
       // The array form `[{ icon, label, href }]` only landed in 0.32+.
@@ -47,23 +47,8 @@ export default defineConfig({
             { label: "Which package?", link: "/which/" },
           ],
         },
-        // ── Core state family ──
-        {
-          label: "Atom",
-          collapsed: false,
-          autogenerate: { directory: "atom" },
-        },
-        {
-          label: "React Atom",
-          collapsed: false,
-          autogenerate: { directory: "react-atom" },
-        },
-        {
-          label: "Atomic Query",
-          collapsed: false,
-          autogenerate: { directory: "atomic-query" },
-        },
         // ── Foundations ──
+        // The non-React utility belt every other @mongez/* package builds on.
         {
           label: "Events",
           collapsed: true,
@@ -79,17 +64,39 @@ export default defineConfig({
           collapsed: true,
           autogenerate: { directory: "supportive-is" },
         },
-        // ── Utilities ──
         {
           label: "Collection",
           collapsed: true,
           autogenerate: { directory: "collection" },
+        },
+        // ── State ──
+        {
+          label: "Atom",
+          collapsed: true,
+          autogenerate: { directory: "atom" },
+        },
+        {
+          label: "React Atom",
+          collapsed: true,
+          autogenerate: { directory: "react-atom" },
+        },
+        {
+          label: "Atomic Query",
+          collapsed: true,
+          autogenerate: { directory: "atomic-query" },
+        },
+        // ── Data & Networking ──
+        {
+          label: "HTTP",
+          collapsed: true,
+          autogenerate: { directory: "http" },
         },
         {
           label: "Cache",
           collapsed: true,
           autogenerate: { directory: "cache" },
         },
+        // ── Infrastructure ──
         {
           label: "Config",
           collapsed: true,
@@ -106,6 +113,11 @@ export default defineConfig({
           autogenerate: { directory: "encryption" },
         },
         {
+          label: "DOM",
+          collapsed: true,
+          autogenerate: { directory: "dom" },
+        },
+        {
           label: "Concat Route",
           collapsed: true,
           autogenerate: { directory: "concat-route" },
@@ -115,31 +127,22 @@ export default defineConfig({
           collapsed: true,
           autogenerate: { directory: "query-string" },
         },
-        {
-          label: "DOM",
-          collapsed: true,
-          autogenerate: { directory: "dom" },
-        },
+        // ── Internationalisation ──
         {
           label: "Localization",
           collapsed: true,
           autogenerate: { directory: "localization" },
         },
-        // ── React adapters ──
         {
           label: "React Localization",
           collapsed: true,
           autogenerate: { directory: "react-localization" },
         },
+        // ── React ──
         {
           label: "React Router",
           collapsed: true,
           autogenerate: { directory: "react-router" },
-        },
-        {
-          label: "React Helmet",
-          collapsed: true,
-          autogenerate: { directory: "react-helmet" },
         },
         {
           label: "React Form",
@@ -147,31 +150,31 @@ export default defineConfig({
           autogenerate: { directory: "react-form" },
         },
         {
+          label: "React Helmet",
+          collapsed: true,
+          autogenerate: { directory: "react-helmet" },
+        },
+        {
           label: "User",
           collapsed: true,
           autogenerate: { directory: "user" },
         },
-        // ── Networking ──
-        {
-          label: "HTTP",
-          collapsed: true,
-          autogenerate: { directory: "http" },
-        },
         // ── Build & AI tooling ──
+        // Standalone — installable in any TS project, not specific to @mongez/*.
         {
           label: "Vite",
           collapsed: true,
           autogenerate: { directory: "vite" },
         },
         {
-          label: "Agent Kit",
-          collapsed: true,
-          autogenerate: { directory: "agent-kit" },
-        },
-        {
           label: "Pkgist",
           collapsed: true,
           autogenerate: { directory: "pkgist" },
+        },
+        {
+          label: "Agent Kit",
+          collapsed: true,
+          autogenerate: { directory: "agent-kit" },
         },
       ],
     }),

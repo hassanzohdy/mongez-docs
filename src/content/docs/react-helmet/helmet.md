@@ -1,5 +1,5 @@
 ---
-title: "Helmet"
+title: "The <Helmet> component"
 name: mongez-react-helmet-helmet
 description: |
   Complete reference for the `<Helmet>` component — its props, `HelmetProps` TypeScript type, per-effect lifecycle, usage examples, and cleanup semantics.

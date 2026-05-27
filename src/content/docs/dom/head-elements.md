@@ -1,5 +1,5 @@
 ---
-title: "Head Elements"
+title: "Head elements"
 name: mongez-dom-head-elements
 description: |
   Lower-level helpers for creating and reusing `<meta>` and `<link>` tags in `<head>`, plus reading/writing HTML element attributes on `<html>` or any element.

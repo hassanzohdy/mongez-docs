@@ -1,5 +1,5 @@
 ---
-title: Get started with @mongez/atom
+title: Get started
 description: Install, the 30-second tour, and where to go next.
 sidebar:
   order: 1

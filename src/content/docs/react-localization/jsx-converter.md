@@ -1,5 +1,5 @@
 ---
-title: "Jsx Converter"
+title: "JSX converter"
 name: mongez-react-localization-jsx-converter
 description: |
   Deep reference for `jsxConverter` — its signature, splitter mechanics, missing-key behaviour, empty / null / primitive placeholder guard, double-curly pattern support, and React key assignment.

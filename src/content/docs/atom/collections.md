@@ -1,5 +1,5 @@
 ---
-title: "Atom Collections"
+title: "Atom collections"
 name: mongez-atom-collections
 description: |
   How to use `atomCollection` to manage array-typed atoms with built-in mutation verbs like `push`, `pop`, `remove`, `map`, and `replace`.

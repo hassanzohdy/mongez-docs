@@ -108,6 +108,11 @@ const OVERVIEW_TITLES: Record<string, string> = {
  * Slugified file titles for the Starlight sidebar. The skills files are
  * named for AI-agent convenience (`overview.md`, `bus.md`, `ssr.md`); a
  * docs reader wants something more human. Override per-file here.
+ *
+ * This map is GLOBAL — the override applies to every package that has a
+ * file of that name. When a slug means different things in different
+ * packages (e.g. `collections.md` in `atom` vs `supportive-is`), use
+ * `PACKAGE_TITLE_OVERRIDES` below instead.
  */
 const TITLE_OVERRIDES: Record<string, string> = {
   "overview.md":          "Overview",
@@ -129,6 +134,22 @@ const TITLE_OVERRIDES: Record<string, string> = {
   "list-helpers.md":      "List helpers",
   "bus.md":               "Events bus",
   "namespaces.md":        "Namespaces",
+  // Acronym & casing fixes — the auto-capitaliser produces "Cli", "Jsx",
+  // "Http Client", etc., which read wrong. Override explicitly.
+  "cli.md":                 "CLI",
+  "cli-usage.md":           "CLI usage",
+  "htaccess.md":            ".htaccess generation",
+  "http-client.md":         "HTTP client",
+  "jsx-converter.md":       "JSX converter",
+  "env-in-html.md":         "Env in HTML",
+  "production-base-url.md": "Production base URL",
+  "tsconfig-aliases.md":    "tsconfig aliases",
+  "trans-x.md":             "transX",
+  "head-elements.md":       "Head elements",
+  "build-zip.md":           "Build ZIP",
+  // Hand-authored / synced getting-started pages — sentence case across
+  // the family, no package-name suffix.
+  "getting-started.md":     "Get started",
   // Reinforcements categories
   "arrays.md":            "Arrays",
   "objects.md":           "Objects",
@@ -141,6 +162,30 @@ const TITLE_OVERRIDES: Record<string, string> = {
   "async.md":             "Async helpers",
   "types.md":             "Type utilities",
   "README.md":            "Skill index",
+};
+
+/**
+ * Per-package per-file title overrides — keyed by `<dir>/<file>`.
+ *
+ * Consulted BEFORE `TITLE_OVERRIDES`. Use this when the same skill slug
+ * appears in multiple packages with genuinely different meanings, or
+ * when a single package needs a label that would look wrong globally
+ * (e.g. a file named after the package itself, like
+ * `concat-route/concat-route.md` — the global default would auto-cap to
+ * "Concat Route", but the sidebar already shows that as the section
+ * label, so the page label should be something else).
+ */
+const PACKAGE_TITLE_OVERRIDES: Record<string, string> = {
+  // `collections.md` in atom is about collections-of-atoms; in
+  // supportive-is it's about type predicates for collection types.
+  // The global override "Atom Collections" is correct for atom but
+  // misleading for supportive-is.
+  "atom/collections.md":             "Atom collections",
+  "supportive-is/collections.md":    "Collection predicates",
+  // Package-name-as-filename — the global auto-cap would just echo the
+  // sidebar section label.
+  "concat-route/concat-route.md":    "Usage",
+  "react-helmet/helmet.md":          "The <Helmet> component",
 };
 
 /**
@@ -170,14 +215,21 @@ const ORDER: Record<string, number> = {
   "README.md":       100,
 };
 
-function titleFromFilename(file: string): string {
-  return (
-    TITLE_OVERRIDES[file] ??
-    file
-      .replace(/\.md$/, "")
-      .replace(/-/g, " ")
-      .replace(/\b\w/g, c => c.toUpperCase())
-  );
+function titleFromFilename(file: string, dir?: string): string {
+  // Per-package override wins first — used for slugs whose global title
+  // would be wrong inside one specific package's context.
+  if (dir) {
+    const perPackage = PACKAGE_TITLE_OVERRIDES[`${dir}/${file}`];
+    if (perPackage) return perPackage;
+  }
+  // Global override map for slugs that are the same idea everywhere.
+  if (TITLE_OVERRIDES[file]) return TITLE_OVERRIDES[file];
+  // Default: drop `.md`, replace dashes with spaces, capitalise word
+  // starts. Good enough for slugs like `arrays`, `caching`, `streaming`.
+  return file
+    .replace(/\.md$/, "")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, c => c.toUpperCase());
 }
 
 /**
@@ -316,7 +368,7 @@ async function syncPackage(pkg: string, dir: string): Promise<number> {
     // `Reinforcements` as its heading. Both come from the same file.
     const isOverview = file === "overview.md";
     const packageTitle = isOverview ? OVERVIEW_TITLES[dir] : undefined;
-    const title = packageTitle ?? titleFromFilename(file);
+    const title = packageTitle ?? titleFromFilename(file, dir);
     const sidebarLabel = packageTitle ? "Overview" : undefined;
     const order = ORDER[file] ?? 50;
     await writeFile(

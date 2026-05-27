@@ -1,5 +1,5 @@
 ---
-title: "Http Client"
+title: "HTTP client"
 name: mongez-http-client
 description: |
   @mongez/http `Http` class — `get`, `post`, `put`, `patch`, `delete`, `head`, `options`, `request`, concurrent `all`/`race`, `invalidate`/`invalidateAll`, `extend`. Per-request `.cancel()` and external `AbortSignal`. Full `HttpConfig` (`baseURL`, `auth`, `timeout`, `putToPost`, `serializer`, `fetchCache`, `dedupeKey`) and `RequestOptions` (`params`, `signal`, `responseType`, `data`, `throw`).

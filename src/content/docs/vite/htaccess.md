@@ -1,5 +1,5 @@
 ---
-title: "Htaccess"
+title: ".htaccess generation"
 name: mongez-vite-htaccess
 description: |
   How @mongez/vite generates and writes an Apache .htaccess file into the build output for SPA routing, HTTPS enforcement, compression, and cache headers.

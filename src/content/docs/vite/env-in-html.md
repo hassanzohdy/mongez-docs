@@ -1,5 +1,5 @@
 ---
-title: "Env In Html"
+title: "Env in HTML"
 name: mongez-vite-env-in-html
 description: |
   How @mongez/vite replaces __KEY__-style tokens in index.html with env values via its transformIndexHtml hook, including custom delimiters and gotchas.

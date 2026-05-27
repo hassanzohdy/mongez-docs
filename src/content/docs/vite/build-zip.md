@@ -1,5 +1,5 @@
 ---
-title: "Build Zip"
+title: "Build ZIP"
 name: mongez-vite-build-zip
 description: |
   How @mongez/vite zips the Vite build output directory after a successful build, including custom filenames, output location, the known setTimeout race condition, and how to opt out.

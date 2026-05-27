@@ -1,5 +1,5 @@
 ---
-title: "Cli"
+title: "CLI"
 name: mongez-pkgist-cli
 description: |
   pkgist CLI commands and flags: `build [pkg...]` (one or more standalone), `build:family <name>` (one synchronized family), `build:all` (every standalone + every family), `list` (show registered packages with current versions), `validate` (check config + paths). Common flags: `--dry-run`, `--no-publish`, `--no-git`, `--concurrency <n>`, `--config <path>`, `--verbose`.

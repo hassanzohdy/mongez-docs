@@ -1,5 +1,5 @@
 ---
-title: "Cli Usage"
+title: "CLI usage"
 name: mongez-agent-kit-cli-usage
 description: |
   Exact commands, flags, and typical wiring for the `agent-kit` CLI (`init` / `sync` / `watch`) and its programmatic counterparts.

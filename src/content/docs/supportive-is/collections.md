@@ -1,5 +1,5 @@
 ---
-title: "Atom Collections"
+title: "Collection predicates"
 name: mongez-supportive-is-collections
 description: |
   Documents the five collection and shape predicates — `isObject`, `isPlainObject`, `Is.array`, `isIterable`, and `isEmpty` — including the falsy-return pattern and known bugs.

@@ -1,5 +1,5 @@
 ---
-title: "Production Base Url"
+title: "Production base URL"
 name: mongez-vite-production-base-url
 description: |
   How @mongez/vite reads an env variable during vite build and writes it into config.base so assets are referenced from the correct CDN or subpath URL.

@@ -1,5 +1,5 @@
 ---
-title: "Getting Started"
+title: "Get started"
 name: mongez-react-form-getting-started
 description: |
   Use when setting up @mongez/react-form for the first time in a Web or React Native project — covers installation, locale registration for validation messages, and the minimal "first form" snippet so a working baseline is in place before any other skill is invoked.

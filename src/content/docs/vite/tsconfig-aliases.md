@@ -1,5 +1,5 @@
 ---
-title: "Tsconfig Aliases"
+title: "tsconfig aliases"
 name: mongez-vite-tsconfig-aliases
 description: |
   How @mongez/vite mirrors compilerOptions.paths from tsconfig.json into Vite's resolve.alias so TypeScript path aliases work in both tsc and the Vite dev server without a separate plugin.

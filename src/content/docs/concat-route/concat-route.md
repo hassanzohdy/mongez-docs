@@ -1,5 +1,5 @@
 ---
-title: "Concat Route"
+title: "Usage"
 name: mongez-concat-route-concat-route
 description: |
   Complete function reference for `concatRoute` — signature, normalization pipeline, return contract, full behavior table, edge cases, and what to avoid.

@@ -21,9 +21,30 @@ The package is intentionally narrow:
 ## Install
 
 ```sh
+# npm
+npm install @mongez/dotenv
+
+# yarn
 yarn add @mongez/dotenv
-# or
-npm i @mongez/dotenv
+
+# pnpm
+pnpm add @mongez/dotenv
+```
+
+Zero runtime / peer dependencies. Node-only (uses `fs` and `process`).
+
+## Quick example
+
+Boot the loader once at process start, then read typed values — `env()` returns real primitives, not the stringified `process.env` form:
+
+```ts
+import { loadEnv, env } from "@mongez/dotenv";
+
+loadEnv();
+
+const port: number   = env("APP_PORT", 3000);   // 3000, not "3000"
+const debug: boolean = env("DEBUG", false);     // true / false, not "true"
+const dbUrl: string  = env("DB_URL");
 ```
 
 ## Import pattern

@@ -17,7 +17,36 @@ The package targets the browser. There is no SSR layer.
 ## Install
 
 ```sh
+# npm
+npm install @mongez/dom
+
+# yarn
 yarn add @mongez/dom
+
+# pnpm
+pnpm add @mongez/dom
+```
+
+Zero runtime dependencies. Browser-only — server use throws (see Environment below).
+
+## Quick example
+
+A snapshot of the breadth — page metadata, fonts, CSS variables, and smooth-scroll all in one import:
+
+```ts
+import { setPageMeta, googleFont, cssVariable, scrollTo } from "@mongez/dom";
+
+setPageMeta({
+  title: "Product Page",
+  description: "Buy widget X today.",
+  image: "https://cdn.example.com/product.png",
+  url: "https://example.com/product",
+  type: "website",
+});
+
+googleFont("https://fonts.googleapis.com/css2?family=Inter", "primary-font");
+cssVariable("--color-primary", "#0a84ff");
+scrollTo("#section-features");
 ```
 
 ## Import pattern

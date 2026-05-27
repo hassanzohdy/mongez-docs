@@ -29,12 +29,17 @@ The full pipeline runs per-package in parallel up to the configured concurrency.
 ## Install
 
 ```sh
-# Global — use the CLI anywhere
-npm install -g @mongez/pkgist
-
-# Or as a dev dependency in your monorepo root
+# npm  (dev dep, recommended)
 npm install -D @mongez/pkgist
+
+# yarn
+yarn add -D @mongez/pkgist
+
+# pnpm
+pnpm add -D @mongez/pkgist
 ```
+
+Prefer the dev-dep install — it pins the version per repo. The global install (`npm install -g @mongez/pkgist` etc.) is also supported when you want a single CLI binary across all your projects.
 
 Add convenience scripts:
 
@@ -45,6 +50,24 @@ Add convenience scripts:
     "release:dry": "pkgist build:all --dry-run"
   }
 }
+```
+
+## Quick example
+
+Once a `pkgist.config.ts` exists (see the minimum config below), the release flow is two commands — dry-run first to inspect, then real build:
+
+```sh
+# Inspect every step (snapshot, compile, clone, commit, publish) without touching disk / git / npm
+npx pkgist build:all --dry-run
+
+# Real run: bumps versions, commits + tags + pushes per repo, publishes to npm
+npx pkgist build:all
+
+# Target one package
+npx pkgist build @my-scope/utils
+
+# Target a synchronized family (all family members share the new version)
+npx pkgist build:family core
 ```
 
 ## Minimum viable config

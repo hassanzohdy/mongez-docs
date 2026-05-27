@@ -15,8 +15,38 @@ sidebar:
 ## Install
 
 ```sh
-yarn add @mongez/react-helmet
-# peer: react >= 18, @mongez/dom >= 1.1.2
+# npm
+npm install @mongez/react-helmet @mongez/dom
+
+# yarn
+yarn add @mongez/react-helmet @mongez/dom
+
+# pnpm
+pnpm add @mongez/react-helmet @mongez/dom
+```
+
+Peer deps: `react >= 18`, `@mongez/dom >= 1.1.2`.
+
+## Quick example
+
+Drop `<Helmet>` anywhere in the tree — every prop fans out to the matching `<head>` tags (title + og:title + twitter:title + itemprop=name, etc.). Unmount restores the prior values automatically:
+
+```tsx
+import Helmet from "@mongez/react-helmet";
+
+export default function ArticlePage({ post }) {
+  return (
+    <>
+      <Helmet
+        title={post.title}
+        description={post.summary}
+        keywords={post.tags}
+        image={post.coverImage}
+      />
+      <Article post={post} />
+    </>
+  );
+}
 ```
 
 ## Import pattern

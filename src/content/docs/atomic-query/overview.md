@@ -10,6 +10,44 @@ sidebar:
   label: "Overview"
 ---
 
+## Install
+
+```sh
+# npm
+npm install @mongez/atomic-query
+
+# yarn
+yarn add @mongez/atomic-query
+
+# pnpm
+pnpm add @mongez/atomic-query
+```
+
+Peer: `react >= 18`. Runtime deps: `@mongez/events`, `@mongez/react-atom` (installed automatically).
+
+## Quick example
+
+A typed query with abort-on-stale, 60-second cache, and loading / error / data branches built in:
+
+```tsx
+"use client";
+import { queryAtom } from "@mongez/atomic-query";
+
+type User = { id: number; name: string };
+
+export function UserList() {
+  const { data, isLoading, error } = queryAtom.useQuery<User[]>({
+    queryKey: ["users"],
+    queryFn: ({ signal }) => fetch("/api/users", { signal }).then(r => r.json()),
+    staleTime: 60_000,
+  });
+
+  if (isLoading) return <Spinner />;
+  if (error) return <ErrorBox error={error} />;
+  return <ul>{data?.map(u => <li key={u.id}>{u.name}</li>)}</ul>;
+}
+```
+
 ## When to use
 
 Reach for this skill when:
@@ -48,26 +86,6 @@ It is **not a replacement for your framework's data loader**. The intended split
 ### Client-only constraint
 
 Every file in the package carries `"use client"` and the exports map declares `"react-server": null`. **React Server Components cannot import this package** — the bundler will error with a clear message. This is intentional: the cache is a client concern. Seed initial data from server components via `<HydrateQueries>`.
-
-### Quick start
-
-```tsx
-"use client";
-import { queryAtom } from "@mongez/atomic-query";
-
-export function UserList() {
-  const { data, isLoading, error } = queryAtom.useQuery<User[]>({
-    queryKey: ["users"],
-    queryFn: ({ signal }) =>
-      fetch("/api/users", { signal }).then(r => r.json()),
-    staleTime: 60_000,
-  });
-
-  if (isLoading) return <Spinner />;
-  if (error) return <ErrorBox error={error} />;
-  return <ul>{data?.map(u => <li key={u.id}>{u.name}</li>)}</ul>;
-}
-```
 
 ### SSR seeding with HydrateQueries
 

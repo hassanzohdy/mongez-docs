@@ -17,8 +17,29 @@ The function is **path-only**: it understands `/` separators between segments, a
 ## Install
 
 ```sh
+# npm
+npm install @mongez/concat-route
+
+# yarn
 yarn add @mongez/concat-route
-# no runtime dependencies
+
+# pnpm
+pnpm add @mongez/concat-route
+```
+
+Zero runtime dependencies. Browser-safe (no `node:path`).
+
+## Quick example
+
+Glue path segments together — leading slash guaranteed, falsy values silently dropped, embedded slashes collapsed:
+
+```ts
+import concatRoute from "@mongez/concat-route";
+
+concatRoute("api", "/users", 42);                  // "/api/users/42"
+concatRoute("/", "/dashboard", "");                // "/dashboard"
+concatRoute("/base", null, locale, "/products");   // "/base/products" if locale is falsy
+concatRoute("/foo//", "//bar///", "baz");          // "/foo/bar/baz"
 ```
 
 ## Import pattern

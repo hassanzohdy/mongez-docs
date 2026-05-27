@@ -10,6 +10,42 @@ sidebar:
   label: "Overview"
 ---
 
+## Install
+
+```sh
+# npm
+npm install @mongez/atom
+
+# yarn
+yarn add @mongez/atom
+
+# pnpm
+pnpm add @mongez/atom
+```
+
+Peer deps installed automatically: `@mongez/events`, `@mongez/reinforcements`.
+
+## Quick example
+
+Atoms aren't just values — they're values with verbs bound to them. Call domain methods directly on the atom instead of writing setters everywhere:
+
+```ts
+import { createAtom } from "@mongez/atom";
+
+const sidebar = createAtom({
+  key: "ui.sidebar",
+  default: false,
+  actions: {
+    open()   { this.update(true); },
+    close()  { this.update(false); },
+    toggle() { this.update(!this.value); },
+  },
+});
+
+sidebar.toggle();   // no setSidebar(!sidebar) ceremony
+sidebar.value;      // true
+```
+
 ## When to use
 
 Load this skill when the user:

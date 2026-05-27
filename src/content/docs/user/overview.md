@@ -19,8 +19,34 @@ For app-wide state beyond auth, reach for [`@mongez/atom`](https://github.com/ha
 ## Install
 
 ```sh
+# npm
+npm install @mongez/user
+
+# yarn
 yarn add @mongez/user
-# peer: @mongez/events, @mongez/reinforcements
+
+# pnpm
+pnpm add @mongez/user
+```
+
+`@mongez/events` and `@mongez/reinforcements` install automatically as runtime deps. No peers to wire.
+
+## Quick example
+
+Subclass `User`, plug in a cache driver, then read / write the session through bound methods:
+
+```ts
+import { User as BaseUser, UserCacheDriverInterface } from "@mongez/user";
+
+class AppUser extends BaseUser {
+  protected cacheDriver: UserCacheDriverInterface = myDriver;
+}
+
+const user = new AppUser();
+user.boot();                                        // hydrate from cache on reload
+user.login({ id: 1, name: "Ada", accessToken: "eyJhbGc..." });
+user.isLoggedIn();                                  // true
+user.can("posts.create");                           // dot-notation permission check
 ```
 
 ## Import pattern

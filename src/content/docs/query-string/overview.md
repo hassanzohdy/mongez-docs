@@ -19,7 +19,33 @@ No runtime dependencies.
 ## Install
 
 ```sh
+# npm
+npm install @mongez/query-string
+
+# yarn
 yarn add @mongez/query-string
+
+# pnpm
+pnpm add @mongez/query-string
+```
+
+Zero runtime dependencies.
+
+## Quick example
+
+Parse and serialize with array + nested-object support, plus a no-reload URL rewriter for browser code:
+
+```ts
+import queryString from "@mongez/query-string";
+
+queryString.parse("?page=2&tags[]=a&tags[]=b&user[name]=alice");
+// → { page: 2, tags: ["a", "b"], user: { name: "alice" } }
+
+queryString.toQueryString({ page: 2, tags: ["a", "b"] });
+// → "page=2&tags[]=a&tags[]=b"
+
+queryString.update({ tag: "books", page: 1 });
+// window.location.search becomes "?tag=books&page=1" — no reload
 ```
 
 ## Import pattern

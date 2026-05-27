@@ -20,8 +20,31 @@ The package is small on purpose. Two exports:
 ## Install
 
 ```sh
-yarn add @mongez/react-localization
-# peer: @mongez/localization, react >= 18
+# npm
+npm install @mongez/react-localization @mongez/localization
+
+# yarn
+yarn add @mongez/react-localization @mongez/localization
+
+# pnpm
+pnpm add @mongez/react-localization @mongez/localization
+```
+
+Peer deps: `@mongez/localization >= 3.0.0`, `react >= 18`.
+
+## Quick example
+
+Wire `jsxConverter` once at boot, then drop React elements straight into translated sentences as placeholder values:
+
+```tsx
+import { extend, setLocalizationConfigurations, trans } from "@mongez/localization";
+import { jsxConverter } from "@mongez/react-localization";
+
+setLocalizationConfigurations({ converter: jsxConverter });
+extend("en", { agreeToTerms: "You agree to our :tos." });
+
+<p>{trans("agreeToTerms", { tos: <a href="/terms">Terms</a> })}</p>
+// → <p>You agree to our <a href="/terms">Terms</a>.</p>
 ```
 
 ## Import pattern

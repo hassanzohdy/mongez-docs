@@ -17,9 +17,31 @@ It is **not** a cryptography library. The helpers wrap exactly what `crypto-js` 
 ## Install
 
 ```sh
+# npm
+npm install @mongez/encryption
+
+# yarn
 yarn add @mongez/encryption
-# runtime dep: crypto-js (declared as a dependency)
+
+# pnpm
+pnpm add @mongez/encryption
 ```
+
+`crypto-js` ships as a transitive dep — no separate install needed.
+
+## Quick example
+
+Symmetric encrypt/decrypt of any JSON-encodable value, plus stable hex digests for cache keys or content fingerprints:
+
+```ts
+import { encrypt, decrypt, sha256 } from "@mongez/encryption";
+
+const cipher = encrypt({ userId: 42 }, "my-key");      // AES by default
+const value  = decrypt(cipher, "my-key");              // { userId: 42 }
+const tag    = sha256(JSON.stringify({ q: "phones" })); // stable cache key
+```
+
+> **Read this before reaching for it.** These helpers are for browser-side symmetric obfuscation and content fingerprinting, **not** for passwords, session tokens, PII at rest, or anything under a compliance regime. See `Security boundaries` below.
 
 ## Import pattern
 

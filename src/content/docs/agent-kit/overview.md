@@ -16,6 +16,41 @@ sidebar:
 
 2. **Skills travel with packages.** Any npm package can ship skills by dropping a `skills/` folder at its root — `agent-kit` auto-discovers them. `agent-kit sync` walks `node_modules/` (plus any extra paths via `--path`), finds those packages, and copies each skill into per-agent skill directories with **flat, collision-free folder names** like `.claude/skills/warlock-js-core-add-connector/SKILL.md`. Skills from removed packages are pruned automatically; user-authored skills sitting alongside ours are left untouched (we track ours with a `.agent-kit-managed` sentinel).
 
+## Install
+
+```sh
+# npm
+npm install -D @mongez/agent-kit
+
+# yarn
+yarn add -D @mongez/agent-kit
+
+# pnpm
+pnpm add -D @mongez/agent-kit
+```
+
+The npm package is `@mongez/agent-kit`; the CLI binary is just `agent-kit`. Install with the scope, invoke without it.
+
+## Quick example
+
+Bootstrap a fresh project in one command. The starter `AGENTS.md` lands at the project root (only if missing), and every per-tool file derives from it:
+
+```sh
+npx agent-kit init
+```
+
+Then wire `sync` into `postinstall` so every future `yarn install` / `npm install` re-derives the per-tool files and mirrors skills from installed packages:
+
+```json
+{
+  "scripts": {
+    "postinstall": "agent-kit sync"
+  }
+}
+```
+
+From here, edit `AGENTS.md` once, run `npx agent-kit sync`, and every supported agent (Claude Code, Cursor, Copilot, Aider, Codex, …) picks up the change.
+
 ## When to use it
 
 - A project adopting AI coding agent workflows wants a single source of truth for project instructions.

@@ -5,11 +5,115 @@
  * `@import "tailwindcss"` directive below is what activates utilities.
  *
  * Starlight ships its own design tokens on `:root` (`--sl-color-*`,
- * `--sl-text-*`, etc.). We don't override them — Tailwind layers on
- * top so we can use `flex`, `gap-*`, `grid-cols-*`, etc. inside MDX
- * pages without fighting the theme.
+ * `--sl-text-*`, etc.). We layer Tailwind on top and add a Mongez brand
+ * palette derived from the logo (fire + ice + bolt) for selective
+ * accenting — without overriding Starlight's defaults wholesale.
  */
 @import "tailwindcss";
 
-/* Custom utilities live in @layer components if/when we add them.
- * Keep custom CSS minimal — Starlight + Tailwind cover almost everything. */
+/* ─────────────────────────────────────────────────────────────────────
+ * Mongez brand palette — derived from the logo
+ * ─────────────────────────────────────────────────────────────────────
+ *  ice      — the cool side of the bolt (cyan/blue family)
+ *  fire     — the warm side of the bolt (orange/red family)
+ *  bolt     — the dark central bolt (deep navy)
+ *
+ * Use these as building blocks for any Mongez-branded element: glows,
+ * gradients, accent bars. Don't tear out Starlight's defaults — those
+ * stay so the docs theme remains familiar.
+ * ──────────────────────────────────────────────────────────────────── */
+:root {
+  --mongez-ice-100: #e1f5fe;
+  --mongez-ice-300: #4fc3f7;
+  --mongez-ice-500: #2196f3;
+  --mongez-ice-700: #0d47a1;
+
+  --mongez-fire-100: #ffe0b2;
+  --mongez-fire-300: #ff9800;
+  --mongez-fire-500: #ff6e40;
+  --mongez-fire-700: #bf360c;
+
+  --mongez-bolt: #1e2740;
+
+  /* Composite glows — re-use across hero logo, focus rings, etc. */
+  --mongez-glow-ice:  0 0 24px rgba(79, 195, 247, 0.45);
+  --mongez-glow-fire: 0 0 32px rgba(255, 110, 64, 0.35);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Hero logo — fire + ice dual-color glow
+ * ──────────────────────────────────────────────────────────────────── */
+.mongez-hero-logo {
+  display: block;
+  width: 260px;
+  height: 260px;
+  max-width: 100%;
+  filter:
+    drop-shadow(var(--mongez-glow-ice))
+    drop-shadow(var(--mongez-glow-fire));
+  transition: filter 0.4s ease, transform 0.4s ease;
+}
+
+.mongez-hero-logo:hover {
+  filter:
+    drop-shadow(0 0 32px rgba(79, 195, 247, 0.65))
+    drop-shadow(0 0 40px rgba(255, 110, 64, 0.55));
+  transform: scale(1.02);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Hero region — subtle brand-tinted backdrop
+ *
+ * Two soft radial washes (ice top-left, fire bottom-right) give the
+ * splash hero a quietly-branded canvas without overpowering content.
+ * Starlight wraps the splash hero in `.hero` so we hook on that.
+ * ──────────────────────────────────────────────────────────────────── */
+.hero {
+  background:
+    radial-gradient(ellipse 60% 70% at 20% 10%, rgba(79, 195, 247, 0.10), transparent 60%),
+    radial-gradient(ellipse 60% 70% at 80% 90%, rgba(255, 110, 64, 0.08), transparent 60%);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Site header — thin fire-to-ice accent line under the top bar
+ *
+ * One-pixel gradient strip that ties the entire chrome to the brand
+ * palette. Visible but unobtrusive — picks up the bolt's energy.
+ * ──────────────────────────────────────────────────────────────────── */
+header.header {
+  border-bottom: 1px solid var(--sl-color-hairline);
+  position: relative;
+}
+
+header.header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--mongez-ice-300) 0%,
+    var(--mongez-ice-500) 35%,
+    var(--mongez-bolt) 50%,
+    var(--mongez-fire-500) 65%,
+    var(--mongez-fire-300) 100%
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Site title logo — modest glow next to the wordmark
+ *
+ * Starlight renders the configured logo as an <img> in the site title
+ * area. Give it the same dual-color treatment as the hero, scaled down
+ * so it doesn't overwhelm the title text.
+ * ──────────────────────────────────────────────────────────────────── */
+.site-title img,
+a.site-title img {
+  filter:
+    drop-shadow(0 0 6px rgba(79, 195, 247, 0.5))
+    drop-shadow(0 0 8px rgba(255, 110, 64, 0.35));
+}

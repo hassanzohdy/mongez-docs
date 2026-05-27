@@ -120,4 +120,4 @@ How the packages reference each other. Every package is otherwise standalone —
 - `react-form` → `events`, `supportive-is`, `localization`, `reinforcements`
 
 **Build tooling deps:**
-- `vite` → `dotenv`, `events`, `reinforcements`, plus `@mongez/copper` (CLI colour output) and `@mongez/fs` (Node fs helpers) — these last two are published on npm but live outside the `@mongez/*` workspace and aren't documented here. They're transitive concerns; you don't install them directly.
+- `vite` → `dotenv`, `events`, `reinforcements`, plus a small CLI / filesystem helper layer that's package-internal and not part of the public `@mongez/*` surface. You don't install those directly.

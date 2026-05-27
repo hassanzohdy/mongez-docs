@@ -26,7 +26,7 @@ export default defineConfig({
       title: "Mongez",
       description:
         "Production TypeScript packages for state, routing, forms, networking, configuration, encryption, and more — 24 focused packages, designed to read equally well to humans and AI coding agents.",
-      logo: { src: "./src/assets/logo.svg", replacesTitle: false },
+      logo: { src: "./src/assets/mongez.png", replacesTitle: false },
       // Starlight 0.30 uses the object form `{ github: url }`.
       // The array form `[{ icon, label, href }]` only landed in 0.32+.
       social: {

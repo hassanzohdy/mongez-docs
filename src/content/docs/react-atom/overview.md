@@ -93,7 +93,7 @@ All four hooks honor the nearest `<AtomStoreProvider>`. When no provider is moun
 </AtomStoreProvider>
 ```
 
-For hydration, see [`ssr.md`](../ssr/).
+For hydration, see [`../ssr/SKILL.md`](../ssr/SKILL.md).
 
 ## Scope boundaries
 

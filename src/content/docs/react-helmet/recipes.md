@@ -191,4 +191,4 @@ export default function AboutPage() {
 }
 ```
 
-The `"use client"` boundary keeps the module-level `document.documentElement` access on the client where it has a body. For Next.js's native metadata API, prefer route-level `export const metadata = …`; use `<Helmet>` when you need data fetched in a client component to drive the head.
+The `"use client"` boundary keeps the `document.documentElement` access and effects on the client where they have a body. For Next.js's native metadata API, prefer route-level `export const metadata = …`; use `<Helmet>` when you need data fetched in a client component to drive the head.

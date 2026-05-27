@@ -9,12 +9,16 @@ sidebar:
   order: 50
 ---
 
-pkgist auto-discovers a config file in the current working directory. Two filenames are recognised:
+pkgist auto-discovers a config file in the current working directory. Filenames are tried in this order:
 
-- `pkgist.config.ts` (preferred)
-- `builder.ts` (legacy alias, still supported)
+1. `pkgist.config.ts` (preferred)
+2. `pkgist.config.js`
+3. `builder.ts` (legacy alias, still supported)
+4. `builder.js`
+5. `mongez.ts` (legacy alias, still supported)
+6. `mongez.js`
 
-The config is loaded at runtime via dynamic `import()` — it can use ESM `import` syntax freely (no transpilation needed).
+The first match wins. TypeScript configs are loaded via `tsx` so you can use ESM `import` syntax freely without a separate transpile step — `tsx` is registered automatically when a `.ts` config is detected (and silently skipped if not installed, in which case stick to a `.js` config).
 
 ## The `defineConfig` shape
 
@@ -38,7 +42,7 @@ Top-level options that apply to every build run.
 |---|---|---|---|
 | `concurrency` | `number` | `4` | Max parallel package builds. Override per-run with `--concurrency <n>`. |
 | `buildDir` | `string` | **required** | Where compiled packages are written, relative to the config file. |
-| `sourcesDir` | `string` | — | Optional. Where source snapshots are archived per build (full copy minus `.git`, `node_modules`, `dist`). Omit if you don't want snapshots. |
+| `sourcesDir` | `string` | — | Optional. Where source snapshots are archived per build (full copy minus `.git`, `node_modules`, `dist`, `.turbo`, `.cache`). Omit if you don't want snapshots. |
 
 ```ts
 settings: {

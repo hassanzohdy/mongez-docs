@@ -17,7 +17,7 @@ What pkgist does for each package, in order. Steps 4 and 9 are conditional; the 
 1. Load source package.json → read current version
 2. Resolve new version (auto-bump or explicit)
 3. Create build output directory (buildDir/<name>/<new-version>/)
-4. Snapshot source to sourcesDir/<name>/ — full copy excluding .git, node_modules, dist
+4. Snapshot source to sourcesDir/<name>/ — full copy excluding .git, node_modules, dist, .turbo, .cache
    (only if settings.sourcesDir is set)
 5. Compile with tsdown → esm/ and cjs/ subdirectories
 6. Clone extra files/directories listed in `clone`
@@ -77,13 +77,15 @@ The generated `package.json` sets:
   "exports": {
     ".": {
       "import":  { "types": "./esm/index.d.mts", "default": "./esm/index.mjs" },
-      "require": { "types": "./cjs/index.d.cts", "default": "./cjs/index.cjs" }
+      "require": { "types": "./esm/index.d.mts", "default": "./cjs/index.cjs" }
     }
   }
 }
 ```
 
 This is the standard dual-publish shape. Bundlers, Node ESM, Node CJS, and TypeScript all resolve correctly.
+
+Note: when `preserveModules: true` (the default) and both ESM + CJS are emitted, the `require` condition's `types` deliberately points back at the `./esm/*.d.mts` declarations rather than CJS-side `.d.cts` files. CJS dts emit is skipped in this mode to dodge a rolldown bug; TypeScript still resolves types correctly because the declarations are reachable through the `exports` map.
 
 ### With `preserveModules: false`
 
@@ -144,9 +146,9 @@ Use for tools that only need to run in modern environments (Vite plugins, Node-o
 
 pkgist generates a clean `package.json` for the build — it does NOT copy yours verbatim. Specifically:
 
-- **Kept**: `name`, `description`, `version`, `author`, `license`, `repository`, `homepage`, `bugs`, `keywords`, `dependencies`, `peerDependencies`, `optionalDependencies`, `peerDependenciesMeta`, `engines`, `sideEffects`, `bin`, `os`, `cpu`, `funding`, `files`, `publishConfig`
-- **Replaced**: `main`, `module`, `types`, `exports`, `type` (set to match the build output)
-- **Dropped**: `devDependencies`, `scripts`, `private`, `workspaces`, anything else
+- **Kept**: `name`, `description`, `keywords`, `author`, `license`, `repository`, `homepage`, `bugs`, `dependencies`, `peerDependencies`, `sideEffects`, `bin`, `engines`
+- **Replaced / set**: `name`, `version`, `main`, `module`, `types`, `exports`, and `type` (set to `"module"` for ESM-only builds)
+- **Dropped**: everything else (`devDependencies`, `scripts`, `private`, `workspaces`, `optionalDependencies`, `peerDependenciesMeta`, `files`, `publishConfig`, etc.)
 
 This is intentional — the published package should not carry your build-time tooling or scripts.
 
@@ -156,7 +158,7 @@ The `bin` field is preserved but normalized: leading `./` is stripped (npm rejec
 
 ## Source snapshots (optional)
 
-If `settings.sourcesDir` is set, pkgist archives a full copy of the source (minus `.git`, `node_modules`, `dist`) into `<sourcesDir>/<name>/` before every build. Useful for:
+If `settings.sourcesDir` is set, pkgist archives a full copy of the source (minus `.git`, `node_modules`, `dist`, `.turbo`, `.cache`) into `<sourcesDir>/<name>/` before every build. Useful for:
 
 - Reconstructing what was published at any point in time
 - Diffing published versions without checking out specific tags

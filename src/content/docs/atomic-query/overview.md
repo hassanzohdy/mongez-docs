@@ -108,7 +108,7 @@ The seeded data lands in the cache synchronously during render — no flash, no 
 
 ## Key details / Pitfalls
 
-- **Peer deps**: `@mongez/atom`, `@mongez/react-atom`, React >= 18.
+- **Peer deps**: React >= 18. Runtime deps `@mongez/events` and `@mongez/react-atom` install automatically.
 - `HydrateQueries` is the React wrapper around `queryAtom.seedQuery()`. Either approach seeds the cache synchronously.
 - Do not try to use atomic-query in a Next.js App Router server component — the bundler will refuse to compile it.
 - The `queryAtom` singleton is the recommended entry point. All methods (`useQuery`, `invalidate`, `updateQueryData`, list helpers, etc.) live on it. Standalone function exports (`import { invalidate } from "@mongez/atomic-query"`) are available as aliases for the same operations.

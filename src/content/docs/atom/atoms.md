@@ -25,6 +25,7 @@ type AtomOptions<V, A> = {
   beforeUpdate?: (next: V, prev: V, atom: Atom<V, A>) => V | void;
   onUpdate?: (callback: AtomChangeCallback<V, A>) => EventSubscription;
   get?: (key: string, defaultValue?: V, atomValue?: V) => V;
+  persist?: PersistOption<V>;
 };
 ```
 

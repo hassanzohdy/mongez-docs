@@ -48,7 +48,7 @@ Only `title` is required. Every other prop either falls back to the value in `se
 
 ```
 mount
- ├── snapshot <html> attributes / id / className
+ ├── snapshot <html> attributes / id / className and current @mongez/dom metadata
  ├── title effect           — depends on [title, appName, appNameSeparator, appendAppName]
  ├── pageId effect          — depends on [pageId]
  ├── className effect       — depends on [className]

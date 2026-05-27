@@ -36,9 +36,9 @@ Glue path segments together — leading slash guaranteed, falsy values silently 
 ```ts
 import concatRoute from "@mongez/concat-route";
 
-concatRoute("api", "/users", 42);                  // "/api/users/42"
+concatRoute("api", "/users", String(userId));      // "/api/users/42"
 concatRoute("/", "/dashboard", "");                // "/dashboard"
-concatRoute("/base", null, locale, "/products");   // "/base/products" if locale is falsy
+concatRoute("/base", locale ?? "", "/products");   // "/base/products" if locale is falsy
 concatRoute("/foo//", "//bar///", "baz");          // "/foo/bar/baz"
 ```
 

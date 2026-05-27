@@ -30,7 +30,7 @@ yarn add @mongez/react-localization @mongez/localization
 pnpm add @mongez/react-localization @mongez/localization
 ```
 
-Peer deps: `@mongez/localization >= 3.0.0`, `react >= 18`.
+Peer deps: `@mongez/localization >= 3.4.0`, `react >= 18`.
 
 ## Quick example
 
@@ -75,7 +75,7 @@ Now every `trans(...)` understands JSX placeholders. The return type widens to `
 ### Path B: keep the default converter, use `transX` per call
 
 ```ts
-import { trans, plainTrans } from "@mongez/localization";
+import { trans } from "@mongez/localization";
 import { transX } from "@mongez/react-localization";
 
 trans("greeting");                              // → "Hello" (string)

@@ -36,7 +36,7 @@ These never look up an existing element. Successive calls duplicate. If you need
 meta(metaName: string, value: string): HTMLMetaElement
 ```
 
-Selector rule: `meta[name="${n}"]` when `n` is `"keywords"` or `"description"`, otherwise `meta[property="${n}"]`. Reuses an existing tag if found, otherwise creates one. The content is trimmed.
+Selector rule: `meta[name="${n}"]` when `n` is `"keywords"`, `"description"`, or `"theme-color"`, otherwise `meta[property="${n}"]`. Reuses an existing tag if found, otherwise creates one. The content is trimmed.
 
 ```ts
 import { meta } from "@mongez/dom";

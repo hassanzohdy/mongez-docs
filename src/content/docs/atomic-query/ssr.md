@@ -107,13 +107,13 @@ function UsersRoute() {
 
 ## What about `useSuspenseQuery`?
 
-atomic-query doesn't ship one. Streaming Suspense responsibility is yours via the framework:
+atomic-query **does** ship `useSuspenseQuery` — see `mongez-atomic-query-suspense` for the dedicated skill. It's a client-side concern though: it suspends a subtree while a query loads, after the initial render. For *streaming* SSR (the initial render itself), the suspense boundary belongs in your framework:
 
-- Next.js: do the await in a server component; suspense boundaries belong there.
+- Next.js: do the await in a server component; the suspense boundary belongs there.
 - Remix: `defer()` + `<Await>`.
 - TanStack: `pendingComponent` on the route.
 
-Hand the resolved data into `<HydrateQueries>` and have client components do plain `useQuery`. Same outcome as suspense queries, with the framework owning the boundary.
+The common pattern is: framework loader fetches → `<HydrateQueries>` seeds the cache → client components use `queryAtom.useQuery` (or `useSuspenseQuery` if you want a client-side suspense boundary on top of the seeded data).
 
 ## What about `prefetchQuery`?
 

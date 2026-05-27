@@ -2,8 +2,8 @@
 title: "Recipes"
 name: mongez-agent-kit-recipes
 description: |
-  Idiomatic composition recipes for `@mongez/agent-kit` — `postinstall` sync, per-workspace `AGENTS.md` in a monorepo, selective target derivation, scoping skill discovery to specific npm scopes, watch mode in development, and a CI guardrail that fails if the derived files are out of date.
-  TRIGGER when: code or `package.json` combines multiple agent-kit features (`postinstall` hook + scoped path + per-target derivation, CI verification, monorepo wiring); user asks "how do I run agent-kit on every install", "monorepo agent-kit setup", "how do I sync skills only from one scope", "how do I keep CLAUDE.md from drifting from AGENTS.md", or "how do I run agent-kit in watch mode".
+  Idiomatic composition recipes for `@mongez/agent-kit` — `postinstall` sync, per-workspace `AGENTS.md` in a monorepo, selective target derivation, filtering which packages contribute skills via `pick`/`omit`, watch mode in development, and a CI guardrail that fails if the derived files are out of date.
+  TRIGGER when: code or `package.json` combines multiple agent-kit features (`postinstall` hook + `pick`/`omit` config + per-target derivation, CI verification, monorepo wiring); user asks "how do I run agent-kit on every install", "monorepo agent-kit setup", "how do I sync skills only from one package", "how do I keep CLAUDE.md from drifting from AGENTS.md", or "how do I run agent-kit in watch mode".
   SKIP: bare CLI flag reference — load `mongez-agent-kit-cli-usage`; authoring `SKILL.md` to ship from an npm package — load `mongez-agent-kit-authoring-skills`; first-time mental model — load `mongez-agent-kit-overview`.
 sidebar:
   order: 99
@@ -31,7 +31,7 @@ The sync is idempotent — running it twice is a no-op. CI installs get the same
 
 ## Per-workspace `AGENTS.md` in a monorepo
 
-A monorepo where each package has its own conventions. Author one `AGENTS.md` per workspace; let agent-kit derive a `CLAUDE.md` / `.gemini/GEMINI.md` / `.github/copilot-instructions.md` next to each one.
+A monorepo where each package has its own conventions. `agent-kit` derives one set of per-tool files per project root — it operates on whatever directory contains the `package.json` you point it at via `--cwd`. To get per-workspace `CLAUDE.md` files, run sync inside each workspace.
 
 ```
 repo/
@@ -39,17 +39,18 @@ repo/
 ├── CLAUDE.md                  # derived
 ├── packages/
 │   ├── api/
-│   │   ├── AGENTS.md          # api-specific conventions (extends repo-wide)
+│   │   ├── AGENTS.md          # api-specific conventions
 │   │   └── CLAUDE.md          # derived from api/AGENTS.md
 │   └── web/
 │       ├── AGENTS.md
 │       └── CLAUDE.md
 ```
 
-Run sync from the repo root; agent-kit walks the workspace structure and derives at every `AGENTS.md` site.
+Drive it from a workspace-aware script (yarn workspaces foreach, pnpm -r, turbo run, etc.) so every package re-derives on install:
 
 ```bash
-npx agent-kit sync
+npx agent-kit sync --cwd packages/api
+npx agent-kit sync --cwd packages/web
 ```
 
 Each editor opens the closest `*.md` to the file being edited, so contributors writing code in `packages/api/` get the api-specific config without manual selection.
@@ -77,25 +78,28 @@ Or pin the choice in `package.json` so collaborators don't have to remember:
 
 The non-selected targets' files are left untouched — they aren't deleted, they're just not regenerated.
 
-## Scope skill discovery to one or two npm scopes
+## Filter which packages contribute skills
 
-By default, agent-kit scans every installed package for a `skills/` folder. In a large repo this can be slow and noisy. Pin the scopes you actually want to vendor skills from.
-
-```bash
-npx agent-kit sync --path @mongez --path @warlock.js
-```
-
-Or in `package.json`:
+By default, agent-kit scans every installed package under `node_modules/` for a `skills/` folder. To narrow that to a curated set, use the `pick` allowlist (or `omit` denylist) in `package.json`.
 
 ```json
 {
   "agentKit": {
-    "paths": ["@mongez", "@warlock.js"]
+    "pick": {
+      "@mongez/agent-kit": true,
+      "@warlock.js/core": true
+    }
   }
 }
 ```
 
-Now only `node_modules/@mongez/*/skills/` and `node_modules/@warlock.js/*/skills/` are crawled. Everything else is ignored. Use `--skills-only` to skip the AGENTS.md derivation pass on the same run.
+Now only the listed packages are synced — everything else discovered under `node_modules/` is ignored. Pair with `--skills-only` to skip the AGENTS.md derivation pass on the same run:
+
+```bash
+npx agent-kit sync --skills-only
+```
+
+`--path` is a different lever: it **adds** extra directories to scan alongside `node_modules/` (each treated like another `node_modules/`), useful for monorepos where workspace packages live outside `node_modules/`. It does not narrow discovery — for that, use `pick` / `omit`.
 
 ## Watch mode while iterating on AGENTS.md
 
@@ -133,8 +137,14 @@ For scripts that already run in Node (custom build steps, test fixtures, IDE plu
 import { deriveAll, syncSkills, findProjectRoot } from "@mongez/agent-kit";
 
 const root = await findProjectRoot();
-await deriveAll({ root, targets: ["claude", "cursor"] });
-await syncSkills({ root, paths: ["@mongez"] });
+if (!root) throw new Error("No package.json found");
+
+await deriveAll({ root, targets: ["claude"] });
+await syncSkills({
+  root,
+  targets: ["claude", "cursor"],
+  scanPaths: ["@warlock.js"],
+});
 ```
 
-Same effect as `agent-kit sync --target claude,cursor --path @mongez` — useful inside a longer pipeline where you don't want a child-process boundary.
+Same effect as `agent-kit sync --target claude,cursor --path @warlock.js` — useful inside a longer pipeline where you don't want a child-process boundary. Note `syncSkills` takes `scanPaths` (the API name), while the CLI flag is `--path`.

@@ -104,11 +104,11 @@ const skills = await syncSkills({
   override: false,             // optional: replace user-authored dest folders
 });
 
-// skills.exported, skills.pruned, skills.skipped, skills.packages, skills.scannedPaths
+// skills.exported, skills.pruned, skills.skipped, skills.targets, skills.packages, skills.scannedPaths
 ```
 
 ## Exit behavior
 
 - All commands exit 0 on success.
-- `init` / `sync` exit non-zero if `AGENTS.md` is missing (only for `sync`; `init` creates one).
+- `sync` exits non-zero if `AGENTS.md` is missing (the derive pass throws). `--skills-only` bypasses that pass and succeeds without it. `init` never errors on a missing source — it creates one.
 - `watch` runs until the process is killed.

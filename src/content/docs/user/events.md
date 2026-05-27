@@ -130,4 +130,4 @@ The same pattern works for any framework with effect hooks.
 
 ## Caveats
 
-- Topic listeners only fire for managers that share the same global `events` bus. If you instantiate a `User` subclass with a per-instance event bus, the convenience `onBoot`/`onLogin`/`onLogout`/`onKeyChange` helpers still subscribe to the global bus — wire them on your per-instance bus directly with `events.subscribe(...)` if you've forked the bus.
+- `UserEventsListener` always dispatches through the singleton `events` bus imported from `@mongez/events`. There's no per-instance bus and no way to swap it — every `User` in the process shares the same topic space. Pick distinct `eventsBaseName` values when you have multiple user types so their topics don't collide (see `mongez-user-recipes` for the admin/customer split).

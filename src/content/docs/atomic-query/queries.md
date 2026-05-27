@@ -114,15 +114,18 @@ const fetching  = queryAtom.useQueryChange(["users"], "isFetching");
 
 Only re-renders when the named field changes — not when sibling fields on the same query change.
 
-### Disabled / paused fetch
+### Snapshot without re-rendering — `watch: false`
 
 ```tsx
 queryAtom.useQuery({
   queryKey: ["users", filterState],
   queryFn,
-  watch: false,    // hook reads the cache but doesn't subscribe / refetch
+  watch: false,    // one-shot snapshot; the query still loads in the background,
+                   // the component just doesn't re-render on changes.
 });
 ```
+
+`watch: false` disables the per-render subscription only. The cache entry is still created and the initial fetch still runs — use `queryAtom.getData(key)` from event handlers if you want a true "fire and forget" read.
 
 ## Key hashing
 

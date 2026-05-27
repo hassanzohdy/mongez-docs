@@ -51,7 +51,7 @@ cart.setQty("a", 3);
 cart.total;  // 35
 ```
 
-## Derived state via `watch`
+## Side effect via `onChange`
 
 When you need a side effect on every change (writing to another atom, logging, hitting an API) rather than a pure derivation, subscribe via `onChange`. For pure computed values, prefer `derive` (see `mongez-atom-derived`).
 

@@ -64,7 +64,7 @@ plainTrans("agreeToTerms", { tos: "Terms" });
 
 ## What `transX` does NOT do
 
-- **Does not subscribe to locale changes.** It's a plain function call — it reads `getTranslationLocaleCode()` once at call time and returns. A component that already rendered will keep its old translation until something re-renders it. See [`recipes.md`](../recipes/) for re-render patterns.
+- **Does not subscribe to locale changes.** It's a plain function call — it reads `getTranslationLocaleCode()` once at call time and returns. A component that already rendered will keep its old translation until something re-renders it. See [`recipes`](../recipes/SKILL.md) for re-render patterns.
 - **Does not respect a per-call converter argument.** The converter is `jsxConverter`, always. If you need a different converter, call `transFrom(...)` directly.
 - **Does not coerce return types.** If placeholders is empty / primitive, you get a string back; otherwise you get an array of React fragments. Consumers must handle both.
 

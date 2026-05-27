@@ -129,12 +129,13 @@ function UserList() {
   return <ul>{data.map(u => <li key={u.id}>{u.name}</li>)}</ul>;
 }
 
-// In the parent:
-<Suspense fallback={<Spinner />}>
-  <ErrorBoundary fallback={<p>Failed to load</p>}>
+// In the parent — ErrorBoundary MUST be outside Suspense so it catches
+// throws from the suspended subtree:
+<ErrorBoundary fallback={<p>Failed to load</p>}>
+  <Suspense fallback={<Spinner />}>
     <UserList />
-  </ErrorBoundary>
-</Suspense>
+  </Suspense>
+</ErrorBoundary>
 ```
 
 ### Non-React subscription
@@ -166,6 +167,6 @@ import { invalidate, getData, getQuery } from "@mongez/atomic-query";
 
 - **`queryFn` is always up-to-date**: The hook stores a ref to `queryFn` and updates it on every render. Refetches (background, on-focus, etc.) always run the latest closure — no stale prop or state captured inside the fetcher.
 
-- **AbortSignal usage**: Always pass the provided `signal` to `fetch()`. The signal is cancelled when the component unmounts mid-fetch or when a newer fetch supersedes the current one.
+- **AbortSignal usage**: Always pass the provided `signal` to `fetch()`. The signal is aborted when a newer fetch supersedes the current one (e.g. an invalidation or a fresh `refetchQuery`) or when `queryAtom.destroyQuery(key)` runs. It is **not** aborted when the consuming component unmounts — that keeps Strict Mode remounts, route bounces, and Suspense retries from killing in-flight work. Use `destroyQuery` (or `clearCache`) when you need explicit cancellation.
 
 - **Auto-GC**: Starts automatically on the first `useQuery` call. Default: runs every 60 seconds, removes entries unobserved for more than 5 minutes, caps cache at 100 entries.

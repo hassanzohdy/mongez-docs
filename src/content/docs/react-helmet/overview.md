@@ -10,7 +10,7 @@ sidebar:
   label: "Overview"
 ---
 
-`@mongez/react-helmet` is a React adapter over [`@mongez/dom`](https://github.com/hassanzohdy/dom)'s metadata module. It exposes one component — `<Helmet>` — that sets the document title (with optional app-name suffix), description, keywords, Open Graph / Twitter cards, canonical URL, favicon, and `<html>` attributes. The component is effect-only: it returns `null` and writes directly to `document.head` and `document.documentElement`.
+`@mongez/react-helmet` is a React adapter over [`@mongez/dom`](https://github.com/hassanzohdy/dom)'s metadata module. It exposes one component — `<Helmet>` — that sets the document title (with optional app-name suffix), description, keywords, Open Graph / Twitter cards, canonical URL, and `<html>` attributes. The component is effect-only: it returns `null` and writes directly to `document.head` and `document.documentElement`.
 
 ## Install
 
@@ -97,4 +97,4 @@ unmount  →  each effect's cleanup restores the mount-time snapshot
 
 ## Browser-only
 
-The component file accesses `document.documentElement` at the module top level. To use under SSR frameworks, wrap the import in a `"use client"` boundary (Next.js App Router) or a `dynamic(..., { ssr: false })` import (Pages Router / Remix).
+`document.documentElement` is accessed lazily (inside a helper function, not at the module top level), so importing `@mongez/react-helmet` in a Node SSR context does not throw. All writes still happen in client-side effects, so the component is a no-op during server render. To use under SSR frameworks, wrap the import in a `"use client"` boundary (Next.js App Router) or a `dynamic(..., { ssr: false })` import (Pages Router / Remix).

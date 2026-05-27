@@ -45,6 +45,7 @@ export default defineConfig({
             { label: "Overview", link: "/" },
             { label: "Ecosystem map", link: "/ecosystem/" },
             { label: "Which package?", link: "/which/" },
+            { label: "Roadmap", link: "/roadmap/" },
           ],
         },
         // ── Foundations ──

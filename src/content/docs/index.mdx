@@ -24,6 +24,8 @@ hero:
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
+import PackageCard from "../../components/PackageCard.astro";
+import { FEATURED_PACKAGES } from "../../data/packages";
 
 ## What is Mongez?
 
@@ -36,6 +38,16 @@ No wrappers. No magic globals. No runtime bloat. Just typed packages that get ou
 **Mongez** ‹*mon-jez*› · مونجز
 
 In Arabic, *mongez* describes someone who **gets it done, fast** — literally a "rabbit accelerator." Effectively, the friend who pushes a feature to prod while you're still drafting the function signature. The toolkit is named in their honor.
+
+## Featured packages
+
+The five most-reached-for `@mongez/*` packages. Start here if you're not sure which one fits.
+
+<div class="mongez-pkg-grid mongez-pkg-grid--homepage">
+  {FEATURED_PACKAGES.map(pkg => <PackageCard pkg={pkg} />)}
+</div>
+
+[See all 24 packages →](/packages/)
 
 ## Pick your starting point
 

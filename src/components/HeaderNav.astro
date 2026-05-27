@@ -1,0 +1,140 @@
+---
+/**
+ * HeaderNav — replaces Starlight's default <SocialIcons> slot.
+ *
+ * Renders three text nav links (Documentation, Packages, Ecosystem)
+ * followed by the GitHub icon. Matches the Warlock.js docs pattern
+ * but uses Mongez branding (ice-300 accent, JetBrains Mono headings,
+ * brand-tinted hover).
+ *
+ * Registered in astro.config.mjs:
+ *   components: { SocialIcons: "./src/components/HeaderNav.astro" }
+ */
+import config from "virtual:starlight/user-config";
+import { Icon } from "@astrojs/starlight/components";
+
+type Platform = keyof NonNullable<typeof config.social>;
+type SocialConfig = NonNullable<NonNullable<typeof config.social>[Platform]>;
+const socials = Object.entries(config.social || {}) as [Platform, SocialConfig][];
+
+const navLinks = [
+  { label: "Docs", href: "/start/welcome/" },
+  { label: "Packages", href: "/packages/" },
+  { label: "Ecosystem", href: "/ecosystem/" },
+];
+
+const currentPath = Astro.url.pathname;
+const isActive = (href: string) => {
+  if (href === "/packages/") return currentPath === "/packages/";
+  if (href === "/ecosystem/") return currentPath === "/ecosystem/";
+  // "Docs" is active when we're inside any /<package>/ doc route or the start section
+  return (
+    currentPath.startsWith("/start/") ||
+    /^\/[a-z-]+\//.test(currentPath) &&
+      currentPath !== "/packages/" &&
+      currentPath !== "/ecosystem/" &&
+      currentPath !== "/which/"
+  );
+};
+---
+
+<nav class="mongez-header-nav" aria-label="Primary">
+  <ul>
+    {
+      navLinks.map(link => (
+        <li>
+          <a
+            href={link.href}
+            class:list={[{ "is-active": isActive(link.href) }]}
+          >
+            {link.label}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>
+
+{
+  socials.length > 0 && (
+    <div class="mongez-header-socials">
+      {socials.map(([platform, { label, url }]) => (
+        <a href={url} rel="me" class="sl-flex" aria-label={label}>
+          <span class="sr-only">{label}</span>
+          <Icon name={platform} />
+        </a>
+      ))}
+    </div>
+  )
+}
+
+<style>
+  .mongez-header-nav {
+    display: flex;
+    align-items: center;
+  }
+  .mongez-header-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+  }
+  .mongez-header-nav a {
+    display: inline-flex;
+    align-items: center;
+    height: 2.25rem;
+    padding: 0 0.85rem;
+    border-radius: 6px;
+    font-family: var(--sl-font-mono);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--sl-color-gray-2);
+    text-decoration: none;
+    letter-spacing: -0.01em;
+    transition: color 0.15s ease, background-color 0.15s ease;
+    cursor: pointer;
+  }
+  .mongez-header-nav a:hover {
+    color: var(--sl-color-white);
+    background-color: rgba(79, 195, 247, 0.08);
+  }
+  .mongez-header-nav a.is-active {
+    color: var(--mongez-ice-300);
+    background-color: rgba(79, 195, 247, 0.10);
+  }
+
+  .mongez-header-socials {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+    padding-left: 0.5rem;
+    border-left: 1px solid var(--sl-color-hairline);
+  }
+  .mongez-header-socials a {
+    color: var(--sl-color-text-accent);
+    padding: 0.5em;
+    margin: -0.25em;
+    border-radius: 6px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+  .mongez-header-socials a:hover {
+    background-color: rgba(79, 195, 247, 0.08);
+  }
+
+  /* On narrow screens (< 50rem) Starlight collapses the right side.
+   * Hide our text nav there — the mobile menu (sidebar) takes over.
+   * The GitHub icon stays visible. */
+  @media (max-width: 50rem) {
+    .mongez-header-nav {
+      display: none;
+    }
+    .mongez-header-socials {
+      border-left: none;
+      margin-left: 0;
+      padding-left: 0;
+    }
+  }
+</style>

@@ -490,6 +490,290 @@ nav.sidebar::after,
 }
 
 /* ═════════════════════════════════════════════════════════════════════
+ * PACKAGES PAGE + PACKAGECARD
+ *
+ * Used by:
+ *   - /packages/         (src/pages/packages.astro — full-width, no sidebar)
+ *   - /                  (Featured section on the homepage)
+ *
+ * Visual model:
+ *   - Wide content well, generous vertical rhythm
+ *   - Cards: deep navy bg, 1px hairline border, subtle hover lift
+ *   - Featured cards: gradient hairline border + chip + outer glow
+ *   - Hover: gradient hairline border (no scale, no layout shift)
+ *   - Everything cursor-pointer
+ * ════════════════════════════════════════════════════════════════════ */
+
+/* Outer page well — wider than docs content (the page has no sidebar) */
+.mongez-packages-page {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 3vw, 2.5rem);
+  font-family: var(--sl-font);
+}
+
+/* Hide Starlight's auto-rendered page <h1> on the /packages/ splash page
+ * — our <header.mongez-packages-hero> is the real hero. The splash layout
+ * renders the title in main > .content-panel:first-child (separate sibling
+ * from the slot container). Scope via main:has() so we only affect this
+ * one route, not every splash page. */
+main:has(.mongez-packages-page) > .content-panel:first-child {
+  display: none;
+}
+
+/* Hero */
+.mongez-packages-hero {
+  position: relative;
+  padding: clamp(2.5rem, 5vw, 4.5rem) 0 clamp(1.5rem, 3vw, 2.5rem);
+  border-bottom: 1px solid var(--sl-color-hairline);
+  margin-bottom: clamp(2rem, 4vw, 3.5rem);
+  background:
+    radial-gradient(ellipse 60% 80% at 80% 30%, rgba(79, 195, 247, 0.07), transparent 60%),
+    radial-gradient(ellipse 50% 60% at 15% 70%, rgba(255, 110, 64, 0.06), transparent 60%);
+}
+.mongez-packages-hero h1 {
+  font-family: var(--sl-font-mono);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  margin: 0 0 0.5rem;
+  background: linear-gradient(
+    180deg,
+    var(--sl-color-white) 0%,
+    var(--mongez-ice-300) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.mongez-packages-tagline {
+  margin: 0;
+  font-size: clamp(1rem, 1vw + 0.85rem, 1.15rem);
+  font-weight: 300;
+  color: var(--sl-color-gray-2);
+  max-width: 56rem;
+  line-height: 1.55;
+}
+
+/* Group sections */
+.mongez-packages-section {
+  margin-bottom: clamp(2.5rem, 4vw, 4rem);
+}
+.mongez-packages-section-head {
+  margin-bottom: 1.25rem;
+}
+.mongez-packages-section-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--sl-font-mono);
+  font-size: clamp(1.35rem, 1.5vw + 0.7rem, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0;
+  color: var(--sl-color-white);
+  position: relative;
+  padding-bottom: 0.4em;
+}
+.mongez-packages-section-head h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 48px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--mongez-fire-500), var(--mongez-ice-500));
+  border-radius: 1px;
+}
+.mongez-packages-section-head p {
+  margin: 0.6rem 0 0;
+  color: var(--sl-color-gray-2);
+  font-size: 0.95rem;
+}
+.mongez-section-bolt {
+  background: var(--mongez-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-size: 1.1em;
+  filter: drop-shadow(0 0 8px rgba(255, 152, 0, 0.4));
+}
+
+/* Card grid — 2-col desktop, 1-col mobile */
+.mongez-pkg-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+@media (max-width: 50rem) {
+  .mongez-pkg-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Homepage variant — slightly tighter spacing since it sits inside
+ * markdown flow with other sections above/below */
+.mongez-pkg-grid--homepage {
+  margin: 1.5rem 0 1rem;
+}
+
+/* PackageCard */
+.mongez-pkg-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1.1rem 1.25rem 1rem;
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 10px;
+  background: rgba(12, 18, 25, 0.6);
+  color: var(--sl-color-gray-1);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease,
+    box-shadow 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
+}
+.mongez-pkg-card::before {
+  /* Top hairline — subtle ice tint on hover */
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+.mongez-pkg-card:hover {
+  border-color: rgba(79, 195, 247, 0.35);
+  background: rgba(12, 18, 25, 0.85);
+  box-shadow: 0 10px 30px -12px rgba(33, 150, 243, 0.25);
+  transform: translateY(-1px);
+}
+.mongez-pkg-card:hover::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--mongez-ice-500),
+    transparent
+  );
+}
+.mongez-pkg-card:focus-visible {
+  outline: 2px solid var(--mongez-ice-500);
+  outline-offset: 2px;
+}
+
+.mongez-pkg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.mongez-pkg-name {
+  font-family: var(--sl-font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--sl-color-white);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
+  transition: text-decoration-color 0.2s ease, color 0.2s ease;
+}
+.mongez-pkg-card:hover .mongez-pkg-name {
+  color: var(--mongez-ice-300);
+  text-decoration-color: var(--mongez-ice-500);
+}
+.mongez-pkg-arrow {
+  color: var(--sl-color-gray-3);
+  flex-shrink: 0;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+.mongez-pkg-card:hover .mongez-pkg-arrow {
+  color: var(--mongez-ice-300);
+  transform: translateX(2px);
+}
+.mongez-pkg-desc {
+  margin: 0;
+  color: var(--sl-color-gray-2);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+.mongez-pkg-scope {
+  font-family: var(--sl-font-mono);
+  font-size: 0.78rem;
+  color: var(--sl-color-gray-3);
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  letter-spacing: -0.01em;
+}
+
+/* Featured variant — gradient hairline border, soft outer glow, chip.
+ * Uses the double-background trick to render a gradient "border": the
+ * inner solid color is the card surface, the outer gradient is the
+ * border layer via background-clip + background-origin. */
+.mongez-pkg-card.is-featured {
+  border-color: transparent;
+  background-image:
+    linear-gradient(rgba(12, 18, 25, 0.92), rgba(12, 18, 25, 0.92)),
+    linear-gradient(
+      135deg,
+      var(--mongez-fire-500) 0%,
+      var(--mongez-fire-300) 25%,
+      var(--mongez-ice-300) 75%,
+      var(--mongez-ice-500) 100%
+    );
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow:
+    0 0 0 1px rgba(79, 195, 247, 0.08),
+    0 12px 30px -16px rgba(255, 110, 64, 0.25),
+    0 12px 30px -16px rgba(33, 150, 243, 0.25);
+}
+.mongez-pkg-card.is-featured:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(79, 195, 247, 0.15),
+    0 18px 40px -16px rgba(255, 110, 64, 0.35),
+    0 18px 40px -16px rgba(33, 150, 243, 0.35);
+}
+.mongez-pkg-card.is-featured::before {
+  /* Disable the simple top hairline — the gradient border already covers it */
+  display: none;
+}
+.mongez-pkg-chip {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  height: 1.25rem;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  font-family: var(--sl-font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(
+    135deg,
+    var(--mongez-fire-500),
+    var(--mongez-ice-500)
+  );
+  box-shadow: 0 2px 8px rgba(255, 110, 64, 0.3);
+  pointer-events: none;
+}
+/* When the chip is present, give the arrow some room */
+.mongez-pkg-card.is-featured .mongez-pkg-arrow {
+  display: none;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
  * SCROLLBAR — branded thin scrollbar (WebKit + Firefox)
  * ════════════════════════════════════════════════════════════════════ */
 :root[data-theme="dark"] {

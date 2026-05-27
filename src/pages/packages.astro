@@ -1,0 +1,73 @@
+---
+/**
+ * /packages/ — full-width packages landing page.
+ *
+ * Modelled after Warlock.js's /packages/ pattern but styled with the
+ * Mongez fire/ice/bolt brand. Uses StarlightPage with hasSidebar=false
+ * so the page gets the shared header + footer + theme but feels like
+ * a landing — no left/right sidebars eating the viewport.
+ *
+ * Single source of truth for the package list: src/data/packages.ts.
+ */
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import PackageCard from "../components/PackageCard.astro";
+import {
+  PACKAGES,
+  FEATURED_PACKAGES,
+  GROUP_ORDER,
+  packagesByGroup,
+} from "../data/packages";
+
+const grouped = packagesByGroup();
+const totalCount = PACKAGES.length;
+const groupCount = GROUP_ORDER.length;
+---
+
+<StarlightPage
+  frontmatter={{
+    title: "Packages",
+    description:
+      "All 24 @mongez/* packages at a glance — independently installable TypeScript packages for state, routing, forms, networking, configuration, and build tooling.",
+    template: "splash",
+    pagefind: false,
+  }}
+  hasSidebar={false}
+>
+  <div class="mongez-packages-page">
+    <header class="mongez-packages-hero">
+      <h1>Packages</h1>
+      <p class="mongez-packages-tagline">
+        {totalCount} packages, {groupCount} groups. Each one is independently
+        installable; together they form a cohesive TypeScript toolkit.
+      </p>
+    </header>
+
+    <section class="mongez-packages-section">
+      <header class="mongez-packages-section-head">
+        <h2>
+          <span class="mongez-section-bolt" aria-hidden="true">⚡</span>
+          Featured
+        </h2>
+        <p>The packages most teams reach for first.</p>
+      </header>
+      <div class="mongez-pkg-grid">
+        {FEATURED_PACKAGES.map(pkg => <PackageCard pkg={pkg} />)}
+      </div>
+    </section>
+
+    {
+      GROUP_ORDER.map(group => (
+        <section class="mongez-packages-section">
+          <header class="mongez-packages-section-head">
+            <h2>{group}</h2>
+          </header>
+          <div class="mongez-pkg-grid">
+            {grouped[group].map(pkg => (
+              <PackageCard pkg={pkg} featured={false} />
+            ))}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+</StarlightPage>

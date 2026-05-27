@@ -41,6 +41,14 @@ export default defineConfig({
         github: "https://github.com/hassanzohdy",
       },
       customCss: ["./src/styles/global.css"],
+      // Replace Starlight's default <SocialIcons> slot with our own
+      // <HeaderNav> that renders top-nav text links (Docs, Packages,
+      // Ecosystem) followed by the GitHub icon. Keeps Starlight's
+      // Header layout intact (SiteTitle on the left, Search in the
+      // middle, our nav on the right).
+      components: {
+        SocialIcons: "./src/components/HeaderNav.astro",
+      },
       lastUpdated: true,
       editLink: {
         baseUrl:

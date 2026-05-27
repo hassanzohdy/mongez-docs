@@ -1,0 +1,47 @@
+---
+/**
+ * PackageCard — the scannable card used on /packages/ and the homepage
+ * Featured section. Renders package name (link), one-line description,
+ * arrow icon, and (when featured=true) a gradient hairline border + chip.
+ *
+ * Plain anchor — the entire card is clickable. cursor-pointer via CSS.
+ */
+import type { Package } from "../data/packages";
+
+interface Props {
+  pkg: Package;
+  /** Force the featured visual style even if pkg.featured is false. */
+  featured?: boolean;
+}
+const { pkg, featured } = Astro.props;
+const isFeatured = featured ?? pkg.featured ?? false;
+const href = `/${pkg.slug}/overview/`;
+---
+
+<a
+  href={href}
+  class:list={["mongez-pkg-card", { "is-featured": isFeatured }]}
+  data-slug={pkg.slug}
+>
+  {isFeatured && <span class="mongez-pkg-chip">Featured</span>}
+  <div class="mongez-pkg-head">
+    <h3 class="mongez-pkg-name">{pkg.name}</h3>
+    <svg
+      class="mongez-pkg-arrow"
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+      <polyline points="12 5 19 12 12 19"></polyline>
+    </svg>
+  </div>
+  <p class="mongez-pkg-desc">{pkg.description}</p>
+  <code class="mongez-pkg-scope">@mongez/{pkg.slug}</code>
+</a>

@@ -218,11 +218,16 @@ body {
 
 /* ═════════════════════════════════════════════════════════════════════
  * SITE HEADER — brand-toned + signature gradient strip
+ *
+ * IMPORTANT: do NOT override `position` on header — Starlight uses
+ * position:sticky on header for scroll behavior, and changing it
+ * collapses the layout. Same for sidebar (below).
+ *
+ * The ::after gradient strip uses Starlight's existing positioning
+ * context (header is already a positioned element).
  * ════════════════════════════════════════════════════════════════════ */
 header.header {
-  position: relative;
   background: var(--sl-color-bg-nav);
-  backdrop-filter: saturate(140%);
 }
 
 header.header::after {
@@ -273,13 +278,18 @@ a.site-title {
  *   3. A 3px gradient bar on the active link's left edge
  *   4. Subtle brand-tinted hover background
  * ════════════════════════════════════════════════════════════════════ */
+/* CRITICAL: do NOT override `position` on .sidebar-pane. Starlight
+ * uses position:fixed (mobile) / position:sticky (desktop) and our
+ * own override collapsed the layout (main content pushed 1500px down).
+ * The background is safe to override; the accent rail uses the
+ * existing fixed/sticky positioning as its containing block. */
 nav.sidebar,
 .sidebar-pane {
-  position: relative;
   background: var(--sl-color-bg-sidebar);
 }
 
-/* Vertical accent rail — right edge of sidebar */
+/* Vertical accent rail — right edge of sidebar.
+ * Uses the sidebar's own positioning context (fixed/sticky). */
 nav.sidebar::after,
 .sidebar-pane::after {
   content: "";

@@ -1,5 +1,5 @@
 ---
-title: "Trans X"
+title: "transX"
 name: mongez-react-localization-trans-x
 description: |
   Reference for `transX()` — when to use it instead of `trans()`, what it delegates to (`transFrom` + `jsxConverter`), and what it does not do (subscriptions, per-call converter override, type coercion).

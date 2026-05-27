@@ -1,0 +1,33 @@
+{
+  "name": "mongez-docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Astro Starlight site for mongez.js.org. Documents @mongez/atom, @mongez/react-atom, @mongez/atomic-query, @mongez/events, @mongez/reinforcements.",
+  "scripts": {
+    "dev": "astro dev",
+    "sync": "tsx scripts/sync-skills.ts",
+    "build:llms": "tsx scripts/build-llms-full.ts",
+    "prebuild": "yarn sync && yarn build:llms",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.0",
+    "@astrojs/starlight": "^0.30.0",
+    "@mongez/atom": "*",
+    "@mongez/atomic-query": "*",
+    "@mongez/events": "*",
+    "@mongez/react-atom": "*",
+    "@mongez/reinforcements": "*",
+    "@tailwindcss/vite": "^4.0.0",
+    "astro": "^5.0.0",
+    "sharp": "^0.33.0",
+    "tailwindcss": "^4.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0"
+  }
+}

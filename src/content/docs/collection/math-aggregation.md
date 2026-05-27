@@ -1,0 +1,123 @@
+---
+title: "Math Aggregation"
+name: mongez-collection-math-aggregation
+description: |
+  Tutorial-style "when to use which math method" guide for `@mongez/collection` — totaling, averaging, finding min/max/median, counting by predicate or by key, applying per-item arithmetic (`plus`/`minus`/`multiply`/`divide`/`modulus`/`increment`/`decrement`/`double`/`half`), parity filters (`even`/`odd`/`evenIndexes`/`oddIndexes`).
+  TRIGGER when: user asks "how do I total / aggregate / sum up / average a field across items", "how to apply a markup / discount to every item", "how to count items matching a condition", "what's the difference between count / countValue / countBy"; user explores math methods without a specific method name in mind; code shapes look like aggregating monetary or analytic fields with `collect(...)`.
+  SKIP: lookup-style "what does method X do" — use `mongez-collection-math` for the exact reference; one-shot aggregation without a chain — use `mongez-reinforcements-arrays`' standalone `sum`/`average`/`min`/`max`/`median`/`count`/`countBy` instead; filtering or sorting downstream of math — see `mongez-collection-querying` / `mongez-collection-sort-group`.
+sidebar:
+  order: 50
+---
+
+## When to use
+
+- Summing, averaging, finding min/max, or computing medians over a list of numbers or object fields.
+- Counting items that satisfy a condition, or counting how many times each value appears.
+- Applying arithmetic (+, -, *, /) to every item or to a named field of every item.
+
+## How to use
+
+### Aggregate reducers
+
+All four accept an optional `key` string (dot-notation supported) to operate on a field rather than the item itself.
+
+```ts
+const nums = collect([10, 20, 30]);
+nums.sum();        // 60
+nums.average();    // 20
+nums.avg();        // 20 (alias)
+nums.min();        // 10
+nums.max();        // 30
+nums.median();     // 20
+
+const orders = collect([
+  { total: { price: 100 } },
+  { total: { price: 200 } },
+]);
+orders.sum("total.price");     // 300
+orders.average("total.price"); // 150
+orders.min("total.price");     // 100
+orders.max("total.price");     // 200
+```
+
+### `count` — conditional count
+
+```ts
+collect(users).count(u => u.active);   // number of active users
+collect(users).count("active");        // same, using a key string
+```
+
+### `countValue` — exact value occurrences
+
+```ts
+collect(["a", "b", "a", "c"]).countValue("a"); // 2
+```
+
+### `countBy` — frequency map per key value
+
+```ts
+collect(users).countBy("role");
+// { admin: 3, user: 12, guest: 1 }
+```
+
+### Per-item arithmetic — `plus`, `minus`, `multiply`, `divide`, `modulus`
+
+Two overloads each:
+
+1. **Primitive items** — single `amount` argument.
+2. **Keyed field** — `(key, amount)` arguments; returns a new collection with that field updated on each item.
+
+```ts
+// Primitive
+collect([1, 2, 3]).plus(10);       // [11, 12, 13]
+collect([10, 20]).multiply(3);     // [30, 60]
+collect([9, 6]).divide(3);         // [3, 2]
+collect([10, 7]).modulus(3);       // [1, 1]
+
+// Keyed field
+collect([{ age: 20 }, { age: 30 }]).plus("age", 5);
+// [{ age: 25 }, { age: 35 }]
+
+collect(items).multiply("price", 1.2);  // apply 20% markup
+```
+
+### `increment` / `decrement` — shorthand ±1
+
+```ts
+collect([1, 2, 3]).increment();         // [2, 3, 4]
+collect(items).increment("views");      // views + 1 on each item
+collect(items).decrement("stock");      // stock - 1 on each item
+```
+
+### `double` / `half` — shorthand ×2 and ÷2
+
+```ts
+collect([5, 10]).double();              // [10, 20]
+collect([10, 20]).half();               // [5, 10]
+collect(items).double("price");
+collect(items).half("discount");
+```
+
+### `even` / `odd` — filter by numeric value parity
+
+```ts
+collect([1, 2, 3, 4]).even();           // [2, 4]
+collect([1, 2, 3, 4]).odd();            // [1, 3]
+
+collect(items).even("score");           // items where score is even
+```
+
+### `evenIndexes` / `oddIndexes` — filter by position parity
+
+```ts
+collect(["a","b","c","d"]).evenIndexes(); // ["a","c"] (indexes 0, 2)
+collect(["a","b","c","d"]).oddIndexes();  // ["b","d"] (indexes 1, 3)
+```
+
+## Key details / Pitfalls
+
+- `min` / `max` on an **empty** collection return `0` (matching `@mongez/reinforcements` convention). On a **non-empty** collection they find the true minimum/maximum, so a collection of all-positive numbers will not incorrectly return `0` for `max`.
+- `sum`, `average`, and `median` delegate directly to `@mongez/reinforcements`' helpers.
+- **Keyed arithmetic does not mutate plain-object items.** `plus("age", 5)` shallow-clones each plain-object item via `cloneForSet` before calling `set(clone, key, value)`, so the originals in the source collection are safe. Class instances and nested object references are still passed through by reference (the clone is shallow) — deep-clone the input first if deep immutability is required.
+- `divide` and `modulus` throw `Error("Cannot divide by zero")` when the divisor is `0`.
+- All per-item math methods return a new collection — they do not mutate `this.items`.

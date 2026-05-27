@@ -1,0 +1,15 @@
+/*
+ * Global styles for the Mongez docs site.
+ *
+ * Tailwind v4 is loaded via the Vite plugin (see astro.config.mjs). The
+ * `@import "tailwindcss"` directive below is what activates utilities.
+ *
+ * Starlight ships its own design tokens on `:root` (`--sl-color-*`,
+ * `--sl-text-*`, etc.). We don't override them — Tailwind layers on
+ * top so we can use `flex`, `gap-*`, `grid-cols-*`, etc. inside MDX
+ * pages without fighting the theme.
+ */
+@import "tailwindcss";
+
+/* Custom utilities live in @layer components if/when we add them.
+ * Keep custom CSS minimal — Starlight + Tailwind cover almost everything. */

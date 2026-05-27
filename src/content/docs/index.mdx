@@ -1,0 +1,57 @@
+---
+title: Mongez
+description: A family of focused TypeScript packages for production apps — state management, routing, forms, utilities, localization, caching, and build tooling.
+template: splash
+hero:
+  tagline: Focused TypeScript packages that accelerate production development.
+  actions:
+    - text: Explore the ecosystem
+      link: /ecosystem/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/hassanzohdy
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## What is Mongez?
+
+Mongez is a family of focused TypeScript packages. Each does one thing well — atom-shaped state management, React routing, form handling, DOM helpers, localization, caching, encryption, and build tooling. Use one package or the whole suite; they compose naturally but stay fully independent.
+
+<CardGrid>
+  <Card title="State management" icon="seti:default">
+    Atom-shaped state with action verbs, React hooks, server-data caching, and SSR support.
+
+    [`@mongez/atom`](/atom/getting-started/) · [`@mongez/react-atom`](/react-atom/getting-started/) · [`@mongez/atomic-query`](/atomic-query/getting-started/)
+  </Card>
+  <Card title="Utilities" icon="seti:json">
+    Type guards, string / array / object helpers, async utilities, and collection manipulation — ~130 typed functions.
+
+    [`@mongez/reinforcements`](/reinforcements/overview/) · [`@mongez/supportive-is`](/supportive-is/overview/) · [`@mongez/collection`](/collection/overview/)
+  </Card>
+  <Card title="React ecosystem" icon="seti:react">
+    Routing, form validation, localization, document `<head>` management, and user session handling — all React-first.
+
+    [`@mongez/react-router`](/react-router/overview/) · [`@mongez/react-form`](/react-form/getting-started/) · [`@mongez/react-localization`](/react-localization/overview/)
+  </Card>
+  <Card title="Infrastructure" icon="seti:config">
+    Environment variables, caching drivers, encryption, URL helpers, and a Vite plugin suite.
+
+    [`@mongez/config`](/config/overview/) · [`@mongez/cache`](/cache/overview/) · [`@mongez/vite`](/vite/overview/)
+  </Card>
+</CardGrid>
+
+## Package independence
+
+Every package can be used standalone. `@mongez/reinforcements` is just a utility belt — no peers. `@mongez/atom` is framework-agnostic and works in Vue or plain TypeScript. The React adapters only pull in what they need.
+
+When you adopt one package, the others compose naturally — but nothing forces you to take all of them.
+
+## Built for AI-assisted development
+
+Every package ships with `llms.txt`, `llms-full.txt`, and a `skills/` folder of dense reference cards designed for LLM ingestion. Claude, Cursor, and Copilot get the API shape right on the first try.
+
+[See the ecosystem `llms.txt` →](https://mongez.js.org/llms.txt) · [Full reference (`llms-full.txt`) →](https://mongez.js.org/llms-full.txt)

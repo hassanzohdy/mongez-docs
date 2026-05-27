@@ -1,0 +1,21 @@
+# Build output
+dist/
+.astro/
+
+# Dependencies
+node_modules/
+
+# Generated content — synced from sibling packages by `yarn sync`.
+# Each per-package directory holds BOTH synced files (sourced from
+# `../<package>/skills/*.md`) and optional hand-authored ones like
+# `getting-started.md`. Synced files carry a `# Synced from …` marker
+# comment in their frontmatter. The directories are not gitignored so
+# hand-authored pages stay tracked; the sync overwrites by filename.
+
+# Generated ecosystem llms-full.txt (built from per-package files at build time)
+public/llms-full.txt
+
+# OS / editor
+.DS_Store
+.vscode/
+*.log

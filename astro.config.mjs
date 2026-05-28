@@ -79,27 +79,20 @@ export default defineConfig({
           ],
         },
         {
-          // Reinforcements ships ~130 helpers grouped by primitive type.
-          // The "By type" subgroup mirrors how authors organize their imports.
           label: "Reinforcements",
           collapsed: true,
           items: [
             { slug: "reinforcements/overview" },
-            {
-              label: "By type",
-              items: [
-                { slug: "reinforcements/arrays" },
-                { slug: "reinforcements/objects" },
-                { slug: "reinforcements/strings" },
-                { slug: "reinforcements/numbers" },
-                { slug: "reinforcements/async" },
-                { slug: "reinforcements/functions" },
-                { slug: "reinforcements/lazy" },
-                { slug: "reinforcements/mixed" },
-                { slug: "reinforcements/random" },
-                { slug: "reinforcements/types" },
-              ],
-            },
+            { slug: "reinforcements/arrays" },
+            { slug: "reinforcements/objects" },
+            { slug: "reinforcements/strings" },
+            { slug: "reinforcements/numbers" },
+            { slug: "reinforcements/async" },
+            { slug: "reinforcements/functions" },
+            { slug: "reinforcements/lazy" },
+            { slug: "reinforcements/mixed" },
+            { slug: "reinforcements/random" },
+            { slug: "reinforcements/types" },
             { slug: "reinforcements/recipes" },
           ],
         },
@@ -108,16 +101,11 @@ export default defineConfig({
           collapsed: true,
           items: [
             { slug: "supportive-is/overview" },
-            {
-              label: "Predicates",
-              items: [
-                { slug: "supportive-is/primitives" },
-                { slug: "supportive-is/collections" },
-                { slug: "supportive-is/formats" },
-                { slug: "supportive-is/environment" },
-                { slug: "supportive-is/misc" },
-              ],
-            },
+            { slug: "supportive-is/primitives" },
+            { slug: "supportive-is/collections" },
+            { slug: "supportive-is/formats" },
+            { slug: "supportive-is/environment" },
+            { slug: "supportive-is/misc" },
             { slug: "supportive-is/recipes" },
           ],
         },
@@ -126,31 +114,16 @@ export default defineConfig({
           collapsed: true,
           items: [
             { slug: "collection/overview" },
-            {
-              label: "Construction",
-              items: [
-                { slug: "collection/construction" },
-                { slug: "collection/builtins" },
-              ],
-            },
-            {
-              label: "Querying",
-              items: [
-                { slug: "collection/querying" },
-                { slug: "collection/where" },
-                { slug: "collection/sort-group" },
-                { slug: "collection/pagination" },
-              ],
-            },
+            { slug: "collection/construction" },
+            { slug: "collection/builtins" },
+            { slug: "collection/querying" },
+            { slug: "collection/where" },
+            { slug: "collection/sort-group" },
+            { slug: "collection/pagination" },
             { slug: "collection/math" },
-            {
-              label: "Transforming",
-              items: [
-                { slug: "collection/transforming" },
-                { slug: "collection/mutation" },
-                { slug: "collection/strings" },
-              ],
-            },
+            { slug: "collection/transforming" },
+            { slug: "collection/mutation" },
+            { slug: "collection/strings" },
             { slug: "collection/recipes" },
           ],
         },
@@ -235,23 +208,13 @@ export default defineConfig({
           collapsed: true,
           items: [
             { slug: "cache/overview" },
-            {
-              label: "Basics",
-              items: [
-                { slug: "cache/basic-usage" },
-                { slug: "cache/manager" },
-              ],
-            },
-            {
-              label: "Drivers",
-              items: [
-                { slug: "cache/drivers" },
-                { slug: "cache/local-storage" },
-                { slug: "cache/session-storage" },
-                { slug: "cache/runtime" },
-                { slug: "cache/custom-drivers" },
-              ],
-            },
+            { slug: "cache/basic-usage" },
+            { slug: "cache/manager" },
+            { slug: "cache/drivers" },
+            { slug: "cache/local-storage" },
+            { slug: "cache/session-storage" },
+            { slug: "cache/runtime" },
+            { slug: "cache/custom-drivers" },
             { slug: "cache/encrypted-cache" },
             { slug: "cache/recipes" },
           ],
@@ -408,29 +371,14 @@ export default defineConfig({
           collapsed: true,
           items: [
             { slug: "vite/overview" },
-            {
-              label: "Env",
-              items: [
-                { slug: "vite/env-loading" },
-                { slug: "vite/env-in-html" },
-              ],
-            },
-            {
-              label: "Build",
-              items: [
-                { slug: "vite/build-zip" },
-                { slug: "vite/htaccess" },
-                { slug: "vite/production-base-url" },
-                { slug: "vite/prerender" },
-              ],
-            },
-            {
-              label: "DX",
-              items: [
-                { slug: "vite/auto-open-browser" },
-                { slug: "vite/tsconfig-aliases" },
-              ],
-            },
+            { slug: "vite/env-loading" },
+            { slug: "vite/env-in-html" },
+            { slug: "vite/production-base-url" },
+            { slug: "vite/build-zip" },
+            { slug: "vite/htaccess" },
+            { slug: "vite/prerender" },
+            { slug: "vite/tsconfig-aliases" },
+            { slug: "vite/auto-open-browser" },
             { slug: "vite/recipes" },
           ],
         },
@@ -453,21 +401,11 @@ export default defineConfig({
           collapsed: true,
           items: [
             { slug: "copper/overview" },
-            {
-              label: "Core",
-              items: [
-                { slug: "copper/colors" },
-                { slug: "copper/log" },
-                { slug: "copper/box" },
-              ],
-            },
-            {
-              label: "Animation",
-              items: [
-                { slug: "copper/spinner" },
-                { slug: "copper/progress" },
-              ],
-            },
+            { slug: "copper/colors" },
+            { slug: "copper/log" },
+            { slug: "copper/box" },
+            { slug: "copper/spinner" },
+            { slug: "copper/progress" },
             { slug: "copper/utilities" },
             { slug: "copper/recipes" },
           ],

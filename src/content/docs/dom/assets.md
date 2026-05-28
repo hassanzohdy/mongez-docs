@@ -3,8 +3,6 @@ title: "Assets"
 name: mongez-dom-assets
 description: |
   Helpers for injecting external stylesheets, Google Fonts, local fonts via the `FontFace` API, third-party scripts, and reading/writing CSS custom properties on `:root` or any element.
-  TRIGGER when: code imports `styleSheet`, `googleFont`, `loadFont`, `loadScript`, `cssVariable`, `setCssVariable`, `getCssVariable`, or the `FontOptions` / `FontWeightSetup` types from `@mongez/dom`; user asks "how do I load a Google Font / custom font at runtime", "how do I inject a stylesheet from JS", "how do I swap themes", "how do I read or set a CSS variable from JS", or "how do I load a third-party script when consent is granted"; `import { googleFont, loadFont, styleSheet, cssVariable } from "@mongez/dom"`.
-  SKIP: user is updating `<head>` meta tags (title, og:*, canonical, …) — load `mongez-dom-metadata` instead; raw `<meta>` / `<link>` / element-attribute building — `mongez-dom-head-elements`; keyboard / scroll / viewport / dark-mode detection — `mongez-dom-interactions`; React-specific declarative head management — `@mongez/react-helmet`.
 sidebar:
   order: 50
 ---

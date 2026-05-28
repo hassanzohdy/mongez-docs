@@ -1,11 +1,8 @@
 ---
 title: "Runtime"
-
 name: mongez-cache-runtime
 description: |
   Reference for `RunTimeDriver` — the in-memory `Record<string, {value, expiresAt?}>` driver used for tests, SSR fallback, and ephemeral page-lifetime state, including its overridden `getItem` / `setItem` / `convertValue` / `parseValue` and the `has(missingKey)` semantics.
-  TRIGGER when: code calls `new RunTimeDriver()` or imports `RunTimeDriver` from `@mongez/cache`; user asks "how do I get an in-memory cache for tests", "how do I make cache SSR-safe in Node", or "how does `has()` behave for missing keys"; `import { RunTimeDriver } from "@mongez/cache"`.
-  SKIP: localStorage-backed persistence — use `mongez-cache-local-storage`; tab-scoped storage — use `mongez-cache-session-storage`; encrypted drivers — use `mongez-cache-encryption`; building a brand-new backend — use `mongez-cache-custom-drivers`.
 sidebar:
   order: 50
 ---
@@ -25,14 +22,6 @@ class RunTimeDriver extends BaseCacheEngine implements CacheDriverInterface {
 ```
 
 The driver overrides `getItem` / `setItem` / `removeItem` to talk to `this.data` directly, and overrides `convertValue` / `parseValue` to no-ops since the in-memory store doesn't need JSON.
-
-## When to use it
-
-- **Tests**: deterministic, isolated, no browser globals required, no cleanup between tests.
-- **SSR fallback**: when the same code path runs on server and client, switch to the runtime driver on the server so calls don't throw.
-- **Ephemeral state**: caches that should die with the page (search-suggestion cache, derived-value memos, etc).
-
-For state that survives a reload, use [`PlainLocalStorageDriver`](../local-storage/). For tab-scoped state that survives a refresh, use [`PlainSessionStorageDriver`](../session-storage/).
 
 ## Usage
 

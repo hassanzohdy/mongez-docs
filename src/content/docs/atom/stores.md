@@ -3,8 +3,6 @@ title: "Atom Stores (SSR)"
 name: mongez-atom-stores
 description: |
   How to use `AtomStore` and `createAtomStore` to isolate per-request atom state in SSR environments and avoid cross-request state leaks.
-  TRIGGER when: code imports `AtomStore`, `createAtomStore`, or calls `store.use`, `store.get`, `store.has`, `store.list`, `store.hydrate`, `store.snapshot`, `store.destroy` from `@mongez/atom`; user asks "how do I scope atoms per request in Next.js / Express / Fastify", "how do I avoid SSR state leaks", or "how do I serialize server atom state and rehydrate on the client"; `import { createAtomStore, AtomStore } from "@mongez/atom"`.
-  SKIP: defining the template atoms themselves (use `mongez-atom-atoms` / `mongez-atom-defining-atoms`); React-side `AtomStoreProvider` / `useAtomStore` (lives in `@mongez/react-atom`); pure client-only apps with no SSR; the sibling `mongez-atom-atom-store` skill — only one of the two should fire for the same request.
 sidebar:
   order: 70
 ---

@@ -3,8 +3,6 @@ title: "Recipes"
 name: mongez-atomic-query-recipes
 description: |
   Idiomatic composition recipes for `@mongez/atomic-query` — optimistic updates with rollback, list mutation + invalidation, infinite scroll wiring, prefetch on hover, SSR data hand-off via `<HydrateQueries>`, suspense-driven detail pages, and segment-aware cross-query invalidation.
-  TRIGGER when: code combines `useQuery`, `useMutation`, `useInfiniteQuery`, `useSuspenseQuery`, `<HydrateQueries>`, or `queryAtom` across more than one component; user asks "show me an end-to-end optimistic update", "how do I prefetch on hover", "SSR hand-off with atomic-query", "infinite scroll integration", or "how do I invalidate multiple queries at once".
-  SKIP: single-feature dives — load `mongez-atomic-query-queries`, `mongez-atomic-query-mutations`, `mongez-atomic-query-infinite`, `mongez-atomic-query-invalidation`, `mongez-atomic-query-suspense`, `mongez-atomic-query-ssr`, or `mongez-atomic-query-cache` instead; vanilla `@mongez/atom` state without a server-data layer (use `mongez-atom-recipes`); React-Query interop — patterns translate but the API surface differs.
 sidebar:
   order: 99
 ---

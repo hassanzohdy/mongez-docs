@@ -3,8 +3,6 @@ title: "Git Workflow"
 name: mongez-pkgist-git-workflow
 description: |
   pkgist git automation: `commit` field accepts `string` (explicit message), `true` (auto-generates `Released <new-version>`, added in 1.1.0), `false` (explicit skip), or omitted (skip, back-compat default). When git runs, pipeline is `git add . → git commit → git push → git tag v<version> → git push tags`. Family-level `commit` overrides per-package commit. Optional `branch` field overrides the push target.
-  TRIGGER when: user asks about pkgist's git automation; user sets or asks about `commit: true`, `commit: false`, `commit: "message"`, `branch`; user asks "how do I auto-generate release commit messages", "how do I skip git in pkgist", "what does pkgist tag look like", "does pkgist push tags"; user is debugging why git ops did/didn't run after a build; questions about `--no-git` flag.
-  SKIP: npm publish (use `pipeline` skill section on publish, or `cli` skill for `--no-publish`); version-bump rules (use `versioning` skill); CLI commands in general (use `cli` skill).
 sidebar:
   order: 50
 ---

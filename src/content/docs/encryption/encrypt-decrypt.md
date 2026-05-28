@@ -3,8 +3,6 @@ title: "Encrypt Decrypt"
 name: mongez-encryption-encrypt-decrypt
 description: |
   Detailed reference for the `encrypt` and `decrypt` functions — signatures, the `{ data: value }` JSON wrapper, failure modes, and non-deterministic ciphertext semantics.
-  TRIGGER when: code imports `encrypt` or `decrypt` from `@mongez/encryption`; user asks "how do I encrypt/decrypt a value", "why does decrypt return null", "how do I round-trip a token through a URL", or "why are two encryptions of the same input different"; file constructs opaque tokens, masks values in logs, or swaps the `crypto-js` driver (AES, TripleDES).
-  SKIP: hashing/fingerprinting — use `mongez-encryption-hashes`; configuring module-level defaults — use `mongez-encryption-configuration`; recipe-style compositions (URL token, HMAC layering) — use `mongez-encryption-recipes`; authenticated encryption / AEAD (use Node `crypto` AES-GCM, libsodium, or JWE); password storage (use `bcrypt`/`scrypt`/`argon2`); `@mongez/cache` encrypted entries (its own skill).
 sidebar:
   order: 50
 ---

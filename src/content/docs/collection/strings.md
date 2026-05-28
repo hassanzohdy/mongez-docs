@@ -3,8 +3,6 @@ title: "Strings"
 name: mongez-collection-strings
 description: |
   Per-element string transforms on an `ImmutableCollection` — `appendString`, `prependString`, `concatString`, `replaceString`, `replaceAllString`, `removeString`, `removeAllString`, `trim` — plus type casting (`string`, `number`, `boolean`). Documents the keyed-form source mutation, the `replaceAllString` "always global regex" trap, and when to reach for `.map` instead.
-  TRIGGER when: code calls `c.appendString`, `c.prependString`, `c.concatString`, `c.replaceString`, `c.replaceAllString`, `c.removeString`, `c.removeAllString`, `c.trim`, `c.string`, `c.number`, or `c.boolean` on an `ImmutableCollection`; user asks "how do I append / prepend / replace / strip / trim text on every item", "how to cast a collection of strings to numbers / booleans", "how to apply a string transform to one field of every object".
-  SKIP: ad-hoc string mapping where `c.map(item => ...)` is clearer — use `mongez-collection-builtins`; single-string formatting helpers — those live in `@mongez/reinforcements` (string slugify / kebab / camel / template) and are out of scope here; `replaceAllString` with a `RegExp` value — it forces `new RegExp(s, "g")`, use `replaceString(/regex/g, ...)` instead.
 sidebar:
   order: 50
 ---
@@ -82,26 +80,3 @@ collect([1, null, "x"]).string();       // ["1", "null", "x"]
 collect(["1", "abc", ""]).number();     // [1, NaN, 0]
 collect([0, 1, "", "x"]).boolean();     // [false, true, false, true]
 ```
-
-## When to reach for these vs `map`
-
-For most callers the `c.map(item => /* custom transform */)` route is clearer:
-
-```ts
-// Equivalent (and more transparent):
-collect(["Ada", "Bob"]).map(name => `${name}!`);
-
-// vs:
-collect(["Ada", "Bob"]).appendString("!");
-```
-
-The dedicated string helpers shine when you want a chain like:
-
-```ts
-collect(users)
-  .trim(" ", "name")
-  .appendString(" verified", "name")
-  .replaceString(/\s+/, " ", "name");
-```
-
-That reads as a fluent pipeline. Otherwise stick with `map`.

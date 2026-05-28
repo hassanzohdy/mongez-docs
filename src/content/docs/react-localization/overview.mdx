@@ -1,0 +1,129 @@
+---
+title: "React Localization"
+name: mongez-react-localization-overview
+description: |
+  @mongez/react-localization — React bridge for @mongez/localization. Drops <strong>, <a>, or any React element straight into a translated sentence via jsxConverter and transX.
+sidebar:
+  order: 10
+  label: "Overview"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+The React-side bridge for [`@mongez/localization`](/localization/overview/). Does **one thing**: replace `:placeholder` (or `{{placeholder}}`) tokens in a translation with React children, so you can drop `<strong>`, `<a href>`, or any element straight into a translated sentence. Small on purpose — two exports.
+
+## Highlighted features
+
+<div class="mongez-highlights">
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+  <h3><code>jsxConverter</code></h3>
+  <p>The placeholder-to-React converter. Wire it globally via <code>setLocalizationConfigurations(&#123; converter: jsxConverter &#125;)</code> and every <code>trans</code> understands JSX placeholders.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+  <h3><code>transX</code> per call</h3>
+  <p>Keep <code>trans</code> strongly typed as <code>string</code> for the 99% of call sites that don't need JSX, drop down to <code>transX</code> when you do.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="fire">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+  <h3>Same placeholder pattern</h3>
+  <p>JSX placeholders use the same <code>:name</code> (or custom regex) markers as plain text — no second template syntax to learn.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="bolt">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+  <h3>Two exports, no hooks</h3>
+  <p>Plain functions. No <code>useLocale</code>, no <code>&lt;Translate&gt;</code>, no subscription layer — drive re-renders from your own state library.</p>
+</div>
+
+</div>
+
+## Install
+
+<Tabs syncKey="pkg-manager">
+<TabItem label="npm">
+
+```sh
+npm install @mongez/react-localization @mongez/localization
+```
+
+</TabItem>
+<TabItem label="yarn">
+
+```sh
+yarn add @mongez/react-localization @mongez/localization
+```
+
+</TabItem>
+<TabItem label="pnpm">
+
+```sh
+pnpm add @mongez/react-localization @mongez/localization
+```
+
+</TabItem>
+</Tabs>
+
+Peer deps: `@mongez/localization >= 3.4.0`, `react >= 18`.
+
+## Quick peek
+
+```tsx
+import { extend, setLocalizationConfigurations, trans } from "@mongez/localization";
+import { jsxConverter } from "@mongez/react-localization";
+
+setLocalizationConfigurations({ converter: jsxConverter });
+extend("en", { agreeToTerms: "You agree to our :tos." });
+
+<p>{trans("agreeToTerms", { tos: <a href="/terms">Terms</a> })}</p>
+// → <p>You agree to our <a href="/terms">Terms</a>.</p>
+```
+
+Wire `jsxConverter` once at boot, then drop React elements straight into translated sentences as placeholder values.
+
+## The two paths
+
+### Path A: wire `jsxConverter` globally
+
+```ts
+import { setLocalizationConfigurations } from "@mongez/localization";
+import { jsxConverter } from "@mongez/react-localization";
+
+setLocalizationConfigurations({
+  defaultLocaleCode: "en",
+  fallback: "en",
+  converter: jsxConverter,
+});
+```
+
+Every `trans(...)` understands JSX placeholders. The return type widens to `string | React.ReactNode[]`.
+
+### Path B: keep the default converter, use `transX` per call
+
+```ts
+import { trans } from "@mongez/localization";
+import { transX } from "@mongez/react-localization";
+
+trans("greeting");                              // → "Hello" (string)
+trans("greeting", { name: "Alice" });           // → "Hello Alice" (string)
+transX("greeting", { name: <em>Alice</em> });   // → React fragment array
+```
+
+This path keeps `trans` strongly typed as `string` for everything else.
+
+## What this package is NOT
+
+- **Not a hooks library.** No `useLocale`, `useTranslate`, `<Translate>`.
+- **Not a subscription layer.** `setCurrentLocaleCode("ar")` does NOT re-render components that already rendered. Drive re-renders from a parent state.
+- **Not a registry.** Translations live in `@mongez/localization`'s module state. Call `extend("en", {...})` from the core package.
+
+## Where to go next
+
+- **[transX](../trans-x/)** — per-call JSX-aware translation
+- **[JSX converter](../jsx-converter/)** — global wiring, placeholder mechanics
+- **[Recipes](../recipes/)** — common patterns (link injection, formatting, dynamic locale switching)
+- **[Localization core](/localization/overview/)** — `extend`, `trans`, locale switching, plural rules

@@ -3,8 +3,6 @@ title: "Recipes"
 name: mongez-react-localization-recipes
 description: |
   Real-world usage patterns for `@mongez/react-localization` — JSX inside translated sentences, pluralization, locale switching via state or atoms, a custom `useLocale` hook, a `Translate` component, and mixing converters per call site.
-  TRIGGER when: code uses `transX`, `jsxConverter`, `setCurrentLocaleCode`, `localizationEvents`, or `useSyncExternalStore` for locale switching; user asks "how do I render a link inside a translated sentence", "how do I re-render on locale change", "how do I build a useLocale hook", "how do I make a Translate component", or "how do I do pluralization with JSX"; `import { transX } from "@mongez/react-localization"` alongside `extend`/`setCurrentLocaleCode` from `@mongez/localization`.
-  SKIP: `mongez-react-localization-jsx-converter` (converter internals), `mongez-react-localization-trans-x` (the bare function reference), `mongez-react-localization-overview` (install/intro); `@mongez/localization` is the framework-agnostic core for registry and count rules; `@mongez/react-atom` for atom-driven state — referenced here but its own skill set covers atom internals; react-i18next, react-intl.
 sidebar:
   order: 99
 ---

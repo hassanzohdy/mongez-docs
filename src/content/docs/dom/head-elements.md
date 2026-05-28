@@ -3,8 +3,6 @@ title: "Head elements"
 name: mongez-dom-head-elements
 description: |
   Lower-level helpers for creating and reusing `<meta>` and `<link>` tags in `<head>`, plus reading/writing HTML element attributes on `<html>` or any element.
-  TRIGGER when: code imports `createHeadElement`, `createNewMeta`, `meta`, `itemprop`, `metaLink`, `twitter`, `og`, `setHTMLAttributes`, `setElementAttributes`, `getElementAttributes`, or the `AttributesList` type from `@mongez/dom`; user asks "how do I add custom og:* / article:* meta tags", "how do I add a manifest link", "how do I set html[lang] / html[dir]", "how do I add a preconnect / alternate link", or "how do I read all attributes off an element"; `import { meta, metaLink, itemprop, setHTMLAttributes } from "@mongez/dom"`.
-  SKIP: user only needs the common `title` / `description` / `og:*` / `twitter:*` / favicon / canonical fields — load `mongez-dom-metadata` instead; `<link rel="stylesheet">` / Google Fonts injection lives in `mongez-dom-assets`; React declarative head — `@mongez/react-helmet`; this package is framework-agnostic DOM.
 sidebar:
   order: 50
 ---

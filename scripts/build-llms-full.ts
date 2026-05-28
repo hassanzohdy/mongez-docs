@@ -43,8 +43,13 @@ const PACKAGES: Array<{ name: string; pkg: string }> = [
   { name: "@mongez/react-helmet",       pkg: "react-helmet" },
   { name: "@mongez/react-form",         pkg: "react-form" },
   { name: "@mongez/user",               pkg: "user" },
-  // Build tooling
+  // Networking
+  { name: "@mongez/http",               pkg: "http" },
+  // Developer tooling
   { name: "@mongez/vite",               pkg: "vite" },
+  { name: "@mongez/pkgist",             pkg: "pkgist" },
+  { name: "@mongez/copper",             pkg: "copper" },
+  { name: "@mongez/agent-kit",          pkg: "agent-kit" },
 ];
 
 async function main() {

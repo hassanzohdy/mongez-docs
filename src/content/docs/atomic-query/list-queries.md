@@ -3,21 +3,9 @@ title: "List Queries"
 name: mongez-atomic-query-list-queries
 description: |
   Built-in array helpers (push, unshift, pop, shift, replace, remove, removeByIndex, clear, sort, reverse) for queries that hold a list, plus useInfiniteQuery for cursor/page-based pagination.
-  TRIGGER when: code imports `push`, `unshift`, `pop`, `shift`, `replace`, `remove`, `removeByIndex`, `clear`, `sort`, `reverse`, `useInfiniteQuery`, `updateQueryData`, `fetchNextPage`, or `getNextPageParam` from `@mongez/atomic-query`; user asks "how do I work with a list-shaped query / append after create / remove after delete / paginate / load more"; typical import `import { queryAtom, useInfiniteQuery, push } from "@mongez/atomic-query"`.
-  SKIP: pure array-helper reference (no pagination context) — use `mongez-atomic-query-list-helpers`; deep `useInfiniteQuery` mechanics only — use `mongez-atomic-query-infinite`; non-list `useQuery` calls — use `mongez-atomic-query-basic-query` or `mongez-atomic-query-queries`; write-side `useMutation` hooks — use `mongez-atomic-query-mutations`.
 sidebar:
   order: 50
 ---
-
-## When to use
-
-Use this skill when:
-- Someone wants to append a new record to a list after a successful mutation.
-- Someone wants to remove a record from the list cache after a delete operation.
-- Someone wants to update one item inside a list without refetching.
-- Someone is implementing an infinite-scroll or load-more pattern.
-- Someone asks about `useInfiniteQuery`, `fetchNextPage`, or `hasNextPage`.
-- Someone asks about any of these helpers: `push`, `unshift`, `pop`, `shift`, `replace`, `remove`, `removeByIndex`, `clear`, `sort`, `reverse`.
 
 ## How to use
 

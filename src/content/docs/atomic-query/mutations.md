@@ -3,21 +3,9 @@ title: "Mutations (useMutation)"
 name: mongez-atomic-query-mutations
 description: |
   How to use useMutation for write-side operations, including optimistic updates with onMutate/onError rollback and direct cache writes with updateQueryData.
-  TRIGGER when: code imports `useMutation`, `updateQueryData`, `UseMutationOptions`, `UseMutationResult`, or `MutationStatus` from `@mongez/atomic-query`, or references `mutate`, `mutateAsync`, `onMutate`, `onSuccess`, `onError`, `onSettled`, `isPending`, or `reset` in a mutation context; user asks "how do I POST / PUT / PATCH / DELETE / do an optimistic update / roll back on error / write to the cache without refetching"; typical import `import { useMutation, queryAtom } from "@mongez/atomic-query"`.
-  SKIP: read-side `useQuery` calls — use `mongez-atomic-query-basic-query` or `mongez-atomic-query-queries`; forcing a refetch after a mutation completes — use `mongez-atomic-query-invalidation`; array-shaped helpers `push`/`remove`/`sort` for list updates — use `mongez-atomic-query-list-helpers`; cache lifecycle/GC questions — use `mongez-atomic-query-cache`.
 sidebar:
   order: 30
 ---
-
-## When to use
-
-Use this skill when:
-- Someone needs to perform a write operation (POST, PUT, PATCH, DELETE).
-- Someone wants to update the UI before the server responds (optimistic update).
-- Someone needs to roll back an optimistic change when the server returns an error.
-- Someone wants to write to the cache directly without firing a network request (`updateQueryData`).
-- Someone asks about `isPending`, `isError`, `isSuccess`, `reset()`, or `mutateAsync`.
-- Someone asks about aborting a mutation or preventing double-submit.
 
 ## How to use
 

@@ -3,8 +3,6 @@ title: "Hashes"
 name: mongez-encryption-hashes
 description: |
   Reference for the `md5`, `sha1`, `sha256`, and `sha512` hash functions exported by `@mongez/encryption` — lowercase hex digests via `crypto-js`.
-  TRIGGER when: code imports `md5`, `sha1`, `sha256`, or `sha512` from `@mongez/encryption`; user asks "how do I hash a string", "how do I make a stable cache key / ETag / idempotency key", "is md5/sha1 safe for X", or "how do I fingerprint a payload"; file derives a content-addressed key from JSON / a query / a request body.
-  SKIP: symmetric `encrypt`/`decrypt` — use `mongez-encryption-encrypt-decrypt`; module defaults — use `mongez-encryption-configuration`; password storage (use `bcrypt`/`scrypt`/`argon2`); message authentication (use HMAC — `CryptoJS.HmacSHA256`, or Node `crypto.createHmac`); constant-time secret comparison (use `crypto.timingSafeEqual`); `@mongez/cache` cache-key derivation that already wraps this; signatures over adversarial inputs.
 sidebar:
   order: 50
 ---

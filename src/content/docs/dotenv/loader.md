@@ -3,8 +3,6 @@ title: "Loader"
 name: mongez-dotenv-loader
 description: |
   API reference and usage patterns for `loadEnv`, `loadEnvFile`, and `resetEnv` — the file-loading entry points of `@mongez/dotenv`.
-  TRIGGER when: code imports `loadEnv`, `loadEnvFile`, `resetEnv`, or `EnvLoaderOptions` from `@mongez/dotenv`; user asks "how do I load .env files", "how do I pick env file by NODE_ENV", or "how does .env.shared layering work"; typical import pattern like `import { loadEnv, loadEnvFile, resetEnv, type EnvLoaderOptions } from "@mongez/dotenv"`.
-  SKIP: parsing-only questions about `parseLine`/`parseValue` or the `env()` reader — use `mongez-dotenv-parser`; higher-level config groups, dot-notation lookups, or schema/defaults — that's `@mongez/config`; this skill is the `.env` file loader, not the application config layer; browser/cookie/localStorage env shims.
 sidebar:
   order: 50
 ---

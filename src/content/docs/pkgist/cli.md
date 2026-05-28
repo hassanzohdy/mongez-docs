@@ -3,8 +3,6 @@ title: "CLI"
 name: mongez-pkgist-cli
 description: |
   pkgist CLI commands and flags: `build [pkg...]` (one or more standalone), `build:family <name>` (one synchronized family), `build:all` (every standalone + every family), `list` (show registered packages with current versions), `validate` (check config + paths). Common flags: `--dry-run`, `--no-publish`, `--no-git`, `--concurrency <n>`, `--config <path>`, `--verbose`.
-  TRIGGER when: user runs or asks about `pkgist build`, `pkgist build:family`, `pkgist build:all`, `pkgist list`, `pkgist validate`; user asks about `--dry-run`, `--no-publish`, `--no-git`, `--concurrency`, `--config`, `--verbose` flags; user asks "how do I release just one package", "how do I dry-run", "what does pkgist list show"; user looking at pkgist help output.
-  SKIP: per-package config options (use `package-options` skill); the build pipeline internals (use `pipeline` skill); git/publish behavior in depth (use `git-workflow` skill).
 sidebar:
   order: 50
 ---

@@ -3,8 +3,6 @@ title: "Package Options"
 name: mongez-pkgist-package-options
 description: |
   Every per-package field accepted in `standalone[]` and `families[].packages[]`: `name`, `root`, `type`, `formats`, `mainType`, `entries`, `srcDir`, `dts`, `sourcemap`, `minify`, `preserveModules`, `clone`, `publish`, `access`, `commit`, `branch`. Defaults, semantics, and which fields are standalone-only or family-level-only.
-  TRIGGER when: user is configuring a package entry in pkgist; user asks about `clone`, `entries`, `srcDir`, `mainType`, `formats`, `preserveModules`, `dts`, `sourcemap`, `minify`, `publish`, `access`, `type` options; user asks "what fields can I set on a package", "what's the default for X", "what does preserveModules do"; user gets a type error on a package entry; user asks about React vs TypeScript package config.
-  SKIP: `version` field semantics (use `versioning` skill); `commit` field semantics in depth (use `git-workflow` skill); top-level `settings` block (use `configuration` skill); CLI flags (use `cli` skill).
 sidebar:
   order: 50
 ---

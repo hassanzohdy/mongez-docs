@@ -1,0 +1,138 @@
+---
+title: "React Helmet"
+name: mongez-react-helmet-overview
+description: |
+  @mongez/react-helmet — React adapter over @mongez/dom's metadata module. One <Helmet> component that sets title, description, OG/Twitter, canonical URL, and <html> attributes. Unmount restores prior values.
+sidebar:
+  order: 10
+  label: "Overview"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+A React adapter over [`@mongez/dom`](/dom/overview/)'s metadata module. One `<Helmet>` component that sets the document title (with optional app-name suffix), description, keywords, Open Graph / Twitter cards, canonical URL, and `<html>` attributes. **Effect-only** — returns `null`, writes directly to `document.head` and `document.documentElement`, restores prior values on unmount.
+
+## Highlighted features
+
+<div class="mongez-highlights">
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+  <h3>One prop fans out</h3>
+  <p><code>&lt;Helmet title=&quot;X&quot; /&gt;</code> writes <code>&lt;title&gt;</code>, <code>og:title</code>, <code>twitter:title</code>, and <code>itemprop=name</code> in one go. Same for description, image, URL.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+  <h3>Auto-restore on unmount</h3>
+  <p>Each effect snapshots the mount-time value. Unmount cleanly restores — perfect for client-side route transitions that briefly mount one Helmet and then another.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="fire">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+  <h3>App-wide defaults</h3>
+  <p><code>setHelmetConfigurations(&#123; appName, titleSeparator, …, translationFunction &#125;)</code> — set once, every <code>&lt;Helmet&gt;</code> instance inherits. Per-call props win.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="bolt">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+  <h3>SSR-safe import</h3>
+  <p><code>document</code> is read lazily inside helpers, not at module top. Importing in a Node SSR context doesn't throw — writes happen in client effects, so SSR is a clean no-op.</p>
+</div>
+
+</div>
+
+## Install
+
+<Tabs syncKey="pkg-manager">
+<TabItem label="npm">
+
+```sh
+npm install @mongez/react-helmet @mongez/dom
+```
+
+</TabItem>
+<TabItem label="yarn">
+
+```sh
+yarn add @mongez/react-helmet @mongez/dom
+```
+
+</TabItem>
+<TabItem label="pnpm">
+
+```sh
+pnpm add @mongez/react-helmet @mongez/dom
+```
+
+</TabItem>
+</Tabs>
+
+Peer deps: `react >= 18`, `@mongez/dom >= 1.1.2`.
+
+## Quick peek
+
+```tsx
+import Helmet from "@mongez/react-helmet";
+
+export default function ArticlePage({ post }) {
+  return (
+    <>
+      <Helmet
+        title={post.title}
+        description={post.summary}
+        keywords={post.tags}
+        image={post.coverImage}
+      />
+      <Article post={post} />
+    </>
+  );
+}
+```
+
+Drop `<Helmet>` anywhere in the tree — every prop fans out to the matching `<head>` tags. Unmount restores the prior values automatically.
+
+## Mental model
+
+| Concept | What it is |
+|---|---|
+| `<Helmet>` | Side-effect renderer — returns `null`. Every prop maps to an effect that writes one or more `<head>` tags. |
+| `HelmetProps` | Per-instance settings. Each maps to a known set of tags. |
+| `setHelmetConfigurations` | App-wide defaults. Per-call props win when both are provided. |
+| `translationFunction` | Optional `(key) => string` — auto-translates the title and `appName` through `@mongez/localization`. |
+
+## Lifecycle
+
+```
+<Helmet title=… description=… />
+   │
+   ▼
+mount  →  one effect per prop  →  writes to document.head / documentElement
+   │
+   ▼
+re-render with new prop  →  effect with that prop in deps re-runs  →  overwrites the tag
+   │
+   ▼
+unmount  →  each effect's cleanup restores the mount-time snapshot
+```
+
+`title`, `description`, `keywords`, `image`, `url`, `pageId`, `className`, and `htmlAttributes` all restore reliably.
+
+## Scope boundaries
+
+| Concern | Lives where | Why |
+|---|---|---|
+| DOM-level title / meta writers | [`@mongez/dom`](/dom/overview/) | Framework-agnostic |
+| React component + config singleton | This package | React-specific |
+| Translation strings | [`@mongez/localization`](/localization/overview/) | Pluggable via `translationFunction` |
+
+## SSR
+
+`document.documentElement` is accessed lazily inside helper functions, not at the module top level — importing `@mongez/react-helmet` in a Node SSR context does not throw. All writes happen in client-side effects, so the component is a no-op during server render. For Next.js App Router, wrap in a `"use client"` boundary; for Pages Router / Remix, use `dynamic(..., { ssr: false })`.
+
+## Where to go next
+
+- **[The Helmet component](../helmet/)** — full prop list, mount/unmount semantics
+- **[Metadata](../metadata/)** — which tags each prop writes
+- **[Configuration](../configuration/)** — `setHelmetConfigurations`, app-wide defaults, translation function
+- **[Recipes](../recipes/)** — common patterns (article pages, dark mode, route transitions)

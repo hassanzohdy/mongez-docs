@@ -3,8 +3,6 @@ title: "Recipes"
 name: mongez-react-helmet-recipes
 description: |
   Practical copy-paste recipes for common `@mongez/react-helmet` patterns using `<Helmet>` and `setHelmetConfigurations` — static pages, async-data pages, i18n via `translationFunction`, RTL routes, per-route canonical URLs, app boot setup, layout-level vs route-level coexistence, and Next.js App Router (`"use client"`) integration.
-  TRIGGER when: user asks "how do I set up Helmet in my app", "give me a working example with async data", "how do I do RTL / localized titles with Helmet", "how do I use Helmet in Next.js App Router", or "what's the canonical URL pattern"; user is wiring `<Helmet>` into a new project and needs a working end-to-end snippet.
-  SKIP: API reference questions about a single prop or function — use `mongez-react-helmet-helmet` or `mongez-react-helmet-configuration`; debugging which meta tags are produced (use `mongez-react-helmet-metadata`); Next.js's own route-level `export const metadata`; the upstream `react-helmet` library.
 sidebar:
   order: 99
 ---

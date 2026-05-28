@@ -774,6 +774,137 @@ main:has(.mongez-packages-page) > .content-panel:first-child {
 }
 
 /* ═════════════════════════════════════════════════════════════════════
+ * HIGHLIGHTS — "Highlighted features" grid for package overview pages.
+ *
+ * Authored as raw HTML inside .md files because the sync script writes
+ * markdown (not .mdx), so Astro components aren't an option in synced
+ * overview pages. Markup convention:
+ *
+ *   <div class="mongez-highlights">
+ *     <div class="mongez-highlight" data-accent="ice">  // or "fire" / "bolt"
+ *       <svg class="mongez-highlight-icon" ...>...</svg>
+ *       <h3>Title</h3>
+ *       <p>One-line description.</p>
+ *     </div>
+ *   </div>
+ *
+ * The `data-accent` attribute picks the brand-tint per card. Default = ice.
+ * ════════════════════════════════════════════════════════════════════ */
+.mongez-highlights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 2rem;
+}
+@media (max-width: 50rem) {
+  .mongez-highlights {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mongez-highlight {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 1rem;
+  row-gap: 0.25rem;
+  padding: 1.1rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--sl-color-hairline);
+  background: var(--sl-color-bg-nav);
+  transition: border-color 0.2s ease, background-color 0.2s ease,
+    transform 0.2s ease;
+}
+.mongez-highlight:hover {
+  border-color: var(--mongez-ice-300);
+  transform: translateY(-1px);
+}
+
+.mongez-highlight-icon {
+  grid-row: 1 / span 2;
+  grid-column: 1;
+  align-self: start;
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  color: var(--mongez-ice-300);
+  background: rgba(79, 195, 247, 0.10);
+  border: 1px solid rgba(79, 195, 247, 0.22);
+}
+
+.mongez-highlight h3 {
+  /* Override Starlight's default heading margins inside the card. */
+  margin: 0 !important;
+  grid-column: 2;
+  font-family: var(--sl-font-mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--sl-color-white);
+  /* Disable auto-anchor links inside card headings */
+  pointer-events: auto;
+}
+.mongez-highlight h3 a {
+  /* Suppress Starlight's heading anchor icon inside cards */
+  display: none;
+}
+
+.mongez-highlight p {
+  margin: 0 !important;
+  grid-column: 2;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--sl-color-gray-2);
+}
+.mongez-highlight p code {
+  font-size: 0.82rem;
+  padding: 0.1em 0.35em;
+  background: rgba(79, 195, 247, 0.10);
+  border: 1px solid rgba(79, 195, 247, 0.18);
+  border-radius: 4px;
+  color: var(--mongez-ice-300);
+}
+
+/* Accent variants — pulled from the brand palette. */
+.mongez-highlight[data-accent="fire"] .mongez-highlight-icon {
+  color: var(--mongez-fire-300);
+  background: rgba(255, 152, 0, 0.10);
+  border-color: rgba(255, 152, 0, 0.22);
+}
+.mongez-highlight[data-accent="fire"]:hover {
+  border-color: var(--mongez-fire-300);
+}
+.mongez-highlight[data-accent="fire"] p code {
+  background: rgba(255, 152, 0, 0.10);
+  border-color: rgba(255, 152, 0, 0.20);
+  color: var(--mongez-fire-300);
+}
+
+.mongez-highlight[data-accent="bolt"] .mongez-highlight-icon {
+  color: var(--mongez-ice-300);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 152, 0, 0.10) 0%,
+    rgba(79, 195, 247, 0.10) 100%
+  );
+  border-color: rgba(79, 195, 247, 0.22);
+}
+
+/* Light theme — soften backgrounds, raise text contrast. */
+:root[data-theme="light"] .mongez-highlight {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.10);
+}
+:root[data-theme="light"] .mongez-highlight h3 {
+  color: #0f172a;
+}
+:root[data-theme="light"] .mongez-highlight p {
+  color: #475569;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
  * SCROLLBAR — branded thin scrollbar (WebKit + Firefox)
  * ════════════════════════════════════════════════════════════════════ */
 :root[data-theme="dark"] {

@@ -3,8 +3,6 @@ title: "List helpers"
 name: mongez-atomic-query-list-helpers
 description: |
   Array mutation helpers on queryAtom (push, unshift, pop, shift, replace, remove, removeByIndex, clear, sort, reverse) that update a cached array value in-place without triggering a refetch.
-  TRIGGER when: code imports `push`, `unshift`, `pop`, `shift`, `replace`, `remove`, `removeByIndex`, `clear`, `sort`, or `reverse` from `@mongez/atomic-query`, or calls `queryAtom.push`/`queryAtom.remove`/`queryAtom.sort` etc.; user asks "how do I append/prepend/remove/reorder items in a cached list without refetching"; typical import `import { queryAtom, push, remove } from "@mongez/atomic-query"`.
-  SKIP: cursor/offset pagination via `useInfiniteQuery` — use `mongez-atomic-query-infinite`; full-replacement optimistic writes via `updateQueryData` — use `mongez-atomic-query-mutations` or `mongez-atomic-query-cache`; invalidating instead of mutating — use `mongez-atomic-query-invalidation`; native `Array.prototype` work that doesn't go through `queryAtom`.
 sidebar:
   order: 70
 ---

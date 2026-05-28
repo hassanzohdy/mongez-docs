@@ -3,20 +3,9 @@ title: "Defining Atoms"
 name: mongez-atom-defining-atoms
 description: |
   How to create atoms with `createAtom` and `atomCollection` — options, actions, typing, object helpers, and the built-in mutation API.
-  TRIGGER when: code imports or calls `createAtom` or `atomCollection`, uses `Atom<V>` / `AtomOptions` generics, or invokes `merge`, `change`, `silentChange`, `silentUpdate`, `beforeUpdate`, `watch`, `onChange`, `onReset`, `clone`, `destroy`; user asks "how do I create an atom", "how do I type an atom", "how do I add actions/methods to my atom", or "how do I subscribe to atom changes"; `import { createAtom, atomCollection } from "@mongez/atom"`.
-  SKIP: deep reference of every base method (use `mongez-atom-atoms` for full surface); array verb specifics (use `mongez-atom-collections`); computed atoms (use `mongez-atom-derived` / `mongez-atom-derived-atoms`); SSR stores (use `mongez-atom-atom-store` / `mongez-atom-stores`); persistence (use `mongez-atom-persist` / `mongez-atom-persistence`); React hooks (live in `@mongez/react-atom`).
 sidebar:
   order: 50
 ---
-
-## When to use
-
-Load this skill when the user is:
-- Creating a new atom with `createAtom` or `atomCollection`
-- Adding typed actions to an atom
-- Using `merge`, `change`, `watch`, `silentUpdate`, or `beforeUpdate`
-- Subscribing to changes with `onChange` or `onReset`
-- Working with `reset`, `destroy`, or `clone`
 
 ## Install
 

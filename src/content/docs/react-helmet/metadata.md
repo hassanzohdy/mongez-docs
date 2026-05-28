@@ -3,8 +3,6 @@ title: "Metadata"
 name: mongez-react-helmet-metadata
 description: |
   Reference mapping every `<Helmet>` prop (`title`, `description`, `keywords`, `image`, `url`, `htmlAttributes`, `pageId`, `className`) to the exact `<title>`, `<meta>`, and `<link>` tags it produces in the DOM — Open Graph, Twitter Card, `itemprop`, and `<html>` attribute effects.
-  TRIGGER when: user asks "which meta tags does Helmet write for X", "where is my og:title / twitter:card / canonical link coming from", or "why is og:image missing"; tests query `document.head.querySelector('meta[property="og:..."]')` or `link[rel="canonical"]`; debugging SEO / social-share previews around a `<Helmet>` render.
-  SKIP: per-prop API and lifecycle questions (use `mongez-react-helmet-helmet`); app-wide config (use `mongez-react-helmet-configuration`); the lower-level `@mongez/dom` `meta()` / `itemprop()` writers when called outside the React component; non-`@mongez` head libraries like `react-helmet` or `next/head`.
 sidebar:
   order: 50
 ---

@@ -16,7 +16,7 @@ export type PackageGroup =
   | "Infrastructure"
   | "Internationalisation"
   | "React"
-  | "Build & AI tooling";
+  | "Developer tooling";
 
 export type Package = {
   /** Display name (eg. "React Form"). */
@@ -178,24 +178,30 @@ export const PACKAGES: Package[] = [
     group: "React",
   },
 
-  // ── Build & AI tooling ──
+  // ── Developer tooling ──
   {
     name: "Vite",
     slug: "vite",
     description: "Vite plugin suite for SPAs — typed env, in-HTML interpolation, path aliasing, auto-open, post-build zip.",
-    group: "Build & AI tooling",
+    group: "Developer tooling",
   },
   {
     name: "Pkgist",
     slug: "pkgist",
     description: "Build, version, and publish tool for TypeScript npm packages. tsdown-powered, dual ESM+CJS, git+npm automation.",
-    group: "Build & AI tooling",
+    group: "Developer tooling",
+  },
+  {
+    name: "Copper",
+    slug: "copper",
+    description: "Zero-dependency CLI toolkit — ANSI colors, spinners, progress bars, themed loggers, boxed messages, OSC-8 hyperlinks, ANSI stripping. NO_COLOR aware.",
+    group: "Developer tooling",
   },
   {
     name: "Agent Kit",
     slug: "agent-kit",
     description: "Authoring toolkit for AI coding agents — one AGENTS.md drives every tool's config file. Skill sync from npm.",
-    group: "Build & AI tooling",
+    group: "Developer tooling",
     featured: true,
   },
 ];
@@ -208,7 +214,7 @@ export const GROUP_ORDER: PackageGroup[] = [
   "Infrastructure",
   "Internationalisation",
   "React",
-  "Build & AI tooling",
+  "Developer tooling",
 ];
 
 export const FEATURED_PACKAGES = PACKAGES.filter(p => p.featured);

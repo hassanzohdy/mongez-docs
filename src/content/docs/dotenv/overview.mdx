@@ -1,0 +1,114 @@
+---
+title: "Dotenv"
+name: mongez-dotenv-overview
+description: |
+  @mongez/dotenv — a small Node.js .env loader. Parses KEY=VALUE lines, coerces typed primitives (number, boolean, null), supports ${VAR} interpolation, picks files by NODE_ENV, layers a .env.shared defaults file.
+sidebar:
+  order: 10
+  label: "Overview"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+A small, zero-dependency `.env` loader for Node.js. Reads `KEY=VALUE` lines, **coerces values to typed primitives** when they look like one (number, boolean, `null`), supports `${VAR}` interpolation between keys, picks the right file based on `NODE_ENV`, and layers a `.env.shared` file of defaults underneath.
+
+## Highlighted features
+
+<div class="mongez-highlights">
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+  <h3>Typed primitives, not strings</h3>
+  <p><code>env("APP_PORT", 3000)</code> returns the number <code>3000</code> — not the string <code>"3000"</code>. Same for booleans and <code>null</code>.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+  <h3><code>$&#123;VAR&#125;</code> interpolation</h3>
+  <p><code>DB_URL=postgres://$&#123;DB_USER&#125;:$&#123;DB_PASS&#125;@$&#123;DB_HOST&#125;/db</code> — substitution happens at parse time, references resolve from already-loaded keys.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="fire">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+  <h3>NODE_ENV file picker</h3>
+  <p>Reads <code>.env.&lt;NODE_ENV&gt;</code> automatically and layers <code>.env.shared</code> underneath for cross-environment defaults.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="bolt">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+  <h3>Zero deps, one file</h3>
+  <p>One source file (<code>src/index.ts</code>), no runtime or peer dependencies. Node-only — uses <code>fs</code> and <code>process</code>.</p>
+</div>
+
+</div>
+
+## Install
+
+<Tabs syncKey="pkg-manager">
+<TabItem label="npm">
+
+```sh
+npm install @mongez/dotenv
+```
+
+</TabItem>
+<TabItem label="yarn">
+
+```sh
+yarn add @mongez/dotenv
+```
+
+</TabItem>
+<TabItem label="pnpm">
+
+```sh
+pnpm add @mongez/dotenv
+```
+
+</TabItem>
+</Tabs>
+
+Zero runtime / peer dependencies. Node-only.
+
+## Quick peek
+
+```ts
+import { loadEnv, env } from "@mongez/dotenv";
+
+loadEnv();
+
+const port: number   = env("APP_PORT", 3000);   // 3000, not "3000"
+const debug: boolean = env("DEBUG", false);     // true / false, not "true"
+const dbUrl: string  = env("DB_URL");
+```
+
+Boot once at process start, then read typed values from anywhere. `env()` returns real primitives, not the stringified `process.env` form.
+
+## Mental model
+
+| Concept | Where it lives | What it is |
+|---|---|---|
+| Internal store | Module-level `envData` object | The typed view of every loaded key. Read via `env()` / `env.all()`. |
+| `process.env` mirror | Real Node `process.env` | Optional write-through, controlled by `override`. Always stores strings. |
+| Initial snapshot | Module-level `initialProcessEnvData` | Captured at first import. `resetEnv` restores keys from this snapshot. |
+
+The loader is **stateful and module-scoped**. One store per Node process. Calling `loadEnv` twice merges the second file's keys into the first store rather than starting over.
+
+## Scope boundaries
+
+| Concern | Lives in | Why |
+|---|---|---|
+| Validation / schema | `zod`, `valibot`, your code | Doesn't type-check loaded values |
+| Higher-level config (groups, defaults, dot-notation) | [`@mongez/config`](/config/overview/) | This is one slice — the file-loading slice |
+| Browser/cookie/localStorage | Other packages | This is a Node filesystem reader |
+
+## Quirks worth knowing
+
+1. **`process.env` always stringifies.** Even though the package writes `process.env.PORT = 3000`, Node's `process.env` setter coerces to `"3000"`. Use `env()` for the typed value.
+2. **`${VAR}` is parse-time only.** Substitutions happen the moment the value is parsed. Later updates to the referenced key do not re-trigger substitution in earlier lines.
+
+## Where to go next
+
+- **[Loader](../loader/)** — `loadEnv` / `loadEnvFile`, file-picking semantics
+- **[Parser](../parser/)** — `parseLine` / `parseValue`, type coercion rules
+- **[Recipes](../recipes/)** — common patterns

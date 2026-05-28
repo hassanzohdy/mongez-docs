@@ -3,8 +3,6 @@ title: "Writing"
 name: mongez-config-writing
 description: |
   Complete reference for `config.set` — the two call shapes (object deep-merge vs path-form per-key write), array replacement behaviour, intermediate container creation, and common pitfalls.
-  TRIGGER when: code calls `config.set` from `@mongez/config`; user asks "how do I deep-merge config", "why was my array replaced instead of appended", or "how do I write a nested config value"; import pattern `import config from "@mongez/config"` followed by `config.set(...)`.
-  SKIP: `@mongez/dotenv` handles `.env` parsing, not this package; reading values — use `mongez-config-reading`; multi-source boot patterns — use `mongez-config-recipes`; whole-tree replacement / live-reference semantics — use `mongez-config-listing`.
 sidebar:
   order: 50
 ---

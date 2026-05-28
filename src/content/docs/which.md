@@ -142,7 +142,7 @@ For hydration, use `<HydrateAtomsScript>` on the server + `readHydration()` on t
 
 → **[`@mongez/react-form`](/react-form/overview/)**. `useFormControl`, validation rules, form events, submit-button state. React Native compatible.
 
-## Build & AI tooling
+## Developer tooling
 
 ### "I'm building a Vite SPA and want sensible defaults"
 
@@ -153,6 +153,12 @@ For hydration, use `<HydrateAtomsScript>` on the server + `readHydration()` on t
 → **[`@mongez/pkgist`](/pkgist/overview/)**. Build, version, and publish tool powered by tsdown (Rolldown-based). Standalone packages (independent versioning) or families (synchronised versioning), dual ESM+CJS output, file cloning, source snapshots, git tag + push automation, dry-run mode.
 
 Installable in any TypeScript project — not specific to `@mongez/*`.
+
+### "I'm building a CLI and want colors / spinners / progress bars / boxed messages"
+
+→ **[`@mongez/copper`](/copper/overview/)**. Zero-dependency CLI toolkit. One install replaces `chalk` + `ora` + `cli-progress` + `boxen`: ANSI colors with a 20+ palette, spinners, known-total progress bars, themed loggers (`log.info` / `log.success` / `log.error`), boxed messages, OSC-8 hyperlinks, and ANSI stripping. `NO_COLOR` / `FORCE_COLOR` aware out of the box.
+
+Installable in any TypeScript or Node project — not specific to `@mongez/*`.
 
 ### "I want one `AGENTS.md` to drive every coding agent on my project"
 

@@ -3,8 +3,6 @@ title: "Derived atoms"
 name: mongez-atom-derived
 description: |
   How to create computed atoms with `derive()` — auto-tracked dependencies, dynamic dep graphs, chaining, and React consumption.
-  TRIGGER when: code imports or calls `derive`, uses `DeriveGetter` / `DeriveOptions` types, or builds a value from other atoms via a `get` argument; user asks "how do I create a computed/derived atom", "how do I auto-track atom dependencies", or "how do I chain derived atoms"; `import { derive } from "@mongez/atom"`.
-  SKIP: writable base atoms (use `mongez-atom-atoms` / `mongez-atom-defining-atoms`); array verbs over a collection (use `mongez-atom-collections`); React-side `useValue` / `useState` wiring (lives in `@mongez/react-atom`); the sibling `mongez-atom-derived-atoms` skill — only one of the two should fire for the same request.
 sidebar:
   order: 40
 ---

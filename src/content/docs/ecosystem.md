@@ -23,8 +23,8 @@ The `@mongez/*` family is organised into four architectural layers. Every packag
   │  events · reinforcements · supportive-is · collection           │
   └─────────────────────────────────────────────────────────────────┘
   ┌─────────────────────────────────────────────────────────────────┐
-  │  Build & AI tooling (standalone, install in any project)         │
-  │  vite · pkgist · agent-kit                                       │
+  │  Developer tooling (standalone, install in any project)          │
+  │  vite · pkgist · copper · agent-kit                              │
   └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -83,7 +83,7 @@ The non-React utility belt every other `@mongez/*` package builds on. Zero `@mon
 | [`@mongez/react-helmet`](/react-helmet/overview/) | Declarative document `<head>` manager — titles, descriptions, OG/Twitter meta, canonical URL, `<html>` attributes. Cleans up on unmount. |
 | [`@mongez/user`](/user/overview/) | Framework-agnostic user/auth state — current-user pointer, permissions, access tokens, pluggable cache-driver storage, event hooks. |
 
-## Build & AI tooling
+## Developer tooling
 
 Standalone tools — install into any TypeScript project, Mongez or otherwise.
 
@@ -91,6 +91,7 @@ Standalone tools — install into any TypeScript project, Mongez or otherwise.
 |---|---|
 | [`@mongez/vite`](/vite/overview/) | Drop-in Vite plugin suite for SPAs — typed env loading with NODE_ENV resolution, in-HTML env interpolation, tsconfig path aliasing, auto-open dev server, post-build zip, `.htaccess` generation, pre-render integration. |
 | [`@mongez/pkgist`](/pkgist/overview/) | Build, version, and publish tool for TypeScript npm packages. Powered by tsdown (Rolldown-based). Standalone packages or version-synchronised families, dual ESM+CJS output, git tag + push automation, dry-run mode. |
+| [`@mongez/copper`](/copper/overview/) | Zero-dependency CLI toolkit — ANSI colors (20+ palette across foreground / background / bright variants), spinners, progress bars, themed loggers, boxed messages, OSC-8 hyperlinks, ANSI stripping. `NO_COLOR` / `FORCE_COLOR` aware, browser-safe imports. |
 | [`@mongez/agent-kit`](/agent-kit/overview/) | Authoring and distribution toolkit for AI coding agents. Derives every tool-specific config file (Claude Code, Cursor, Copilot, Aider, Codex, …) from a single `AGENTS.md`. Syncs skills bundled in npm packages into per-agent skill directories. |
 
 ## Dependency overview
@@ -98,7 +99,7 @@ Standalone tools — install into any TypeScript project, Mongez or otherwise.
 How the packages reference each other. Every package is otherwise standalone — you can install any one without dragging the others along.
 
 **No `@mongez/*` internal deps** (pure standalones):
-`events` · `reinforcements` · `supportive-is` · `concat-route` · `dotenv` · `dom` · `encryption` · `query-string` · `pkgist` · `agent-kit`
+`events` · `reinforcements` · `supportive-is` · `concat-route` · `dotenv` · `dom` · `encryption` · `query-string` · `pkgist` · `copper` · `agent-kit`
 
 **Built on Foundations:**
 - `atom` → `events`, `reinforcements`

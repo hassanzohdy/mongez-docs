@@ -1,0 +1,129 @@
+---
+title: "DOM"
+name: mongez-dom-overview
+description: |
+  @mongez/dom — imperative browser helpers for page metadata, head elements, asset injection, CSS variables, viewport dimensions, and keyboard shortcuts. Zero-dependency, framework-agnostic, browser-only.
+sidebar:
+  order: 10
+  label: "Overview"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+The collection of imperative browser helpers almost every front-end app ends up writing by hand. Flat function exports, zero runtime dependencies, framework-agnostic. Drop it into React, Vue, Svelte, Astro, or vanilla JS — they all consume the same API.
+
+## Highlighted features
+
+<div class="mongez-highlights">
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+  <h3>Page metadata, one call</h3>
+  <p><code>setPageMeta(&#123;...&#125;)</code> fans out into title, description, image, OG/Twitter, canonical, theme color — every <code>&lt;head&gt;</code> tag at once.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V4h16v3"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+  <h3>Font + stylesheet injection</h3>
+  <p><code>googleFont(url, id)</code>, <code>styleSheet(href, id)</code>, <code>loadFont(family, ...)</code> — id-based so you can swap themes later.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="fire">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  <h3>CSS variables</h3>
+  <p><code>cssVariable("--color-primary", "#0a84ff")</code>, <code>getCssVariable("--gap")</code> — read/write CSS custom properties on <code>:root</code> or a given element.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="bolt">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+  <h3>Viewport + keyboard</h3>
+  <p>One-liners around <code>window.outerWidth</code>, <code>window.screen.width</code>, etc. <code>pressed(event, ESC_KEY)</code> normalises legacy <code>keyCode</code> handling.</p>
+</div>
+
+</div>
+
+## Install
+
+<Tabs syncKey="pkg-manager">
+<TabItem label="npm">
+
+```sh
+npm install @mongez/dom
+```
+
+</TabItem>
+<TabItem label="yarn">
+
+```sh
+yarn add @mongez/dom
+```
+
+</TabItem>
+<TabItem label="pnpm">
+
+```sh
+pnpm add @mongez/dom
+```
+
+</TabItem>
+</Tabs>
+
+Zero runtime dependencies. Browser-only — server use throws (see Environment below).
+
+## Quick peek
+
+```ts
+import { setPageMeta, googleFont, cssVariable, scrollTo } from "@mongez/dom";
+
+setPageMeta({
+  title: "Product Page",
+  description: "Buy widget X today.",
+  image: "https://cdn.example.com/product.png",
+  url: "https://example.com/product",
+  type: "website",
+});
+
+googleFont("https://fonts.googleapis.com/css2?family=Inter", "primary-font");
+cssVariable("--color-primary", "#0a84ff");
+scrollTo("#section-features");
+```
+
+Page metadata, fonts, CSS variables, smooth-scroll — all in one import.
+
+## Environment
+
+Every helper touches `document`, `window`, or `FontFace`. Calling on the server throws. If your module loads in both environments, guard:
+
+```ts
+function syncTitle(t: string) {
+  if (typeof window !== "undefined") setTitle(t);
+}
+```
+
+In React, prefer client-only effects:
+
+```tsx
+useEffect(() => setTitle(props.title), [props.title]);
+```
+
+## Scope boundaries
+
+| Concern | Lives in | Why |
+|---|---|---|
+| React hooks / declarative metadata | [`@mongez/react-helmet`](/react-helmet/overview/) | This package is framework-agnostic |
+| Persistent storage (localStorage / cookies) | [`@mongez/cache`](/cache/overview/) | Different concern |
+| Routing | [`@mongez/react-router`](/react-router/overview/) | Different concern |
+
+## Idioms
+
+- **Call `setPageMeta` once per page-view.** It fans out into the seven setter helpers internally. Cheap to repeat — each setter short-circuits when the value matches the last seen value.
+- **Use ids with `styleSheet` and `googleFont`** for any link you might want to replace later (theme switcher, A/B framework swap). Without an id you can't find the link again.
+- **No event subscriptions.** Helpers here are fire-and-forget. If you need to react to attribute changes, use a `MutationObserver` directly.
+
+## Where to go next
+
+- **[Metadata](../metadata/)** — `setPageMeta`, title/description/image setters, OG/Twitter
+- **[Head elements](../head-elements/)** — `createHeadElement`, `meta`, `metaLink`, custom tags
+- **[Assets](../assets/)** — `styleSheet`, `googleFont`, `loadFont`, `loadScript`
+- **[Interactions](../interactions/)** — viewport, keyboard, scroll, dark-mode detection
+- **[Recipes](../recipes/)** — common patterns

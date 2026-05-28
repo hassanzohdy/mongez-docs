@@ -3,8 +3,6 @@ title: "Events"
 name: mongez-user-events
 description: |
   How to enable and subscribe to the five `User` lifecycle events (boot, login, logout, change, keyChange) via `UserEventsListener` and the `@mongez/events` bus.
-  TRIGGER when: code sets `enableEvents = true` or `eventsBaseName` on a `User` subclass; calls `user.events.onLogin`, `onLogout`, `onChange`, `onKeyChange`, `onBoot`, or uses `UserEventsListener`; user asks "how do I react to login / fire side effects on logout / subscribe to auth events / invalidate caches on logout"; subscribes to `events.subscribe("auth.login", ...)` topics from `@mongez/events`.
-  SKIP: @mongez/events for generic app-wide pub/sub unrelated to auth lifecycle; DOM `addEventListener`; framework state-change hooks (e.g. React effect deps); pure component re-render concerns.
 sidebar:
   order: 50
 ---

@@ -3,8 +3,6 @@ title: "Configuration"
 name: mongez-react-helmet-configuration
 description: |
   Reference for `setHelmetConfigurations`, `getHelmetConfigurations`, and `getHelmetConfig` — the app-wide config API including translation integration and prop resolution order.
-  TRIGGER when: code imports `setHelmetConfigurations`, `getHelmetConfigurations`, `getHelmetConfig`, or `HelmetConfigurations` from `@mongez/react-helmet`; user asks "how do I set up app-wide Helmet defaults", "how do I configure appName / appNameSeparator", or "how do I wire @mongez/localization into Helmet titles"; file is a config bootstrap module (e.g. `src/config/helmet.ts`) calling `setHelmetConfigurations({...})`.
-  SKIP: per-page `<Helmet>` prop usage — use `mongez-react-helmet-helmet` instead; the lower-level `@mongez/dom` metadata functions (`setTitle`, `setDescription`, etc.) that have no React or config layer; unrelated React Helmet libraries (e.g. `react-helmet`, `react-helmet-async`) or Next.js `export const metadata`.
 sidebar:
   order: 50
 ---

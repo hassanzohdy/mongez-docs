@@ -3,8 +3,6 @@ title: "Suspense mode"
 name: mongez-atomic-query-suspense
 description: |
   How to use useSuspenseQuery from @mongez/atomic-query to suspend a React subtree while a query loads, including ErrorBoundary pairing and behavioral gotchas.
-  TRIGGER when: code imports `useSuspenseQuery` from `@mongez/atomic-query`, or uses it together with `<Suspense>` and `ErrorBoundary`; user asks "how do I use React Suspense with atomic-query / get data typed as non-undefined / pair Suspense with ErrorBoundary"; typical import `import { useSuspenseQuery } from "@mongez/atomic-query"`.
-  SKIP: plain non-suspense `useQuery` usage — use `mongez-atomic-query-basic-query` or `mongez-atomic-query-queries`; SSR streaming / server-component-driven loading — use `mongez-atomic-query-ssr`; write-side mutations — use `mongez-atomic-query-mutations`; cache invalidation triggered while suspended — use `mongez-atomic-query-invalidation`.
 sidebar:
   order: 50
 ---
@@ -88,12 +86,6 @@ The order matters: `ErrorBoundary` must be outside `Suspense` so it catches thro
 ```
 
 Each `Suspense` boundary handles one query's loading state. The header doesn't wait for the feed.
-
-## When to reach for this vs `useQuery`
-
-- **Use `useQuery`** when you want explicit `isLoading` / `isError` branches in your JSX. More verbose but the control flow is local and obvious.
-- **Use `useSuspenseQuery`** when you want a declarative loading boundary at the top of the subtree. Cleaner JSX, but the suspense behavior is implicit (throwing during render).
-- **Use the framework loader (Next.js / Remix / TanStack)** when the data is needed for the *initial server render*. Suspense for streaming SSR lives in the framework loader, not here.
 
 ## Gotchas
 

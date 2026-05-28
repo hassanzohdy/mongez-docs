@@ -3,8 +3,6 @@ title: "Persistence"
 name: mongez-atom-persist
 description: |
   How to persist atom values using the built-in `localStorageAdapter` or a custom `PersistAdapter` (cookies, IndexedDB, `@mongez/cache`, or any async store).
-  TRIGGER when: code sets `persist: true` or `persist: { get, set, remove }` on a `createAtom` call, imports `PersistAdapter`, `PersistOption`, `localStorageAdapter`, or `resolvePersistAdapter`; user asks "how do I save atom state across reloads", "how do I write a custom localStorage / cookie / IndexedDB adapter", or "why is my atom value lost on refresh"; `import { type PersistAdapter, localStorageAdapter } from "@mongez/atom"`.
-  SKIP: per-request SSR isolation (use `mongez-atom-atom-store` / `mongez-atom-stores`); defining the atom itself (use `mongez-atom-atoms` / `mongez-atom-defining-atoms`); server-state caching with HTTP keys (use `@mongez/atomic-query`); the sibling `mongez-atom-persistence` skill — only one of the two should fire for the same request.
 sidebar:
   order: 50
 ---

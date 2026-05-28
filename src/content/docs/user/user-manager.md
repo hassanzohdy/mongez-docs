@@ -3,8 +3,6 @@ title: "User Manager"
 name: mongez-user-user-manager
 description: |
   Complete reference for the `User` base class — subclassing, `boot()`, `login`/`logout`/`update`, `get`/`set`, token shortcuts, and protected field configuration.
-  TRIGGER when: code extends `User` (`class AppUser extends BaseUser`) or calls `user.boot()`, `user.login(...)`, `user.logout()`, `user.update(...)`, `user.get(...)`, `user.set(...)`, `user.all()`, `user.isLoggedIn()`, `user.isNotLoggedIn()`, `user.getAccessToken()`, `user.setAccessToken(...)`, `user.refreshToken(...)`, `user.getCacheKey()`, `user.getAccessTokenKey()`, or `user.setAccessTokenKey(...)`; sets `protected cacheDriver`, `cacheKey`, `accessTokenKey`, `enableEvents`, or `eventsBaseName` on a subclass; user asks "how do I subclass User / log in a user / read user fields / change the token key / preserve token on update"; `import { User } from "@mongez/user"`.
-  SKIP: cache driver implementation details (use `mongez-user-cache-drivers`); event subscriptions (use `mongez-user-events`); permission checks (use `mongez-user-permissions`); module-level current user (use `mongez-user-current-user`).
 sidebar:
   order: 50
 ---

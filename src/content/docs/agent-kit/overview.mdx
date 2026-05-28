@@ -1,0 +1,148 @@
+---
+title: "Agent Kit"
+name: mongez-agent-kit-overview
+description: |
+  What agent-kit is, what it does, and when an agent should reach for it — the front-door mental model covering `AGENTS.md` derivation, npm-package skill distribution, custom `--path` scan roots (monorepos / linked dev packages), nested skill folders, flat folder naming (`<pkg-slug>-<skill-path>`), and the `.agent-kit-managed` sentinel.
+sidebar:
+  order: 10
+  label: "Overview"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+If you're working with AI coding agents — Claude Code, Cursor, Copilot, Codex, Aider, Gemini CLI — you've probably noticed two annoying chores. **First**, every agent reads its own project-instructions file from its own path, so the same content ends up copy-pasted across `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, and a half-dozen others. **Second**, your team's hard-won prompt patterns and skill files live in repos that downstream consumers can't reach — so everyone reinvents them.
+
+`agent-kit` is a small CLI (and library) that solves both. Write your project instructions **once** in `AGENTS.md` — the emerging open standard read natively by Codex, Cursor, Amp, Jules, Factory, Windsurf, OpenCode, and others — and let `agent-kit` derive the agent-specific files. Ship your skills from any npm package and let `agent-kit sync` discover and mirror them into every agent's skills directory, with collision-free folder names.
+
+## Highlighted features
+
+<div class="mongez-highlights">
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+  <h3>One <code>AGENTS.md</code>, every agent</h3>
+  <p>Edit one file. <code>agent-kit sync</code> derives <code>CLAUDE.md</code>, <code>.gemini/GEMINI.md</code>, <code>.github/copilot-instructions.md</code>, <code>CONVENTIONS.md</code>, and others. They never drift again.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+  <h3>Skills travel with packages</h3>
+  <p>Any npm package can ship a <code>skills/</code> folder. <code>agent-kit sync</code> walks <code>node_modules/</code>, finds them, and mirrors each into <code>.claude/skills/</code>, <code>.cursor/skills/</code>, and friends — automatically pruned when the package is removed.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="fire">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+  <h3>Custom scan paths + nested skills</h3>
+  <p>agent-kit reads <code>skills/</code> from three places: your own project root, every package inside <code>node_modules/</code>, and any extra root you hand it via <code>--path</code> (monorepo workspace, linked dev package, vendor mirror). Inside any of those <code>skills/</code> folders, SKILL.md files can sit at the top, in flat subdirs, or in nested category folders (<code>skills/backend/auth/SKILL.md</code>). Skills found in <code>--path</code> roots override same-named entries in <code>node_modules/</code>.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="fire">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+  <h3>Flat names, zero collisions</h3>
+  <p>Skill folders are written as <code>&lt;pkg-slug&gt;-&lt;skill-path&gt;</code> — e.g. <code>.claude/skills/warlock-js-core-add-connector/</code>. Collisions impossible by construction. Claude Code routes by folder name, so naming = identity.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="bolt">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  <h3>Sentinel-based prune</h3>
+  <p>Only folders tagged with <code>.agent-kit-managed</code> get cleaned on re-sync. Your hand-authored skills sitting alongside ours stay completely untouched.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="bolt">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+  <h3>Stateless and idempotent</h3>
+  <p>Every sync re-derives from disk. No lockfile, no cache, no "did sync forget to update state?" bugs. Run it twice — the second is a no-op.</p>
+</div>
+
+</div>
+
+## Install
+
+<Tabs syncKey="pkg-manager">
+<TabItem label="npm">
+
+```sh
+npm install -D @mongez/agent-kit
+```
+
+</TabItem>
+<TabItem label="yarn">
+
+```sh
+yarn add -D @mongez/agent-kit
+```
+
+</TabItem>
+<TabItem label="pnpm">
+
+```sh
+pnpm add -D @mongez/agent-kit
+```
+
+</TabItem>
+</Tabs>
+
+The package is `@mongez/agent-kit`; the CLI binary is just `agent-kit`. Install with the scope, invoke without it.
+
+## Sixty-second walkthrough
+
+Bootstrap a fresh project. A starter `AGENTS.md` lands at the project root (only if missing), then every per-tool file is derived from it:
+
+```sh
+npx agent-kit init
+```
+
+Wire `sync` into `postinstall` so every future `yarn install` / `npm install` re-derives the per-tool files **and** mirrors skills from installed packages:
+
+```json
+{
+  "scripts": {
+    "postinstall": "agent-kit sync"
+  }
+}
+```
+
+From here, the workflow is: edit `AGENTS.md` once, run `npx agent-kit sync`, and every supported agent picks up the change.
+
+### Pulling skills from a custom folder
+
+By default, agent-kit reads `skills/` from two places automatically: your project root and every package inside `node_modules/`. Working in a Yarn / pnpm workspaces monorepo, or with packages linked from outside `node_modules/`? Hand `--path` (or `-p`) one or more extra scan roots — agent-kit walks each one looking for the same `skills/` layout. Inside any of those `skills/` folders, SKILL.md files can sit at the top, in flat subdirs, or in nested category folders like `skills/backend/auth/SKILL.md`:
+
+```sh
+# Pull skills from a sibling workspace and a vendored mirror
+npx agent-kit sync --path ../warlock.js/packages,vendor/our-skills
+```
+
+Skills discovered in `--path` roots take precedence over same-named entries from `node_modules/` — handy for testing a local edit of an upstream skill without publishing.
+
+## Mental model
+
+Source of truth → derivation → distribution.
+
+```
+AGENTS.md                                ← you write this once
+   │
+   ▼  agent-kit sync (derivation)
+CLAUDE.md
+.gemini/GEMINI.md
+.github/copilot-instructions.md
+CONVENTIONS.md
+
+node_modules/@scope/pkg/skills/foo/SKILL.md
+   │
+   ▼  agent-kit sync (skills distribution)
+.claude/skills/scope-pkg-foo/SKILL.md
+.cursor/skills/scope-pkg-foo/SKILL.md
+```
+
+## Where to go next
+
+**If you're a developer** setting up agent-kit on your project:
+
+- **[Agent integrations](../agent-integrations/)** — copy-pasteable per-IDE walkthroughs (Claude Code, Cursor, Codex, Kiro, Gemini CLI, GitHub Copilot, Aider, Antigravity)
+- **[CLI usage](../cli-usage/)** — every flag, every command, exact invocations
+- **[Recipes](../recipes/)** — monorepo wiring, `pick`/`omit` filtering, CI guardrail, programmatic API
+
+**If you're a package author** shipping skills with your own npm package:
+
+- **[Authoring skills](../authoring-skills/)** — folder layout, `SKILL.md` conventions, front-door pattern

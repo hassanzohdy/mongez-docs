@@ -3,8 +3,6 @@ title: "Parser"
 name: mongez-dotenv-parser
 description: |
   API reference for `parseLine`, `parseValue`, `env`, and `env.all` — the parsing and value-reading layer of `@mongez/dotenv`.
-  TRIGGER when: code imports `parseLine`, `parseValue`, or `env` from `@mongez/dotenv`; user asks "how does env() coerce values", "why is my null becoming undefined", "how does `${VAR}` interpolation work", or "how do I read a typed env value"; typical import pattern like `import { env, parseLine, parseValue } from "@mongez/dotenv"`.
-  SKIP: file-loading entry points `loadEnv`/`loadEnvFile`/`resetEnv` — use `mongez-dotenv-loader`; full worked-example recipes — use `mongez-dotenv-recipes`; the app-config layer (groups, dot-notation, schema) is `@mongez/config`, not this `.env`-parser package; runtime schema validation (zod/valibot is layered on top, not provided here).
 sidebar:
   order: 50
 ---

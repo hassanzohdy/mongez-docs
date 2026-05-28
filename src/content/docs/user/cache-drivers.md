@@ -3,8 +3,6 @@ title: "Cache Drivers"
 name: mongez-user-cache-drivers
 description: |
   How to implement and supply a `UserCacheDriverInterface` to persist user data across sessions, with ready-made examples for localStorage, sessionStorage, cookies, in-memory, and async backends.
-  TRIGGER when: code references `UserCacheDriverInterface`, `cacheDriver`, or assigns to `protected cacheDriver` on a `User` subclass; user asks "how do I persist the user / store auth in localStorage / use cookies for auth / write a cache driver for @mongez/user"; file imports `UserCacheDriverInterface` from `@mongez/user` or wires a `get`/`set`/`remove` driver to a `User` class.
-  SKIP: @mongez/cache for general-purpose caching unrelated to user/session state; storage primitives unrelated to `@mongez/user` (e.g. plain `localStorage.setItem` calls with no `User` subclass); SSR session middleware that doesn't use the `User` class.
 sidebar:
   order: 50
 ---

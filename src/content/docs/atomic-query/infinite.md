@@ -3,8 +3,6 @@ title: "Infinite / paginated queries"
 name: mongez-atomic-query-infinite
 description: |
   How to use useInfiniteQuery for cursor-based and offset-based paginated lists, including fetchNextPage, hasNextPage, and invalidation behavior.
-  TRIGGER when: code imports `useInfiniteQuery`, `InfiniteQueryData`, `InfiniteQueryFnContext`, `UseInfiniteQueryOptions`, or `UseInfiniteQueryResult` from `@mongez/atomic-query`, or calls `fetchNextPage`, `getNextPageParam`, `hasNextPage`, or `isFetchingNextPage`; user asks "how do I implement infinite scroll / load more / cursor pagination / offset pagination"; typical import `import { useInfiniteQuery } from "@mongez/atomic-query"`.
-  SKIP: single-page `useQuery` calls — use `mongez-atomic-query-basic-query` or `mongez-atomic-query-queries`; mutating cached array values via `push`/`unshift`/`remove`/`sort` — use `mongez-atomic-query-list-helpers`; write-side mutations — use `mongez-atomic-query-mutations`.
 sidebar:
   order: 40
 ---

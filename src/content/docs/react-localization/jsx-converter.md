@@ -3,8 +3,6 @@ title: "JSX converter"
 name: mongez-react-localization-jsx-converter
 description: |
   Deep reference for `jsxConverter` — its signature, splitter mechanics, missing-key behaviour, empty / null / primitive placeholder guard, double-curly pattern support, and React key assignment.
-  TRIGGER when: code imports `jsxConverter` from `@mongez/react-localization`; code calls `setLocalizationConfigurations({ converter: jsxConverter })`; user asks "how do I render JSX inside trans()", "why does trans() return an array", or "how do placeholders work with React elements"; `import { jsxConverter } from "@mongez/react-localization"`.
-  SKIP: `mongez-react-localization-trans-x` (per-call JSX without flipping global converter), `mongez-react-localization-overview` (package-level intro), `mongez-react-localization-recipes` (usage patterns); `@mongez/localization` is the framework-agnostic core that defines `trans`, `plainConverter`, and the placeholder pattern — this skill is the React-specific converter layer; react-i18next, react-intl, or other i18n libraries.
 sidebar:
   order: 50
 ---

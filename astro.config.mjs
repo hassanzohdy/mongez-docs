@@ -29,7 +29,7 @@ export default defineConfig({
     starlight({
       title: "Mongez",
       description:
-        "Production TypeScript packages for state, routing, forms, networking, configuration, encryption, and more — 24 focused packages, designed to read equally well to humans and AI coding agents.",
+        "Production TypeScript packages for state, routing, forms, networking, configuration, encryption, and more — 25 focused packages, designed to read equally well to humans and AI coding agents.",
       logo: {
         src: "./src/assets/mongez.png",
         alt: "Mongez — production TypeScript packages",
@@ -68,129 +68,462 @@ export default defineConfig({
         {
           label: "Events",
           collapsed: true,
-          autogenerate: { directory: "events" },
+          items: [
+            { slug: "events/overview" },
+            { slug: "events/bus" },
+            { slug: "events/namespaces" },
+            { slug: "events/recipes" },
+          ],
         },
         {
+          // Reinforcements ships ~130 helpers grouped by primitive type.
+          // The "By type" subgroup mirrors how authors organize their imports.
           label: "Reinforcements",
           collapsed: true,
-          autogenerate: { directory: "reinforcements" },
+          items: [
+            { slug: "reinforcements/overview" },
+            {
+              label: "By type",
+              items: [
+                { slug: "reinforcements/arrays" },
+                { slug: "reinforcements/objects" },
+                { slug: "reinforcements/strings" },
+                { slug: "reinforcements/numbers" },
+                { slug: "reinforcements/async" },
+                { slug: "reinforcements/functions" },
+                { slug: "reinforcements/lazy" },
+                { slug: "reinforcements/mixed" },
+                { slug: "reinforcements/random" },
+                { slug: "reinforcements/types" },
+              ],
+            },
+            { slug: "reinforcements/recipes" },
+          ],
         },
         {
           label: "Supportive Is",
           collapsed: true,
-          autogenerate: { directory: "supportive-is" },
+          items: [
+            { slug: "supportive-is/overview" },
+            {
+              label: "Predicates",
+              items: [
+                { slug: "supportive-is/primitives" },
+                { slug: "supportive-is/collections" },
+                { slug: "supportive-is/formats" },
+                { slug: "supportive-is/environment" },
+                { slug: "supportive-is/misc" },
+              ],
+            },
+            { slug: "supportive-is/recipes" },
+          ],
         },
         {
           label: "Collection",
           collapsed: true,
-          autogenerate: { directory: "collection" },
+          items: [
+            { slug: "collection/overview" },
+            {
+              label: "Construction",
+              items: [
+                { slug: "collection/construction" },
+                { slug: "collection/builtins" },
+              ],
+            },
+            {
+              label: "Querying",
+              items: [
+                { slug: "collection/querying" },
+                { slug: "collection/where" },
+                { slug: "collection/sort-group" },
+                { slug: "collection/pagination" },
+              ],
+            },
+            {
+              label: "Math",
+              items: [
+                { slug: "collection/math" },
+                { slug: "collection/math-aggregation" },
+              ],
+            },
+            {
+              label: "Transforming",
+              items: [
+                { slug: "collection/transforming" },
+                { slug: "collection/mutation" },
+                { slug: "collection/strings" },
+              ],
+            },
+            { slug: "collection/recipes" },
+          ],
         },
         // ── State ──
         {
           label: "Atom",
           collapsed: true,
-          autogenerate: { directory: "atom" },
+          items: [
+            { slug: "atom/overview" },
+            {
+              label: "Atoms",
+              items: [
+                { slug: "atom/atoms" },
+                { slug: "atom/defining-atoms" },
+                { slug: "atom/actions" },
+                { slug: "atom/derived" },
+                { slug: "atom/derived-atoms" },
+                { slug: "atom/collections" },
+              ],
+            },
+            {
+              label: "Persistence",
+              items: [
+                { slug: "atom/persist" },
+                { slug: "atom/persistence" },
+              ],
+            },
+            {
+              label: "Stores & SSR",
+              items: [
+                { slug: "atom/atom-store" },
+                { slug: "atom/stores" },
+              ],
+            },
+            { slug: "atom/devtools" },
+            { slug: "atom/recipes" },
+          ],
         },
         {
           label: "React Atom",
           collapsed: true,
-          autogenerate: { directory: "react-atom" },
+          items: [
+            { slug: "react-atom/overview" },
+            { slug: "react-atom/atoms" },
+            { slug: "react-atom/presets" },
+            { slug: "react-atom/ssr" },
+            { slug: "react-atom/recipes" },
+          ],
         },
         {
           label: "Atomic Query",
           collapsed: true,
-          autogenerate: { directory: "atomic-query" },
+          items: [
+            { slug: "atomic-query/overview" },
+            {
+              label: "Core",
+              items: [
+                { slug: "atomic-query/basic-query" },
+                { slug: "atomic-query/queries" },
+                { slug: "atomic-query/mutations" },
+              ],
+            },
+            {
+              label: "Advanced",
+              items: [
+                { slug: "atomic-query/infinite" },
+                { slug: "atomic-query/suspense" },
+                { slug: "atomic-query/list-queries" },
+                { slug: "atomic-query/list-helpers" },
+                { slug: "atomic-query/invalidation" },
+                { slug: "atomic-query/cache" },
+              ],
+            },
+            { slug: "atomic-query/ssr" },
+            { slug: "atomic-query/recipes" },
+          ],
         },
         // ── Data & Networking ──
         {
+          // HTTP splits its sidebar into a flat list of narrative guides
+          // + a nested "API Reference" subgroup for signature lookup.
+          // First package to grow API reference pages; the pattern is
+          // available to any other package that needs it.
           label: "HTTP",
           collapsed: true,
-          autogenerate: { directory: "http" },
+          items: [
+            { slug: "http/overview" },
+            { slug: "http/http-client" },
+            { slug: "http/resource" },
+            { slug: "http/error-handling" },
+            { slug: "http/caching" },
+            { slug: "http/interceptors" },
+            { slug: "http/streaming" },
+            { slug: "http/recipes" },
+            {
+              label: "API Reference",
+              items: [
+                { slug: "http/api/http" },
+                { slug: "http/api/http-error" },
+                { slug: "http/api/resource" },
+              ],
+            },
+          ],
         },
         {
           label: "Cache",
           collapsed: true,
-          autogenerate: { directory: "cache" },
+          items: [
+            { slug: "cache/overview" },
+            {
+              label: "Basics",
+              items: [
+                { slug: "cache/basic-usage" },
+                { slug: "cache/manager" },
+              ],
+            },
+            {
+              label: "Drivers",
+              items: [
+                { slug: "cache/drivers" },
+                { slug: "cache/local-storage" },
+                { slug: "cache/session-storage" },
+                { slug: "cache/runtime" },
+                { slug: "cache/custom-drivers" },
+              ],
+            },
+            {
+              label: "Encryption",
+              items: [
+                { slug: "cache/encryption" },
+                { slug: "cache/encrypted-cache" },
+              ],
+            },
+            { slug: "cache/recipes" },
+          ],
         },
         // ── Infrastructure ──
         {
           label: "Config",
           collapsed: true,
-          autogenerate: { directory: "config" },
+          items: [
+            { slug: "config/overview" },
+            { slug: "config/reading" },
+            { slug: "config/writing" },
+            { slug: "config/listing" },
+            { slug: "config/typing" },
+            { slug: "config/recipes" },
+          ],
         },
         {
           label: "Dotenv",
           collapsed: true,
-          autogenerate: { directory: "dotenv" },
+          items: [
+            { slug: "dotenv/overview" },
+            { slug: "dotenv/loader" },
+            { slug: "dotenv/parser" },
+            { slug: "dotenv/recipes" },
+          ],
         },
         {
           label: "Encryption",
           collapsed: true,
-          autogenerate: { directory: "encryption" },
+          items: [
+            { slug: "encryption/overview" },
+            { slug: "encryption/configuration" },
+            { slug: "encryption/encrypt-decrypt" },
+            { slug: "encryption/hashes" },
+            { slug: "encryption/recipes" },
+          ],
         },
         {
           label: "DOM",
           collapsed: true,
-          autogenerate: { directory: "dom" },
+          items: [
+            { slug: "dom/overview" },
+            { slug: "dom/metadata" },
+            { slug: "dom/head-elements" },
+            { slug: "dom/assets" },
+            { slug: "dom/interactions" },
+            { slug: "dom/recipes" },
+          ],
         },
         {
           label: "Concat Route",
           collapsed: true,
-          autogenerate: { directory: "concat-route" },
+          items: [
+            { slug: "concat-route/overview" },
+            { slug: "concat-route/concat-route" },
+            { slug: "concat-route/recipes" },
+          ],
         },
         {
           label: "Query String",
           collapsed: true,
-          autogenerate: { directory: "query-string" },
+          items: [
+            { slug: "query-string/overview" },
+            { slug: "query-string/parse" },
+            { slug: "query-string/serialize" },
+            { slug: "query-string/recipes" },
+          ],
         },
         // ── Internationalisation ──
         {
           label: "Localization",
           collapsed: true,
-          autogenerate: { directory: "localization" },
+          items: [
+            { slug: "localization/overview" },
+            { slug: "localization/translations" },
+            { slug: "localization/translating" },
+            { slug: "localization/interpolation" },
+            { slug: "localization/count-translations" },
+            { slug: "localization/events" },
+            { slug: "localization/recipes" },
+          ],
         },
         {
           label: "React Localization",
           collapsed: true,
-          autogenerate: { directory: "react-localization" },
+          items: [
+            { slug: "react-localization/overview" },
+            { slug: "react-localization/trans-x" },
+            { slug: "react-localization/jsx-converter" },
+            { slug: "react-localization/recipes" },
+          ],
         },
         // ── React ──
         {
           label: "React Router",
           collapsed: true,
-          autogenerate: { directory: "react-router" },
+          items: [
+            { slug: "react-router/overview" },
+            { slug: "react-router/routes" },
+            { slug: "react-router/navigation" },
+            { slug: "react-router/params" },
+            { slug: "react-router/lazy-loading" },
+            { slug: "react-router/localization" },
+            { slug: "react-router/recipes" },
+          ],
         },
         {
           label: "React Form",
           collapsed: true,
-          autogenerate: { directory: "react-form" },
+          items: [
+            { slug: "react-form/getting-started" },
+            {
+              label: "Form & controls",
+              items: [
+                { slug: "react-form/create-form-control" },
+                { slug: "react-form/form-events" },
+                { slug: "react-form/submit-button" },
+              ],
+            },
+            { slug: "react-form/validation-rules" },
+            { slug: "react-form/react-native-usage" },
+            { slug: "react-form/recipes" },
+          ],
         },
         {
           label: "React Helmet",
           collapsed: true,
-          autogenerate: { directory: "react-helmet" },
+          items: [
+            { slug: "react-helmet/overview" },
+            { slug: "react-helmet/helmet" },
+            { slug: "react-helmet/metadata" },
+            { slug: "react-helmet/configuration" },
+            { slug: "react-helmet/recipes" },
+          ],
         },
         {
           label: "User",
           collapsed: true,
-          autogenerate: { directory: "user" },
+          items: [
+            { slug: "user/overview" },
+            {
+              label: "User & permissions",
+              items: [
+                { slug: "user/current-user" },
+                { slug: "user/user-manager" },
+                { slug: "user/permissions" },
+              ],
+            },
+            { slug: "user/cache-drivers" },
+            { slug: "user/events" },
+            { slug: "user/recipes" },
+          ],
         },
-        // ── Build & AI tooling ──
+        // ── Developer tooling ──
         // Standalone — installable in any TS project, not specific to @mongez/*.
         {
           label: "Vite",
           collapsed: true,
-          autogenerate: { directory: "vite" },
+          items: [
+            { slug: "vite/overview" },
+            {
+              label: "Env",
+              items: [
+                { slug: "vite/env-loading" },
+                { slug: "vite/env-in-html" },
+              ],
+            },
+            {
+              label: "Build",
+              items: [
+                { slug: "vite/build-zip" },
+                { slug: "vite/htaccess" },
+                { slug: "vite/production-base-url" },
+                { slug: "vite/prerender" },
+              ],
+            },
+            {
+              label: "DX",
+              items: [
+                { slug: "vite/auto-open-browser" },
+                { slug: "vite/tsconfig-aliases" },
+              ],
+            },
+            { slug: "vite/recipes" },
+          ],
         },
         {
           label: "Pkgist",
           collapsed: true,
-          autogenerate: { directory: "pkgist" },
+          items: [
+            { slug: "pkgist/overview" },
+            { slug: "pkgist/cli" },
+            { slug: "pkgist/configuration" },
+            { slug: "pkgist/package-options" },
+            { slug: "pkgist/pipeline" },
+            { slug: "pkgist/versioning" },
+            { slug: "pkgist/git-workflow" },
+            { slug: "pkgist/recipes" },
+          ],
         },
         {
+          label: "Copper",
+          collapsed: true,
+          items: [
+            { slug: "copper/overview" },
+            {
+              label: "Core",
+              items: [
+                { slug: "copper/colors" },
+                { slug: "copper/log" },
+                { slug: "copper/box" },
+              ],
+            },
+            {
+              label: "Animation",
+              items: [
+                { slug: "copper/spinner" },
+                { slug: "copper/progress" },
+              ],
+            },
+            { slug: "copper/utilities" },
+            { slug: "copper/recipes" },
+          ],
+        },
+        {
+          // Agent Kit splits into a developer-facing path (Overview →
+          // Agent integrations → CLI → Recipes) and an author-facing
+          // path (Authoring skills). Same package, two audiences.
           label: "Agent Kit",
           collapsed: true,
-          autogenerate: { directory: "agent-kit" },
+          items: [
+            { slug: "agent-kit/overview" },
+            { slug: "agent-kit/agent-integrations" },
+            { slug: "agent-kit/cli-usage" },
+            { slug: "agent-kit/recipes" },
+            { slug: "agent-kit/authoring-skills" },
+          ],
         },
       ],
     }),

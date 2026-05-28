@@ -3,8 +3,6 @@ title: "Versioning"
 name: mongez-pkgist-versioning
 description: |
   Version-bump strategies for pkgist packages: `"auto"` / `"patch"` (default, bumps patch digit), `"minor"`, `"major"`, or any literal semver string. Standalone packages bump from their own current version. Families take the highest current version across all members and bump that, landing all members on the same new version.
-  TRIGGER when: user asks about `version: "auto" | "patch" | "minor" | "major"`; user asks "how does pkgist pick the next version", "how do I do a minor release with pkgist", "how do family versions work", "what if family members have different starting versions"; user wants to set an explicit version like `version: "3.0.0"`; semver questions in the context of pkgist.
-  SKIP: general semver concepts not tied to pkgist; questions about commit/git/publish (use `git-workflow` skill); CLI invocation (use `cli` skill).
 sidebar:
   order: 50
 ---

@@ -3,8 +3,6 @@ title: "Current User"
 name: mongez-user-current-user
 description: |
   How to use the module-level current user pointer (`setCurrentUser` / `getCurrentUser`) for cross-module access to the logged-in user.
-  TRIGGER when: code imports `setCurrentUser` or `getCurrentUser` from `@mongez/user`; user asks "how do I access the current user from anywhere / get the logged-in user in middleware / share user across modules"; file calls `getCurrentUser()?.getAccessToken()` or sets the global slot after `boot()`; `import { setCurrentUser, getCurrentUser } from "@mongez/user"`.
-  SKIP: @mongez/atom for app-wide reactive state beyond a single global slot; React Context / Redux-style stores; per-request SSR user threading (use request context instead — see `mongez-user-recipes`).
 sidebar:
   order: 50
 ---
@@ -18,33 +16,6 @@ import { setCurrentUser, getCurrentUser } from "@mongez/user";
 
 setCurrentUser(user);     // store a user instance
 getCurrentUser();         // retrieve it (returns the same User, or undefined)
-```
-
-## When to use it
-
-For code that needs to reach the current user without importing the module where the user is defined — middleware, generic API helpers, error reporters, etc.
-
-```ts
-// src/auth.ts
-import { User as BaseUser, setCurrentUser } from "@mongez/user";
-
-class AppUser extends BaseUser { /* … */ }
-const user = new AppUser();
-user.boot();
-setCurrentUser(user);
-export default user;
-```
-
-```ts
-// src/api/with-auth.ts
-import { getCurrentUser } from "@mongez/user";
-
-export function withAuth(request: Request): Request {
-  const u = getCurrentUser();
-  const token = u?.getAccessToken();
-  if (token) request.headers.set("Authorization", `Bearer ${token}`);
-  return request;
-}
 ```
 
 ## Caveats

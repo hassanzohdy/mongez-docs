@@ -3,8 +3,6 @@ title: "transX"
 name: mongez-react-localization-trans-x
 description: |
   Reference for `transX()` — when to use it instead of `trans()`, what it delegates to (`transFrom` + `jsxConverter`), and what it does not do (subscriptions, per-call converter override, type coercion).
-  TRIGGER when: code imports `transX` from `@mongez/react-localization`; code calls `transX(keyword, placeholders)` at a JSX call site; user asks "how is transX different from trans", "how do I use JSX placeholders without changing the global converter", or "how do I mix plain and JSX trans calls"; `import { transX } from "@mongez/react-localization"`.
-  SKIP: `mongez-react-localization-jsx-converter` (converter mechanics and placeholder-bag guard), `mongez-react-localization-overview` (package-level intro and the two paths), `mongez-react-localization-recipes` (real-world locale-switching and `Translate` patterns); `@mongez/localization` exposes the underlying `trans`, `transFrom`, `plainTrans` — this skill is the React-bound variant; react-i18next, react-intl.
 sidebar:
   order: 50
 ---
@@ -29,15 +27,6 @@ transFrom(getTranslationLocaleCode(), keyword, placeholders, jsxConverter);
 ```
 
 It hard-codes `jsxConverter` as the converter argument, ignoring `setLocalizationConfigurations({ converter })`. That's the entire point.
-
-## When to use it
-
-Default to `trans(...)` from `@mongez/localization`. Reach for `transX` only when:
-
-1. The global converter is `plainConverter` (default), AND
-2. This specific call site needs to interpolate a React element.
-
-If `jsxConverter` is your global converter, `trans` and `transX` produce identical output — prefer `trans`.
 
 ## Example
 

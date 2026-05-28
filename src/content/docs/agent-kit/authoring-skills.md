@@ -1,12 +1,10 @@
 ---
-title: "Authoring Skills"
+title: "Authoring skills"
 name: mongez-agent-kit-authoring-skills
 description: |
   How to ship reusable skills from an npm package so consumers using `agent-kit sync` pick them up automatically — folder layout, `SKILL.md` frontmatter (`description`, `when_to_use`, `name`), the `files` field, flat destination naming, and the front-door / subskill convention.
-  TRIGGER when: editing a `skills/**/SKILL.md` inside an npm package the user maintains; user asks "how do I ship a skill with my package", "how do consumers pick up my skill", "what should go in SKILL.md frontmatter", or "how should I write `when_to_use` / `description`"; `package.json` `files` field needs `"skills"` added; multi-skill package needs a "front-door" / `<pkg>-overview` orientation skill; user is structuring nested skills (`skills/backend/auth/SKILL.md`) under a category folder.
-  SKIP: user is invoking the agent-kit CLI or wiring `postinstall` — load `mongez-agent-kit-cli-usage` instead; user just wants the mental model of agent-kit — load `mongez-agent-kit-overview` instead; project-local skills inside an app the user is NOT publishing to npm (no special authoring concerns — just drop a `skills/` folder).
 sidebar:
-  order: 50
+  order: 18
 ---
 
 If you maintain a library that benefits from a coding-agent skill (a model registration pattern, a CLI command shape, a domain-specific convention), you can ship that skill with your package. Anyone using `agent-kit sync` in a downstream project will receive your skill in their `.claude/skills/`, `.cursor/skills/`, etc.
@@ -104,14 +102,9 @@ A `SKILL.md` is a markdown file with optional frontmatter:
 ---
 name: using-the-thing
 description: One sentence telling an agent what this skill is about.
-when_to_use: Specific triggers — "User imports from X", "User is editing Y", "User asks about Z". Be narrow; broad triggers cause noisy activation across unrelated tasks.
 ---
 
 # Using the thing
-
-## When to use
-
-Specific situations the agent should recognize.
 
 ## How to use
 
@@ -121,27 +114,6 @@ Concrete steps, with code examples where it helps.
 
 Common mistakes and how to avoid them.
 ```
-
-### The `when_to_use` field matters as much as `description`
-
-Both fields are advisory to the AI's skill-activation heuristics, but they play different roles:
-
-- **`description`** answers "what is this skill?" — used for listings and broad matching.
-- **`when_to_use`** answers "should I load this right now?" — used to gate activation. **The narrower and more concrete this is, the less your skill bloats consumers' context on unrelated tasks.**
-
-Bad `when_to_use` (too broad — fires on almost every task):
-
-```yaml
-when_to_use: When working with TypeScript projects.
-```
-
-Good `when_to_use` (sharp, naming the actual trigger conditions):
-
-```yaml
-when_to_use: User imports from `@my-org/queue` OR is editing a `*.queue.ts` file OR asks how to publish/subscribe to a message broker.
-```
-
-If you skip `when_to_use`, consumers' AI assistants will pattern-match on `description` alone and may load your skill in contexts where it's irrelevant. Treat tight triggers as good ecosystem citizenship — every package author who writes broad triggers contributes a little context bloat to every downstream user.
 
 ### Front-door skill convention
 

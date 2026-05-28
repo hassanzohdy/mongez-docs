@@ -3,8 +3,6 @@ title: "Devtools"
 name: mongez-atom-devtools
 description: |
   How to enable Redux DevTools integration for `@mongez/atom` — setup, options, time-travel, and filtering high-frequency atoms.
-  TRIGGER when: code imports or calls `enableAtomDevtools`, uses `EnableDevtoolsOptions`, or passes `name` / `ignore` / `scanInterval` options for DevTools; user asks "how do I debug atoms with Redux DevTools", "how do I time-travel atom state", or "how do I skip noisy atoms in the DevTools timeline"; `import { enableAtomDevtools } from "@mongez/atom"`.
-  SKIP: defining atoms (use `mongez-atom-atoms` / `mongez-atom-defining-atoms`); production-only / non-debug code paths; logging atom values to console without the Redux extension; React-renderer profiling (DevTools handles state, React Profiler handles renders).
 sidebar:
   order: 80
 ---

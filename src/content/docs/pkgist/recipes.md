@@ -3,8 +3,6 @@ title: "Recipes"
 name: mongez-pkgist-recipes
 description: |
   Common pkgist patterns ready to copy: single TypeScript library, React component package, Vite/ESM-only plugin, package with library + CLI entries, build-only (no publish) package, family of synchronized packages, hands-off `commit: true` config, monorepo with mixed packages, dry-run-first release flow, hotfix one package, build everything without publishing.
-  TRIGGER when: user asks "how do I configure X with pkgist", "show me an example pkgist config for Y", "what's the right config for a React + Node tool combo", "how do I release a family"; user wants a copy-paste-able pattern; user is setting up pkgist for a new monorepo.
-  SKIP: detailed option reference (use `package-options` skill); semver decisions (use `versioning` skill); CLI flag explanations (use `cli` skill); deep pipeline internals (use `pipeline` skill).
 sidebar:
   order: 99
 ---

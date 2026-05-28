@@ -3,8 +3,6 @@ title: "Queries (useQuery)"
 name: mongez-atomic-query-queries
 description: |
   Full reference for queryAtom.useQuery — all options, the Query<T> return shape, retry configuration, window-focus/reconnect refetch, granular field subscriptions, key hashing, and abort behavior.
-  TRIGGER when: code imports `useQuery`, `queryAtom`, `useLoadChange`, `useDataChange`, `useErrorChange`, `useQueryChange`, `Query`, `QueryKey`, `QueryState`, or `AddQueryOptions` from `@mongez/atomic-query`; user asks "how does useQuery work / what's in Query<T> / what is staleTime vs gcTime / how does retry / refetchOnWindowFocus work / how are query keys hashed"; typical import `import { queryAtom, useQuery } from "@mongez/atomic-query"`.
-  SKIP: quick-start framing for first-time users — use `mongez-atomic-query-basic-query`; suspense-mode behavior — use `mongez-atomic-query-suspense`; write-side mutations — use `mongez-atomic-query-mutations`; invalidation/refetch patterns — use `mongez-atomic-query-invalidation` or `mongez-atomic-query-cache`; cursor/page-based pagination — use `mongez-atomic-query-infinite`.
 sidebar:
   order: 20
 ---

@@ -1,0 +1,112 @@
+---
+title: "Concat Route"
+name: mongez-concat-route-overview
+description: |
+  @mongez/concat-route — a single-function utility for joining path segments into a normalised leading-slash path. Drops falsy segments, collapses repeated slashes, zero deps, browser-safe.
+sidebar:
+  order: 10
+  label: "Overview"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+A single-function utility for joining path segments into one normalised leading-slash path. The helper you reach for when you have a base path from configuration, a feature prefix from a constant, and an ID from a URL parameter — and you don't want to write `if (base.endsWith("/")) …` six times.
+
+The function is **path-only**: it understands `/` separators between segments, and that's it. Not a URL builder, not a query-string parser, not a router pattern matcher.
+
+## Highlighted features
+
+<div class="mongez-highlights">
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+  <h3>Leading slash guaranteed</h3>
+  <p><code>concatRoute("api", "users")</code> returns <code>"/api/users"</code> — never the bare <code>"api/users"</code> you'd get from <code>path.posix.join</code>.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  <h3>Falsy segments dropped</h3>
+  <p><code>concatRoute("/base", locale ?? "", "/products")</code> just works — no conditionals when threading optional pieces.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="fire">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+  <h3>Slash runs collapse</h3>
+  <p><code>concatRoute("/foo//", "//bar///", "baz")</code> → <code>"/foo/bar/baz"</code>. Junk in, clean path out.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="bolt">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+  <h3>~10 lines, zero deps</h3>
+  <p>Browser-safe (no <code>node:path</code> polyfill), no runtime dependencies. Default-exports the entire public surface.</p>
+</div>
+
+</div>
+
+## Install
+
+<Tabs syncKey="pkg-manager">
+<TabItem label="npm">
+
+```sh
+npm install @mongez/concat-route
+```
+
+</TabItem>
+<TabItem label="yarn">
+
+```sh
+yarn add @mongez/concat-route
+```
+
+</TabItem>
+<TabItem label="pnpm">
+
+```sh
+pnpm add @mongez/concat-route
+```
+
+</TabItem>
+</Tabs>
+## Quick peek
+
+```ts
+import concatRoute from "@mongez/concat-route";
+
+concatRoute("api", "/users", String(userId));      // "/api/users/42"
+concatRoute("/", "/dashboard", "");                // "/dashboard"
+concatRoute("/base", locale ?? "", "/products");   // "/base/products" if locale is falsy
+concatRoute("/foo//", "//bar///", "baz");          // "/foo/bar/baz"
+```
+
+Glue path segments — leading slash guaranteed, falsy values silently dropped, embedded slashes collapsed.
+
+## Mental model
+
+| Input | What you get |
+|---|---|
+| `concatRoute(a, b, c)` | Glue `a`, `b`, `c` into a path. Slashes are normalised — result always starts with `/`, no junk. |
+| Falsy segments | Dropped silently. Use this to thread optional pieces without conditionals. |
+| Empty input | Returns `"/"`. The function never returns an empty string. |
+
+## Scope boundaries
+
+| Concern | Lives in | Why |
+|---|---|---|
+| Query string `?a=1&b=2` | [`@mongez/query-string`](/query-string/overview/) | Concat-route treats `"?q=1"` as a segment and wraps it in `/`. Use a real parser. |
+| Absolute URLs with `protocol://host` | Built-in `URL` | The slash-collapse pass destroys `https://`. |
+| Route pattern matching (`/users/:id`) | [`@mongez/react-router`](/react-router/overview/) | Different problem entirely. |
+| Encoding | `encodeURIComponent` | Concat-route does not encode. |
+
+## Why a function instead of `path.posix.join`?
+
+1. **Always leading `/`**. URL paths need it; `path.posix.join` doesn't add it.
+2. **Drops falsy segments silently**. Lets you spread optional pieces without conditionals.
+3. **Browser-safe**. `node:path` isn't available in the browser without polyfilling.
+4. **Collapses arbitrary slash runs**, including embedded `//` inside a single segment.
+
+## Where to go next
+
+- **[Concat route](../concat-route/)** — full signature, edge cases
+- **[Recipes](../recipes/)** — common patterns

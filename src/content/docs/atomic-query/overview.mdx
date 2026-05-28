@@ -1,0 +1,145 @@
+---
+title: "Atomic Query"
+name: mongez-atomic-query-overview
+description: |
+  What @mongez/atomic-query is — a React-Query-style client-side server-state cache built on @mongez/react-atom. Covers queries, mutations, infinite, suspense, SSR seeding via HydrateQueries, and when to use it over TanStack Query.
+sidebar:
+  order: 10
+  label: "Overview"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+A **client-side server-state cache** with the API shape you already know from React Query — `useQuery`, `useMutation`, `useInfiniteQuery`, `useSuspenseQuery` — but built on top of `@mongez/react-atom`. One reactive system instead of two: server state and ephemeral UI state both live as atoms, share devtools, and read with the same hooks.
+
+## Highlighted features
+
+<div class="mongez-highlights">
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
+  <h3>One unified cache atom</h3>
+  <p>Every query lives in a single <code>queryAtom</code>. One mental model for server state and UI state, one devtools timeline, one source of truth.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><line x1="14.5" y1="9.5" x2="17.5" y2="6.5"/><line x1="6.5" y1="17.5" x2="9.5" y2="14.5"/></svg>
+  <h3><code>queryAtom</code> hooks</h3>
+  <p><code>queryAtom.useQuery</code>, <code>useMutation</code>, <code>useInfiniteQuery</code>, <code>useSuspenseQuery</code> — all the React Query shapes you expect.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="fire">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+  <h3>Built-in list helpers</h3>
+  <p><code>push</code>, <code>unshift</code>, <code>remove</code>, <code>replace</code>, <code>sort</code>, <code>reverse</code> on cached lists — write optimistic updates without re-implementing the patterns.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="fire">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+  <h3><code>&lt;HydrateQueries&gt;</code> for SSR</h3>
+  <p>Seed initial data from a framework loader (Next.js / Remix / TanStack Start) so the client's first paint matches the server HTML — no flash, no hydration mismatch.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="bolt">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+  <h3>Smaller surface than TanStack</h3>
+  <p>If you're already on <code>@mongez/atom</code>, you don't pay for a second reactive system. Lean API, atom devtools for free.</p>
+</div>
+
+</div>
+
+## Install
+
+<Tabs syncKey="pkg-manager">
+<TabItem label="npm">
+
+```sh
+npm install @mongez/atomic-query
+```
+
+</TabItem>
+<TabItem label="yarn">
+
+```sh
+yarn add @mongez/atomic-query
+```
+
+</TabItem>
+<TabItem label="pnpm">
+
+```sh
+pnpm add @mongez/atomic-query
+```
+
+</TabItem>
+</Tabs>
+
+Peer: `react >= 18`. Runtime deps: `@mongez/events`, `@mongez/react-atom` (installed automatically).
+
+## Quick peek
+
+```tsx
+"use client";
+import { queryAtom } from "@mongez/atomic-query";
+
+export function UserList() {
+  const { data, isLoading, error } = queryAtom.useQuery<User[]>({
+    queryKey: ["users"],
+    queryFn: ({ signal }) => fetch("/api/users", { signal }).then(r => r.json()),
+    staleTime: 60_000,
+  });
+
+  if (isLoading) return <Spinner />;
+  if (error) return <ErrorBox error={error} />;
+  return <ul>{data?.map(u => <li key={u.id}>{u.name}</li>)}</ul>;
+}
+```
+
+A typed query with abort-on-stale, 60-second cache, and loading / error / data branches built in.
+
+## How it fits
+
+`atomic-query` is the **client-side cache**, not a replacement for your framework's data loader. The intended split:
+
+- **Framework loader** (Next.js server component, Remix `loader`, TanStack Start `loader`) — initial server render, produces the first dataset.
+- **atomic-query** — client takes over for mutations, optimistic updates, background refetches, invalidations, list manipulation.
+
+## SSR seeding
+
+```tsx
+// server component
+import { HydrateQueries } from "@mongez/atomic-query";
+import { UserListClient } from "./UserListClient";
+
+export default async function UsersPage() {
+  const users = await db.users.findMany();
+  return (
+    <HydrateQueries entries={[{ queryKey: ["users"], data: users }]}>
+      <UserListClient />
+    </HydrateQueries>
+  );
+}
+```
+
+Seeded data lands in the cache synchronously during render.
+
+## Client-only constraint
+
+Every file carries `"use client"` and the exports map declares `"react-server": null`. React Server Components **cannot** import this package — the bundler will refuse to compile with a clear error. SSR is your framework's job; this is the client cache.
+
+## When to use atomic-query vs TanStack Query
+
+| Use atomic-query | Use TanStack Query |
+|---|---|
+| Already using `@mongez/atom` | Not on `@mongez/atom` |
+| Want built-in list helpers (`push`, `unshift`, `remove`, …) | Need bidirectional infinite scroll (atomic-query is forward-only) |
+| Smaller surface, comfortable owning SSR via framework loader | Need full TanStack feature set (Suspense, dehydrate/hydrate, normalisation) |
+
+## Where to go next
+
+- **[Basic query](../basic-query/)**, **[Queries](../queries/)**, **[Mutations](../mutations/)** — core hooks
+- **[Infinite queries](../infinite/)**, **[Suspense mode](../suspense/)** — advanced patterns
+- **[List queries](../list-queries/)**, **[List helpers](../list-helpers/)** — optimistic list mutations
+- **[Invalidation](../invalidation/)**, **[Cache management](../cache/)** — cache control
+- **[SSR](../ssr/)** — `<HydrateQueries>`, framework loaders
+- **[Recipes](../recipes/)** — cross-cutting patterns

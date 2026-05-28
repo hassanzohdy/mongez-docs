@@ -3,8 +3,6 @@ title: "Configuration"
 name: mongez-pkgist-configuration
 description: |
   pkgist config file shape: `pkgist.config.ts` (or `builder.ts`) with `defineConfig({ settings, standalone, families })`. Auto-discovered from cwd; runtime-loaded via dynamic import so it can use ESM `import` syntax freely. Settings block covers concurrency, buildDir, sourcesDir.
-  TRIGGER when: user is creating or editing `pkgist.config.ts` or `builder.ts`; user asks "how do I set up pkgist", "where do I configure pkgist", "what goes in the config"; user imports or asks about `defineConfig` from `@mongez/pkgist`; user asks about `settings.concurrency`, `settings.buildDir`, `settings.sourcesDir`; user asks how `standalone[]` differs from `families[]` at the config level.
-  SKIP: per-package field details (use `package-options` skill); CLI invocation (use `cli` skill); semantic versioning rules (use `versioning` skill); git/publish behavior (use `git-workflow` skill).
 sidebar:
   order: 50
 ---

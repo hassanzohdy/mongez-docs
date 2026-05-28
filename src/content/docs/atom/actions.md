@@ -3,8 +3,6 @@ title: "Actions"
 name: mongez-atom-actions
 description: |
   How to define function actions, property getters, and plain values in the `actions` bag passed to `createAtom` or `atomCollection`, with `this` bound to the atom instance.
-  TRIGGER when: code defines an `actions` object on `createAtom` or `atomCollection`, uses `ThisType<Atom<V, A>>`, or declares `get total()` / `get isEmpty()` style getters; user asks "how do I add methods to an atom", "how do I use `this` inside an action", or "how do I add a computed getter"; file uses `this.update(...)` / `this.merge(...)` inside a `createAtom` actions block.
-  SKIP: defining the atom itself (use `mongez-atom-defining-atoms` or `mongez-atom-atoms`); array-specialized verbs like `push`/`pop`/`remove` (use `mongez-atom-collections`); React hook patterns like `useValue` / `useState` (those live in `@mongez/react-atom`, not this package).
 sidebar:
   order: 60
 ---

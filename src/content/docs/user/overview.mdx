@@ -1,0 +1,132 @@
+---
+title: "User"
+name: mongez-user-overview
+description: |
+  @mongez/user — framework-agnostic auth/session primitive. Subclass User, plug a cache driver, call login/logout/can/get/set methods. Browser and Node. Class-based, no React adapter.
+sidebar:
+  order: 10
+  label: "Overview"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+A framework-agnostic auth/session primitive. Subclass `User`, plug in a cache driver, then read and write the session through bound methods (`login`, `logout`, `get`, `set`, `can`). Class-based — each instance owns its `userData`, permissions, and (optional) event listener. There's no React adapter and no global store; for cross-module access to "the current user", use the module-level `getCurrentUser` pointer.
+
+## Highlighted features
+
+<div class="mongez-highlights">
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+  <h3>Subclass <code>User</code></h3>
+  <p>Inherit from <code>User</code>, declare your <code>cacheDriver</code> + optional overrides. Methods (<code>login</code>, <code>logout</code>, <code>can</code>) come free.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+  <h3>Pluggable storage</h3>
+  <p>Cache driver is a 3-method interface (<code>get</code>, <code>set</code>, <code>remove</code>). Cookies, localStorage, IndexedDB, <code>@mongez/cache</code> — your choice.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="fire">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+  <h3>Dot-notation permissions</h3>
+  <p><code>user.can("posts.create")</code> reads nested permission trees. Set the whole tree with <code>setPermissions</code>, query with paths.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="bolt">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><line x1="14.5" y1="9.5" x2="17.5" y2="6.5"/><line x1="6.5" y1="17.5" x2="9.5" y2="14.5"/></svg>
+  <h3>Lifecycle events</h3>
+  <p><code>boot</code>, <code>login</code>, <code>logout</code>, <code>change</code>, <code>keyChange</code> all dispatch through <code>@mongez/events</code>. Drive UI re-renders, audit logs, side effects.</p>
+</div>
+
+</div>
+
+## Install
+
+<Tabs syncKey="pkg-manager">
+<TabItem label="npm">
+
+```sh
+npm install @mongez/user
+```
+
+</TabItem>
+<TabItem label="yarn">
+
+```sh
+yarn add @mongez/user
+```
+
+</TabItem>
+<TabItem label="pnpm">
+
+```sh
+pnpm add @mongez/user
+```
+
+</TabItem>
+</Tabs>
+
+`@mongez/events` and `@mongez/reinforcements` install automatically. No peers to wire.
+
+## Quick peek
+
+```ts
+import { User as BaseUser, UserCacheDriverInterface } from "@mongez/user";
+
+class AppUser extends BaseUser {
+  protected cacheDriver: UserCacheDriverInterface = myDriver;
+}
+
+const user = new AppUser();
+user.boot();                                        // hydrate from cache on reload
+user.login({ id: 1, name: "Ada", accessToken: "eyJhbGc..." });
+user.isLoggedIn();                                  // true
+user.can("posts.create");                           // dot-notation permission check
+```
+
+Subclass `User`, plug in a cache driver, then read/write the session through bound methods.
+
+## Mental model
+
+| Concept | What it is |
+|---|---|
+| User | A typed user payload + bound methods. One instance per app, typically. |
+| Cache driver | Three methods (`get` / `set` / `remove`) — anything that persists data. |
+| Events | Optional pub/sub for `boot` / `login` / `logout` / `change` / `keyChange`. |
+| Current user | Module global — `setCurrentUser` / `getCurrentUser`. Single shared slot. |
+| Permissions | Plain object on the instance. Replaced via `setPermissions`, queried via `can(dot.path)`. |
+
+## Class hierarchy
+
+```
+UserInterface  (type contract)
+     │
+     ▼
+   User       (base class — abstract in practice)
+     │
+     ▼
+  AppUser     (your subclass — declares cacheDriver and any overrides)
+```
+
+`UserEventsListener` is a separate class instantiated on `user.events` during `boot()` when events are enabled.
+
+## Scope boundaries
+
+| Concern | Lives in | Why |
+|---|---|---|
+| Login UI / forms / network calls | Your app | This library manages state, not transport |
+| Storage primitive (cookies, localStorage, IDB) | The cache driver you supply | Keeps the package storage-agnostic |
+| App-wide reactive state | [`@mongez/atom`](/atom/overview/) | A different abstraction. Compose if you need both |
+| Event bus | [`@mongez/events`](/events/overview/) | Shared dep; events dispatched there |
+| Object/string utilities | [`@mongez/reinforcements`](/reinforcements/overview/) | Used internally for dot-notation |
+
+## Where to go next
+
+- **[Current user](../current-user/)** — `setCurrentUser`, `getCurrentUser`, module-level pointer
+- **[User manager](../user-manager/)** — subclassing `User`, `boot`, `login`, `logout`
+- **[Permissions](../permissions/)** — `setPermissions`, `can`, dot-notation queries
+- **[Cache drivers](../cache-drivers/)** — implementing `UserCacheDriverInterface`
+- **[Events](../events/)** — `UserEventsListener`, the five lifecycle hooks
+- **[Recipes](../recipes/)** — common patterns (token refresh, role gating)

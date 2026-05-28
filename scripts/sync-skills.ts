@@ -13,7 +13,7 @@
  * This script is idempotent — runs as a `prebuild` step or manually via
  * `yarn sync`.
  */
-import { readFile, writeFile, readdir, mkdir, rm } from "node:fs/promises";
+import { readFile, writeFile, readdir, mkdir, rm, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,10 +60,11 @@ const PACKAGES: Array<{ pkg: string; dir: string }> = [
   { pkg: "user",               dir: "user" },
   // Networking
   { pkg: "http",               dir: "http" },
-  // Build & AI tooling
+  // Developer tooling
   { pkg: "vite",               dir: "vite" },
   { pkg: "agent-kit",          dir: "agent-kit" },
   { pkg: "pkgist",             dir: "pkgist" },
+  { pkg: "copper",             dir: "copper" },
 ];
 
 /**
@@ -102,6 +103,7 @@ const OVERVIEW_TITLES: Record<string, string> = {
   "http":               "HTTP",
   "agent-kit":          "Agent Kit",
   "pkgist":             "Pkgist",
+  "copper":             "Copper",
 };
 
 /**
@@ -138,6 +140,8 @@ const TITLE_OVERRIDES: Record<string, string> = {
   // "Http Client", etc., which read wrong. Override explicitly.
   "cli.md":                 "CLI",
   "cli-usage.md":           "CLI usage",
+  "agent-integrations.md":  "Agent integrations",
+  "authoring-skills.md":    "Authoring skills",
   "htaccess.md":            ".htaccess generation",
   "http-client.md":         "HTTP client",
   "jsx-converter.md":       "JSX converter",
@@ -194,6 +198,10 @@ const PACKAGE_TITLE_OVERRIDES: Record<string, string> = {
  */
 const ORDER: Record<string, number> = {
   "overview.md":     10,
+  // Agent Kit's developer-facing pages come right after Overview.
+  "agent-integrations.md": 15,
+  "cli-usage.md":          16,
+  "authoring-skills.md":   18,
   "atoms.md":        20,
   "collections.md":  30,
   "derived.md":      40,
@@ -276,6 +284,177 @@ function rewriteSiblingLinks(content: string): string {
     /\(\.\/([^)#\s]+?)\.md(#[^)\s]*)?\)/g,
     (_, slug, anchor) => `(../${slug}/${anchor ?? ""})`,
   );
+}
+
+/**
+ * Replace the install code block(s) under `## Install` / `## Installation`
+ * with a Starlight `<Tabs>` block exposing npm / yarn / pnpm.
+ *
+ * Source SKILL.md files keep their plain markdown install commands —
+ * AI agents reading them see one canonical install command. Only the
+ * docs site rewrites them into tabs for human-friendly UX.
+ *
+ * Detection:
+ *   - Finds the first `## Install` or `## Installation` H2.
+ *   - Reads the first install command in the section to learn the
+ *     `-D` flag (some dev-tools install with `-D`) and the package
+ *     specifier(s).
+ *   - Strips up to three leading fenced code blocks (covers the
+ *     three-blocks-stacked layout most overview pages use today).
+ *   - Emits a single `<Tabs>` block with three `<TabItem>`s.
+ *
+ * The output is MDX (Starlight components require it).
+ */
+function transformInstallToTabs(body: string): { transformed: string; changed: boolean } {
+  const headingRe = /^##\s+Install(?:ation)?\s*$/im;
+  const headingMatch = headingRe.exec(body);
+  if (!headingMatch) return { transformed: body, changed: false };
+
+  // Locate the section body — everything from the line after the heading
+  // until the next H1/H2 heading (or EOF).
+  const headingEnd = headingMatch.index + headingMatch[0].length;
+  let i = headingEnd;
+  while (i < body.length && (body[i] === "\n" || body[i] === "\r")) i++;
+
+  // Only treat H2 as the next section boundary — `# npm` / `# yarn` /
+  // `# pnpm` shell-style comments at the start of `sh` code blocks also
+  // sit at column 0, which would otherwise be mistaken for H1 headers.
+  const rest = body.slice(i);
+  const nextHeadingIdx = rest.search(/^##\s/m);
+  const sectionEnd = nextHeadingIdx === -1 ? body.length : i + nextHeadingIdx;
+
+  const section = body.slice(i, sectionEnd);
+
+  // Extract the first install command to learn the install flag and
+  // the package specifier(s). Handles `npm install`, `npm i`, `yarn add`,
+  // and `pnpm add` / `pnpm i`, with optional `-D` and one or more
+  // `@scope/name` (or unscoped) specifiers.
+  const cmdRe =
+    /(?:npm\s+(?:install|i)|yarn\s+add|pnpm\s+(?:add|i))\s+(-D\s+)?((?:@[\w\-.]+\/[\w\-]+|[\w\-]+)(?:\s+(?:@[\w\-.]+\/[\w\-]+|[\w\-]+))*)/i;
+  const cmdMatch = cmdRe.exec(section);
+  if (!cmdMatch) return { transformed: body, changed: false };
+
+  const devFlag = cmdMatch[1] ? "-D " : "";
+  const pkgs = cmdMatch[2].trim();
+
+  // Strip up to three leading fenced code blocks (and any blank lines
+  // before them). Whatever trailing prose follows is preserved as-is.
+  let remaining = section.replace(/^\n+/, "");
+  for (let n = 0; n < 3; n++) {
+    const blockMatch = /^```[\w]*\n[\s\S]*?\n```\n*/.exec(remaining);
+    if (!blockMatch) break;
+    remaining = remaining.slice(blockMatch[0].length);
+  }
+
+  // Build the tabs block. `syncKey="pkg-manager"` makes the user's
+  // package-manager choice persist across every overview page in the
+  // session — pick yarn once, every install snippet on every page
+  // defaults to yarn from then on.
+  const tabs = `<Tabs syncKey="pkg-manager">
+<TabItem label="npm">
+
+\`\`\`sh
+npm install ${devFlag}${pkgs}
+\`\`\`
+
+</TabItem>
+<TabItem label="yarn">
+
+\`\`\`sh
+yarn add ${devFlag}${pkgs}
+\`\`\`
+
+</TabItem>
+<TabItem label="pnpm">
+
+\`\`\`sh
+pnpm add ${devFlag}${pkgs}
+\`\`\`
+
+</TabItem>
+</Tabs>
+`;
+
+  const trailingProse = remaining.length > 0
+    ? (remaining.startsWith("\n") ? remaining : "\n" + remaining)
+    : "";
+
+  return {
+    transformed: body.slice(0, i) + tabs + trailingProse + body.slice(sectionEnd),
+    changed: true,
+  };
+}
+
+/**
+ * MDX 3 parses literal `{...}` inside JSX context (anywhere inside a
+ * raw HTML block) as a JavaScript expression. So `<p>{data}</p>` inside
+ * a `<div>` would try to evaluate `data` as a variable and silently
+ * fail the entire body render — TOC survives, paragraphs disappear.
+ *
+ * This transform escapes `{` → `&#123;` and `}` → `&#125;` ONLY when
+ * inside an open `<div>...</div>` block, leaving prose markdown outside
+ * such blocks untouched (so writers can still use `{...}` in normal
+ * paragraphs) and leaving fenced code blocks untouched (so Quick peek
+ * snippets with object literals render correctly).
+ *
+ * Authors writing highlight cards with literal `{...}` placeholders
+ * (e.g. `<code>setFoo({...})</code>`, `<code>${VAR}</code>`,
+ * `<code>{ key: value }</code>`) get the right rendering without
+ * remembering to manually HTML-entity-escape every brace.
+ */
+function escapeBracesInHtmlBlocks(content: string): string {
+  const lines = content.split("\n");
+  const out: string[] = [];
+  let divDepth = 0;
+  let inCodeFence = false;
+
+  for (const line of lines) {
+    // Toggle fenced-code state on ``` or ~~~. Don't escape inside fences.
+    if (/^\s*(```|~~~)/.test(line)) {
+      inCodeFence = !inCodeFence;
+      out.push(line);
+      continue;
+    }
+
+    if (inCodeFence) {
+      out.push(line);
+      continue;
+    }
+
+    const openDivs = (line.match(/<div\b/g) || []).length;
+    const closeDivs = (line.match(/<\/div>/g) || []).length;
+    const willBeInsideDiv = divDepth > 0 || openDivs > 0;
+
+    if (willBeInsideDiv) {
+      out.push(
+        line.replace(/\{/g, "&#123;").replace(/\}/g, "&#125;"),
+      );
+    } else {
+      out.push(line);
+    }
+
+    divDepth += openDivs - closeDivs;
+    if (divDepth < 0) divDepth = 0;
+  }
+
+  return out.join("\n");
+}
+
+/**
+ * Inject an MDX import block immediately after the frontmatter (or at
+ * the top of the file when there's no frontmatter). The import is the
+ * minimum needed for Starlight's `<Tabs>` / `<TabItem>` components.
+ */
+function injectTabsImport(content: string): string {
+  const importLine = `import { Tabs, TabItem } from "@astrojs/starlight/components";`;
+  if (!content.startsWith("---")) {
+    return `${importLine}\n\n${content}`;
+  }
+  const endIdx = content.indexOf("\n---", 4);
+  if (endIdx === -1) return content; // malformed; pass through
+  const head = content.slice(0, endIdx + 4); // through closing `---`
+  const tail = content.slice(endIdx + 4);     // begins with `\n`
+  return `${head}\n\n${importLine}${tail}`;
 }
 
 function ensureFrontmatter(
@@ -371,16 +550,39 @@ async function syncPackage(pkg: string, dir: string): Promise<number> {
     const title = packageTitle ?? titleFromFilename(file, dir);
     const sidebarLabel = packageTitle ? "Overview" : undefined;
     const order = ORDER[file] ?? 50;
-    await writeFile(
-      join(destDir, file),
-      ensureFrontmatter(
-        rewriteSiblingLinks(stripLeadingH1(raw)),
-        title,
-        order,
-        sidebarLabel,
-      ),
-      "utf8",
-    );
+
+    // Overview pages get the install code block rewritten into a
+    // Starlight `<Tabs>` block (npm / yarn / pnpm). Because Starlight
+    // components only render in MDX, the file extension flips to `.mdx`
+    // and an MDX import line gets injected immediately after frontmatter.
+    let body = rewriteSiblingLinks(stripLeadingH1(raw));
+    let outFile = file;
+    if (isOverview) {
+      const { transformed, changed } = transformInstallToTabs(body);
+      if (changed) {
+        body = transformed;
+        outFile = file.replace(/\.md$/, ".mdx");
+      }
+    }
+
+    let output = ensureFrontmatter(body, title, order, sidebarLabel);
+    if (outFile.endsWith(".mdx")) {
+      output = injectTabsImport(output);
+      // Defensive: any literal `{` / `}` inside the HTML highlight
+      // cards (or any other raw `<div>` block) gets escaped so MDX
+      // doesn't try to evaluate it as a JSX expression.
+      output = escapeBracesInHtmlBlocks(output);
+    }
+
+    // If we're writing `overview.mdx`, remove any stale `overview.md`
+    // left over from a previous sync (and vice versa) so Astro's
+    // content collection sees exactly one source for the URL.
+    const stalePath = outFile.endsWith(".mdx")
+      ? join(destDir, outFile.replace(/\.mdx$/, ".md"))
+      : join(destDir, outFile.replace(/\.md$/, ".mdx"));
+    if (existsSync(stalePath)) await unlink(stalePath);
+
+    await writeFile(join(destDir, outFile), output, "utf8");
   }
 
   console.log(

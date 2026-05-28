@@ -3,8 +3,6 @@ title: "Recipes"
 name: mongez-concat-route-recipes
 description: |
   Idiomatic patterns for `concatRoute` covering API URL construction, locale-prefixed routes, base-path normalization, query string composition, paginated routes, sub-resources, breadcrumb arrays, and building absolute URLs.
-  TRIGGER when: code imports `concatRoute` from `@mongez/concat-route` in a real application flow; user asks "how do I build an API URL with concatRoute", "how do I add an optional locale prefix to my routes", "how do I normalize a configurable base path", "how do I append a query string to a concatRoute result", or "how do I spread a breadcrumb array into concatRoute"; `import concatRoute from "@mongez/concat-route"` appears next to helpers like `userUrl(id)` or `route(locale, ...rest)`.
-  SKIP: signature/normalization-rules deep dives — use `mongez-concat-route-concat-route`; first-time package orientation/install — use `mongez-concat-route-overview`; building query strings — use `mongez-query-string-*`; route pattern matching — use `mongez-react-router-*`.
 sidebar:
   order: 99
 ---

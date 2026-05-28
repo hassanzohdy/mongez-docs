@@ -3,8 +3,6 @@ title: "Interactions"
 name: mongez-dom-interactions
 description: |
   Helpers for keyboard event detection, smooth scrolling, dark-mode detection, HTML-to-text conversion, and reading viewport/screen dimensions.
-  TRIGGER when: code imports `pressed`, `TAB_KEY`, `ESC_KEY`, `ENTER_KEY`, `CONTROL_KEY`, `scrollTo`, `userPrefersDarkMode`, `htmlToText`, `getWindowWidth`, `getWindowHeight`, `getScreenWidth`, or `getScreenHeight` from `@mongez/dom`; user asks "how do I detect Enter / Esc / Tab keys", "how do I smooth-scroll to an anchor", "how do I detect OS dark mode", "how do I strip HTML tags for a plain-text preview", or "how do I read window/screen width"; `import { pressed, ENTER_KEY, scrollTo } from "@mongez/dom"`.
-  SKIP: user is updating `<head>` meta tags / favicon / canonical — load `mongez-dom-metadata` instead; loading stylesheets, fonts, scripts, or setting CSS variables — `mongez-dom-assets`; raw `<meta>` / `<link>` / element-attribute building — `mongez-dom-head-elements`; React-specific declarative head management — `@mongez/react-helmet`; this package is framework-agnostic DOM.
 sidebar:
   order: 50
 ---

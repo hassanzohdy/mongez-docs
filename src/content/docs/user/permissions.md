@@ -3,8 +3,6 @@ title: "Permissions"
 name: mongez-user-permissions
 description: |
   How to store, check, and persist user permissions using `setPermissions()` and `can()` with dot-notation paths.
-  TRIGGER when: code calls `user.setPermissions(...)`, `user.can("...")`, or imports `Role`, `PermissionGroup` types from `@mongez/user`; user asks "how do I check permissions / gate features by role / store user permissions / wire RBAC with @mongez/user"; file does permission checks against a `User` subclass instance.
-  SKIP: CASL, Casbin, or other dedicated authorization libraries; backend policy/middleware authz unrelated to the client-side `User` class; generic feature flagging (LaunchDarkly, Unleash); roles stored entirely in the JWT without `setPermissions`.
 sidebar:
   order: 50
 ---

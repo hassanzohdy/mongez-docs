@@ -3,8 +3,6 @@ title: "Cache management"
 name: mongez-atomic-query-cache
 description: |
   All cache management operations in @mongez/atomic-query — invalidation, refetch, optimistic writes, seeding, direct reads, destruction, GC, and non-React subscriptions.
-  TRIGGER when: code imports `invalidate`, `invalidateAll`, `invalidateBackground`, `invalidateBackgroundAll`, `refetchQuery`, `refetchMultipleQueries`, `refetchQueryBackground`, `refetchMultipleQueriesBackground`, `updateQueryData`, `seedQuery`, `getQuery`, `getData`, `isStale`, `destroyQuery`, `clearCache`, `garbageCollect`, `limitCacheSize`, `getCacheStats`, `setupAutoGC`, or `onQueryChange` from `@mongez/atomic-query`; user asks "how do I read/write/expire the cache without a hook / invalidate after a mutation / configure GC"; typical import `import { queryAtom, invalidate, updateQueryData } from "@mongez/atomic-query"`.
-  SKIP: writing `useQuery`/`useSuspenseQuery` calls — use `mongez-atomic-query-basic-query` or `mongez-atomic-query-queries`; running mutations (POST/PUT/PATCH/DELETE) — use `mongez-atomic-query-mutations`; array-shaped helpers like `push`/`remove`/`sort` — use `mongez-atomic-query-list-helpers`; SSR seeding via `<HydrateQueries>` — use `mongez-atomic-query-ssr`.
 sidebar:
   order: 60
 ---

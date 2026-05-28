@@ -3,8 +3,6 @@ title: "Serialize"
 name: mongez-query-string-serialize
 description: |
   How to serialize objects into URL query strings using `queryString.toQueryString` and write them to the browser URL via `queryString.update` (plus `queryString.toString` for reads) — including `key[]` array syntax, `parent[child]` nesting, `null` drops, string passthrough, and the no-percent-encoding quirk.
-  TRIGGER when: code calls `queryString.toQueryString`, `queryString.update`, or `queryString.toString` from `@mongez/query-string`; user asks "how do I build a query string from an object", "how do I update the URL without reloading", "why does `null` disappear from my query string", "why isn't `&` encoded", or "how do I clear the query string"; `import queryString from "@mongez/query-string"` followed by `update(...)` or `toQueryString(...)`.
-  SKIP: parsing / reading the URL — use `mongez-query-string-parse`; full filter/pagination/multi-select/round-trip flows — use `mongez-query-string-recipes`; package orientation — use `mongez-query-string-overview`; URL/path joining (`@mongez/concat-route`); React-aware URL hooks (`@mongez/react-router`); native `URLSearchParams` or `history.pushState` use without this package.
 sidebar:
   order: 50
 ---

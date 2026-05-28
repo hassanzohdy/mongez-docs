@@ -3,8 +3,6 @@ title: "Recipes"
 name: mongez-query-string-recipes
 description: |
   End-to-end usage patterns for `@mongez/query-string` combining `parse`, `all`, `get`, `toQueryString`, and `update` — URL-driven filters, pagination, multi-select facets, safe round-trips with `encodeURIComponent`, resetting the query, `pushState` vs `replaceState`, server-side parsing, store sync via `popstate`, and composing with `concatRoute` from `@mongez/concat-route`.
-  TRIGGER when: code combines multiple `queryString.*` calls in one feature; user asks "how do I build URL-driven filters", "how do I do pagination in the URL", "how do I sync URL state with a store", "how do I round-trip values with `&` or `%`", "how do I push a history entry instead of replace", or "how do I parse a query string server-side"; `import queryString from "@mongez/query-string"` alongside `concatRoute` or store/router code.
-  SKIP: single-method semantics for parsing — use `mongez-query-string-parse`; single-method semantics for serializing/updating — use `mongez-query-string-serialize`; package orientation — use `mongez-query-string-overview`; React-aware URL hooks (`@mongez/react-router`); pure URL/path joining without query strings (`@mongez/concat-route` on its own); generic state-management or form-state tutorials.
 sidebar:
   order: 99
 ---

@@ -3,8 +3,6 @@ title: "Atoms"
 name: mongez-atom-atoms
 description: |
   Full reference for `createAtom` — signature, base methods, object-only methods, lifecycle events, registry helpers, and usage examples.
-  TRIGGER when: code imports or calls `createAtom`, `getAtom`, `atomsList`, `atomsObject`, or uses `atom.update`, `atom.silentUpdate`, `atom.merge`, `atom.change`, `atom.silentChange`, `atom.watch`, `atom.reset`, `atom.silentReset`, `atom.onChange`, `atom.onReset`, `atom.onDestroy`, `atom.clone`, `atom.destroy`, `beforeUpdate`; user asks "how do I define an atom", "what methods does an atom have", or "how do I subscribe to atom changes"; `import { createAtom } from "@mongez/atom"`.
-  SKIP: array-typed atom mutation verbs (use `mongez-atom-collections`); computed atoms (use `mongez-atom-derived` / `mongez-atom-derived-atoms`); attaching custom methods via `actions` bag (use `mongez-atom-actions`); SSR isolation (use `mongez-atom-atom-store` / `mongez-atom-stores`); persistence (use `mongez-atom-persist` / `mongez-atom-persistence`); React hooks (live in `@mongez/react-atom`).
 sidebar:
   order: 20
 ---

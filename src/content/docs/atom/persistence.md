@@ -3,19 +3,9 @@ title: "Persistence"
 name: mongez-atom-persistence
 description: |
   How to persist atom values across page loads using the built-in `localStorageAdapter` or a custom `PersistAdapter` (cookies, IndexedDB, any sync/async store).
-  TRIGGER when: code sets `persist: true` or `persist: customAdapter` on a `createAtom` call, imports `PersistAdapter`, `PersistOption`, or `localStorageAdapter`; user asks "how do I persist atom state to localStorage", "why doesn't persist work on the server", or "how do I write an SSR-safe cookie adapter"; `import { type PersistAdapter, localStorageAdapter } from "@mongez/atom"`.
-  SKIP: per-request SSR isolation (use `mongez-atom-atom-store` / `mongez-atom-stores`); defining the atom itself (use `mongez-atom-atoms` / `mongez-atom-defining-atoms`); cache-with-invalidation patterns (use `@mongez/atomic-query`); the sibling `mongez-atom-persist` skill — only one of the two should fire for the same request.
 sidebar:
   order: 50
 ---
-
-## When to use
-
-Load this skill when the user:
-- Wants atom values to survive page reloads
-- Uses `persist: true` or `persist: myAdapter` in `AtomOptions`
-- Needs to swap localStorage for a different store (IndexedDB, cookies, memory)
-- Asks why `persist: true` doesn't work on the server (SSR/Node)
 
 ## The persist option
 

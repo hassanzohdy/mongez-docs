@@ -3,8 +3,6 @@ title: "Pipeline"
 name: mongez-pkgist-pipeline
 description: |
   Per-package build pipeline: 1) load source package.json, 2) resolve new version, 3) create build dir, 4) snapshot source to sourcesDir (excludes .git/node_modules/dist), 5) compile via tsdown to esm/+cjs/, 6) clone extra files, 7) write clean build package.json, 8) update source package.json version in-place, 9) git add/commit/push/tag, 10) npm publish from build dir. Output structure with preserveModules true/false documented.
-  TRIGGER when: user asks "what does pkgist do step by step", "how does pkgist build a package", "what does the build output look like", "what's in the published package.json"; user wants to understand the pipeline order; user asks about source snapshots / sourcesDir; user asks about the generated `exports` map; user asks why ESM-only packages get `"type": "module"`; user debugging build artifacts.
-  SKIP: per-package config (use `package-options` skill); CLI invocation (use `cli` skill); semver decisions (use `versioning` skill); git automation specifics (use `git-workflow` skill).
 sidebar:
   order: 50
 ---

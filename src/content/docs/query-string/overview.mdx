@@ -1,0 +1,118 @@
+---
+title: "Query String"
+name: mongez-query-string-overview
+description: |
+  @mongez/query-string — parse and serialize URL query strings with array bracket + nested-object support, plus a no-reload browser URL rewriter. Zero deps.
+sidebar:
+  order: 10
+  label: "Overview"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+The parse/serialize half of every URL-driven feature — filters, sorts, pagination, search forms — packaged as one default export. Pass it an object, get back a query string with `[]` array brackets and `[parent][child]` nesting. Pass it a query string, get back an object with numeric coercion applied. Four browser-bound methods (`all`, `get`, `update`, `toString`) read and write `window.location`; the two pure data methods (`parse`, `toQueryString`) work anywhere.
+
+## Highlighted features
+
+<div class="mongez-highlights">
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+  <h3>Nested object + array shapes</h3>
+  <p><code>?tags[]=a&user[name]=alice</code> ⇄ <code>&#123; tags: ["a"], user: &#123; name: "alice" &#125; &#125;</code>. Any depth, both directions.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="ice">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+  <h3>Numeric coercion on parse</h3>
+  <p><code>"page=2"</code> parses as <code>&#123; page: 2 &#125;</code> — the number, not the string. Lossy by design: <code>"007"</code> → <code>7</code>.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="fire">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+  <h3>No-reload URL rewriter</h3>
+  <p><code>queryString.update(&#123;...&#125;)</code> rewrites <code>window.location.search</code> via <code>history.replaceState</code> — no reload, no <code>popstate</code> fire.</p>
+</div>
+
+<div class="mongez-highlight" data-accent="bolt">
+  <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+  <h3>Zero deps, SSR-safe parsers</h3>
+  <p>The two pure methods (<code>parse</code>, <code>toQueryString</code>) work in browser, Node, and edge workers. Browser-only methods are clearly demarcated.</p>
+</div>
+
+</div>
+
+## Install
+
+<Tabs syncKey="pkg-manager">
+<TabItem label="npm">
+
+```sh
+npm install @mongez/query-string
+```
+
+</TabItem>
+<TabItem label="yarn">
+
+```sh
+yarn add @mongez/query-string
+```
+
+</TabItem>
+<TabItem label="pnpm">
+
+```sh
+pnpm add @mongez/query-string
+```
+
+</TabItem>
+</Tabs>
+
+Zero runtime dependencies.
+
+## Quick peek
+
+```ts
+import queryString from "@mongez/query-string";
+
+queryString.parse("?page=2&tags[]=a&tags[]=b&user[name]=alice");
+// → { page: 2, tags: ["a", "b"], user: { name: "alice" } }
+
+queryString.toQueryString({ page: 2, tags: ["a", "b"] });
+// → "page=2&tags[]=a&tags[]=b"
+
+queryString.update({ tag: "books", page: 1 });
+// window.location.search becomes "?tag=books&page=1" — no reload
+```
+
+Parse and serialize with array + nested-object support, plus a no-reload URL rewriter for browser code.
+
+## Mental model
+
+| Concept | Type | Mental model |
+|---|---|---|
+| `parse` / `toQueryString` | pure function | Stateless conversion between `Record<string, any>` and `string`. Same in browser and server. |
+| `all` / `get` / `toString` | browser read | Sugar over `parse(window.location.search)`. |
+| `update` | browser write | Sugar over `history.replaceState`. |
+| Numeric coercion | parse-time | Values matching `!isNaN(v - parseFloat(v))` become numbers. Lossy: `"007"` → `7`. |
+| Array shape | URL convention | `key[]=a&key[]=b` ⇄ `{ key: ["a", "b"] }`. |
+| Object shape | URL convention | `parent[child]=v` ⇄ `{ parent: { child: v } }`. Any depth. |
+
+## Environment
+
+- **Browser**: every method works.
+- **Server / Worker**: `parse` and `toQueryString` are safe. `all` / `get` / `toString` / `update` reference `window.location` / `window.history` and will throw. Guard with `typeof window !== "undefined"` if the same module loads on both sides.
+
+## Idioms
+
+- **Call `update` from event handlers, not effects.** It's a deliberate side effect on browser history; running it in a `useEffect` makes the URL flip on every render.
+- **Don't trust `get(key, default)` for falsy values.** Use `key in queryString.all()` if you need a presence check.
+- **Pass raw strings to the serializer.** `toQueryString` runs values through `encodeURIComponent` for you — pre-encoding double-encodes.
+- **Use `update({})` to clear the query string.** It rewrites the URL to just the pathname.
+- **`update` does not fire `popstate`.** If you mirror URL state into another store, subscribe to your store, not `popstate`.
+
+## Where to go next
+
+- **[Parse](../parse/)** — input shapes, coercion rules, edge cases
+- **[Serialize](../serialize/)** — output shapes, encoding rules
+- **[Recipes](../recipes/)** — common patterns

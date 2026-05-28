@@ -12,8 +12,11 @@ node_modules/
 # comment in their frontmatter. The directories are not gitignored so
 # hand-authored pages stay tracked; the sync overwrites by filename.
 
-# Generated ecosystem llms-full.txt (built from per-package files at build time)
-public/llms-full.txt
+# `public/llms-full.txt` is regenerated locally by `yarn build:llms`
+# (concatenates every sibling package's `llms-full.txt`). It IS committed
+# to git so CI (which has no sibling packages) can serve it as-is at
+# `/llms-full.txt`. Remember to re-run `yarn build` before each push so
+# the committed copy stays current.
 
 # OS / editor
 .DS_Store

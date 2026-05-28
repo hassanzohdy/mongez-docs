@@ -1,0 +1,64 @@
+# Builds the Starlight docs and publishes them to GitHub Pages on every
+# push to `main`. The production site lives at https://mongez.js.org
+# (CNAME → hassanzohdy.github.io/mongez-docs).
+#
+# CI deliberately skips the `prebuild` npm hook (`yarn sync` +
+# `yarn build:llms`) because those scripts read from sibling `@mongez/*`
+# package folders that don't exist in this single-repo checkout. Both
+# the synced overview pages (`src/content/docs/`) and the concatenated
+# ecosystem `public/llms-full.txt` are committed to git — keep them
+# current by running `yarn build` locally before each push.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Queue one deploy at a time; finish the in-flight one before starting the next.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      # Invoke Astro's CLI directly. `npm run build` would trigger the
+      # `prebuild` hook (`yarn sync` + `yarn build:llms`) which needs
+      # sibling `@mongez/*` package checkouts that don't exist in CI.
+      - name: Build static site
+        run: npx astro build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

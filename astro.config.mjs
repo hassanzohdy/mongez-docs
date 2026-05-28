@@ -35,6 +35,9 @@ export default defineConfig({
         alt: "Mongez — production TypeScript packages",
         replacesTitle: false,
       },
+      // Browser tab icon — reuse the fire-and-ice bolt logo. Lives in
+      // public/, referenced by absolute path.
+      favicon: "/mongez.png",
       // Starlight 0.30 uses the object form `{ github: url }`.
       // The array form `[{ icon, label, href }]` only landed in 0.32+.
       social: {
@@ -139,13 +142,7 @@ export default defineConfig({
                 { slug: "collection/pagination" },
               ],
             },
-            {
-              label: "Math",
-              items: [
-                { slug: "collection/math" },
-                { slug: "collection/math-aggregation" },
-              ],
-            },
+            { slug: "collection/math" },
             {
               label: "Transforming",
               items: [
@@ -159,35 +156,19 @@ export default defineConfig({
         },
         // ── State ──
         {
+          // Flat easy→advanced flow. Duplicate skill pages (defining-atoms,
+          // derived, persist, stores) stay in the package for AI agents but
+          // are excluded from docs via DOCS_EXCLUDE in sync-skills.ts.
           label: "Atom",
           collapsed: true,
           items: [
             { slug: "atom/overview" },
-            {
-              label: "Atoms",
-              items: [
-                { slug: "atom/atoms" },
-                { slug: "atom/defining-atoms" },
-                { slug: "atom/actions" },
-                { slug: "atom/derived" },
-                { slug: "atom/derived-atoms" },
-                { slug: "atom/collections" },
-              ],
-            },
-            {
-              label: "Persistence",
-              items: [
-                { slug: "atom/persist" },
-                { slug: "atom/persistence" },
-              ],
-            },
-            {
-              label: "Stores & SSR",
-              items: [
-                { slug: "atom/atom-store" },
-                { slug: "atom/stores" },
-              ],
-            },
+            { slug: "atom/atoms" },
+            { slug: "atom/actions" },
+            { slug: "atom/derived-atoms" },
+            { slug: "atom/collections" },
+            { slug: "atom/persistence" },
+            { slug: "atom/atom-store" },
             { slug: "atom/devtools" },
             { slug: "atom/recipes" },
           ],
@@ -204,29 +185,20 @@ export default defineConfig({
           ],
         },
         {
+          // Flat easy→advanced flow. basic-query (⊂ queries) and
+          // list-queries (bundles infinite + list-helpers) stay in the
+          // package for AI but are excluded from docs.
           label: "Atomic Query",
           collapsed: true,
           items: [
             { slug: "atomic-query/overview" },
-            {
-              label: "Core",
-              items: [
-                { slug: "atomic-query/basic-query" },
-                { slug: "atomic-query/queries" },
-                { slug: "atomic-query/mutations" },
-              ],
-            },
-            {
-              label: "Advanced",
-              items: [
-                { slug: "atomic-query/infinite" },
-                { slug: "atomic-query/suspense" },
-                { slug: "atomic-query/list-queries" },
-                { slug: "atomic-query/list-helpers" },
-                { slug: "atomic-query/invalidation" },
-                { slug: "atomic-query/cache" },
-              ],
-            },
+            { slug: "atomic-query/queries" },
+            { slug: "atomic-query/mutations" },
+            { slug: "atomic-query/infinite" },
+            { slug: "atomic-query/list-helpers" },
+            { slug: "atomic-query/suspense" },
+            { slug: "atomic-query/invalidation" },
+            { slug: "atomic-query/cache" },
             { slug: "atomic-query/ssr" },
             { slug: "atomic-query/recipes" },
           ],
@@ -280,13 +252,7 @@ export default defineConfig({
                 { slug: "cache/custom-drivers" },
               ],
             },
-            {
-              label: "Encryption",
-              items: [
-                { slug: "cache/encryption" },
-                { slug: "cache/encrypted-cache" },
-              ],
-            },
+            { slug: "cache/encrypted-cache" },
             { slug: "cache/recipes" },
           ],
         },
@@ -318,9 +284,9 @@ export default defineConfig({
           collapsed: true,
           items: [
             { slug: "encryption/overview" },
-            { slug: "encryption/configuration" },
             { slug: "encryption/encrypt-decrypt" },
             { slug: "encryption/hashes" },
+            { slug: "encryption/configuration" },
             { slug: "encryption/recipes" },
           ],
         },
@@ -427,14 +393,9 @@ export default defineConfig({
           collapsed: true,
           items: [
             { slug: "user/overview" },
-            {
-              label: "User & permissions",
-              items: [
-                { slug: "user/current-user" },
-                { slug: "user/user-manager" },
-                { slug: "user/permissions" },
-              ],
-            },
+            { slug: "user/current-user" },
+            { slug: "user/user-manager" },
+            { slug: "user/permissions" },
             { slug: "user/cache-drivers" },
             { slug: "user/events" },
             { slug: "user/recipes" },

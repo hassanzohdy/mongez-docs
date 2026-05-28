@@ -5,7 +5,7 @@
 > per-package content, see each package's `/llms-full.txt` at
 > `https://mongez.js.org/<package>/llms-full.txt`.
 
-Generated: 2026-05-27T23:58:37.521Z
+Generated: 2026-05-28T13:44:38.198Z
 
 
 

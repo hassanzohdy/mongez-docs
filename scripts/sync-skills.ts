@@ -78,6 +78,30 @@ const PACKAGES: Array<{ pkg: string; dir: string }> = [
  *   Sidebar:  Reinforcements > Overview
  *   Page H1:  Reinforcements
  */
+/**
+ * Skill files that exist in a package's `skills/` folder — and DO ship to
+ * AI agents via agent-kit — but are intentionally NOT rendered as docs
+ * pages, because a sibling page already covers the same topic for human
+ * readers. Documentation is for developers; skills are for AI. We keep
+ * every skill at the source, and only the docs site omits the duplicates
+ * so the sidebar stays free of near-identical entries.
+ *
+ * Keyed by docs dir → set of skill slugs (directory name for the nested
+ * `skills/<name>/SKILL.md` layout, or filename-without-`.md` for the flat
+ * layout).
+ */
+const DOCS_EXCLUDE: Record<string, Set<string>> = {
+  // Refactor leftovers — old flat names superseded by newer ones.
+  atom: new Set(["defining-atoms", "derived", "persist", "stores"]),
+  // basic-query ⊂ queries; list-queries bundles infinite + list-helpers
+  // which have their own focused pages.
+  "atomic-query": new Set(["basic-query", "list-queries"]),
+  // math-aggregation is a tutorial subset of the math reference.
+  collection: new Set(["math-aggregation"]),
+  // encryption (driver reference) folded into encrypted-cache (setup guide).
+  cache: new Set(["encryption"]),
+};
+
 const OVERVIEW_TITLES: Record<string, string> = {
   "atom":               "Atom",
   "react-atom":         "React Atom",
@@ -523,6 +547,7 @@ async function syncPackage(pkg: string, dir: string): Promise<number> {
   //   (a) `skills/<name>.md`               (flat — atom, react-atom, …)
   //   (b) `skills/<name>/SKILL.md`         (Claude-plugin layout — react-form)
   // For (b), we use the directory name as the doc slug.
+  const excluded = DOCS_EXCLUDE[dir] ?? new Set<string>();
   const entries = await readdir(skillsDir, { withFileTypes: true });
   const sources: Array<{ slug: string; sourcePath: string }> = [];
   for (const entry of entries) {
@@ -530,8 +555,11 @@ async function syncPackage(pkg: string, dir: string): Promise<number> {
       // Skip the per-package README inside skills/ — it's an LLM index,
       // not a doc page.
       if (entry.name === "README.md") continue;
+      // Skip AI-only duplicates — kept in source skills, omitted from docs.
+      if (excluded.has(entry.name.replace(/\.md$/, ""))) continue;
       sources.push({ slug: entry.name, sourcePath: join(skillsDir, entry.name) });
     } else if (entry.isDirectory()) {
+      if (excluded.has(entry.name)) continue;
       const skillFile = join(skillsDir, entry.name, "SKILL.md");
       if (existsSync(skillFile)) {
         sources.push({ slug: `${entry.name}.md`, sourcePath: skillFile });

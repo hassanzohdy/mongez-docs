@@ -76,6 +76,7 @@ export default defineConfig({
             { slug: "events/bus" },
             { slug: "events/namespaces" },
             { slug: "events/recipes" },
+            { slug: "events/changelog" },
           ],
         },
         {
@@ -94,6 +95,7 @@ export default defineConfig({
             { slug: "reinforcements/random" },
             { slug: "reinforcements/types" },
             { slug: "reinforcements/recipes" },
+            { slug: "reinforcements/changelog" },
           ],
         },
         {
@@ -107,6 +109,7 @@ export default defineConfig({
             { slug: "supportive-is/environment" },
             { slug: "supportive-is/misc" },
             { slug: "supportive-is/recipes" },
+            { slug: "supportive-is/changelog" },
           ],
         },
         {
@@ -125,6 +128,7 @@ export default defineConfig({
             { slug: "collection/mutation" },
             { slug: "collection/strings" },
             { slug: "collection/recipes" },
+            { slug: "collection/changelog" },
           ],
         },
         // ── State ──
@@ -144,6 +148,7 @@ export default defineConfig({
             { slug: "atom/atom-store" },
             { slug: "atom/devtools" },
             { slug: "atom/recipes" },
+            { slug: "atom/changelog" },
           ],
         },
         {
@@ -155,6 +160,7 @@ export default defineConfig({
             { slug: "react-atom/presets" },
             { slug: "react-atom/ssr" },
             { slug: "react-atom/recipes" },
+            { slug: "react-atom/changelog" },
           ],
         },
         {
@@ -174,6 +180,7 @@ export default defineConfig({
             { slug: "atomic-query/cache" },
             { slug: "atomic-query/ssr" },
             { slug: "atomic-query/recipes" },
+            { slug: "atomic-query/changelog" },
           ],
         },
         // ── Data & Networking ──
@@ -201,6 +208,7 @@ export default defineConfig({
                 { slug: "http/api/resource" },
               ],
             },
+            { slug: "http/changelog" },
           ],
         },
         {
@@ -217,6 +225,7 @@ export default defineConfig({
             { slug: "cache/custom-drivers" },
             { slug: "cache/encrypted-cache" },
             { slug: "cache/recipes" },
+            { slug: "cache/changelog" },
           ],
         },
         // ── Infrastructure ──
@@ -230,6 +239,7 @@ export default defineConfig({
             { slug: "config/listing" },
             { slug: "config/typing" },
             { slug: "config/recipes" },
+            { slug: "config/changelog" },
           ],
         },
         {
@@ -240,6 +250,7 @@ export default defineConfig({
             { slug: "dotenv/loader" },
             { slug: "dotenv/parser" },
             { slug: "dotenv/recipes" },
+            { slug: "dotenv/changelog" },
           ],
         },
         {
@@ -251,6 +262,7 @@ export default defineConfig({
             { slug: "encryption/hashes" },
             { slug: "encryption/configuration" },
             { slug: "encryption/recipes" },
+            { slug: "encryption/changelog" },
           ],
         },
         {
@@ -263,6 +275,7 @@ export default defineConfig({
             { slug: "dom/assets" },
             { slug: "dom/interactions" },
             { slug: "dom/recipes" },
+            { slug: "dom/changelog" },
           ],
         },
         {
@@ -272,6 +285,7 @@ export default defineConfig({
             { slug: "concat-route/overview" },
             { slug: "concat-route/concat-route" },
             { slug: "concat-route/recipes" },
+            { slug: "concat-route/changelog" },
           ],
         },
         {
@@ -282,6 +296,7 @@ export default defineConfig({
             { slug: "query-string/parse" },
             { slug: "query-string/serialize" },
             { slug: "query-string/recipes" },
+            { slug: "query-string/changelog" },
           ],
         },
         // ── Internationalisation ──
@@ -296,6 +311,7 @@ export default defineConfig({
             { slug: "localization/count-translations" },
             { slug: "localization/events" },
             { slug: "localization/recipes" },
+            { slug: "localization/changelog" },
           ],
         },
         {
@@ -306,6 +322,7 @@ export default defineConfig({
             { slug: "react-localization/trans-x" },
             { slug: "react-localization/jsx-converter" },
             { slug: "react-localization/recipes" },
+            { slug: "react-localization/changelog" },
           ],
         },
         // ── React ──
@@ -320,6 +337,7 @@ export default defineConfig({
             { slug: "react-router/lazy-loading" },
             { slug: "react-router/localization" },
             { slug: "react-router/recipes" },
+            { slug: "react-router/changelog" },
           ],
         },
         {
@@ -338,6 +356,7 @@ export default defineConfig({
             { slug: "react-form/validation-rules" },
             { slug: "react-form/react-native-usage" },
             { slug: "react-form/recipes" },
+            { slug: "react-form/changelog" },
           ],
         },
         {
@@ -349,6 +368,7 @@ export default defineConfig({
             { slug: "react-helmet/metadata" },
             { slug: "react-helmet/configuration" },
             { slug: "react-helmet/recipes" },
+            { slug: "react-helmet/changelog" },
           ],
         },
         {
@@ -362,6 +382,7 @@ export default defineConfig({
             { slug: "user/cache-drivers" },
             { slug: "user/events" },
             { slug: "user/recipes" },
+            { slug: "user/changelog" },
           ],
         },
         // ── Developer tooling ──
@@ -380,6 +401,7 @@ export default defineConfig({
             { slug: "vite/tsconfig-aliases" },
             { slug: "vite/auto-open-browser" },
             { slug: "vite/recipes" },
+            { slug: "vite/changelog" },
           ],
         },
         {
@@ -394,6 +416,7 @@ export default defineConfig({
             { slug: "pkgist/versioning" },
             { slug: "pkgist/git-workflow" },
             { slug: "pkgist/recipes" },
+            { slug: "pkgist/changelog" },
           ],
         },
         {
@@ -408,6 +431,7 @@ export default defineConfig({
             { slug: "copper/progress" },
             { slug: "copper/utilities" },
             { slug: "copper/recipes" },
+            { slug: "copper/changelog" },
           ],
         },
         {
@@ -422,6 +446,7 @@ export default defineConfig({
             { slug: "agent-kit/cli-usage" },
             { slug: "agent-kit/recipes" },
             { slug: "agent-kit/authoring-skills" },
+            { slug: "agent-kit/changelog" },
           ],
         },
       ],

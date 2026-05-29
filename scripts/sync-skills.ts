@@ -613,8 +613,26 @@ async function syncPackage(pkg: string, dir: string): Promise<number> {
     await writeFile(join(destDir, outFile), output, "utf8");
   }
 
+  // Copy the package's root CHANGELOG.md (if present) into the docs as a
+  // `changelog.md` page — same source-of-truth model as skills: the
+  // package owns the file, the docs site mirrors it. Ordered last in the
+  // sidebar (order 900) so it always sits below Recipes.
+  let changelogSynced = 0;
+  const changelogSrc = resolve(WORKSPACE_ROOT, pkg, "CHANGELOG.md");
+  if (existsSync(changelogSrc)) {
+    const raw = await readFile(changelogSrc, "utf8");
+    const output = ensureFrontmatter(
+      rewriteSiblingLinks(stripLeadingH1(raw)),
+      "Changelog",
+      900,
+      "Changelog",
+    );
+    await writeFile(join(destDir, "changelog.md"), output, "utf8");
+    changelogSynced = 1;
+  }
+
   console.log(
-    `[sync] @mongez/${pkg}: ${sources.length} files → ${dir}/`,
+    `[sync] @mongez/${pkg}: ${sources.length + changelogSynced} files → ${dir}/`,
   );
   return sources.length;
 }

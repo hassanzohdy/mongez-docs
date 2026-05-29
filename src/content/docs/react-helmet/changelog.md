@@ -1,0 +1,38 @@
+---
+title: "Changelog"
+sidebar:
+  order: 900
+  label: "Changelog"
+---
+
+## Unreleased
+
+### Fixed
+
+- **`<Helmet>` unmount now restores the prior title / description / keywords / image.** The pre-mount snapshot is now a shallow clone of `getMetaData()` rather than a live reference to `@mongez/dom`'s mutable `currentMetaData` singleton, so cleanup actually reads the pre-mount values. See `src/components/Helmet.tsx:36`.
+- **`htmlAttributes` cleanup now removes keys added by the render.** Cleanup now diffs the live `<html>` attribute set against the pre-mount snapshot (excluding `dir`/`lang`, which we intentionally leave alone) and removes any attribute the render introduced before re-applying the snapshot. See `src/components/Helmet.tsx:120-149`.
+- **`url={false}` no longer crashes the canonical-url effect.** The component now short-circuits when `pageUrl` is `false`, `null`, or `""`, treating those as "do not touch the canonical url for this page" — matching the existing `HelmetProps.url: boolean | string` type. See `src/components/Helmet.tsx:213-216`.
+- **`@mongez/dom`'s `setCanonicalUrl` now writes to the `url` slot instead of `color`.** Fix landed in `@mongez/dom`; `getMetaData("url")` returns the value that was last set, and the Helmet canonical-url cleanup path can now read back the correct prior value. See `../dom/src/metadata.ts:275`.
+- **Module-level `document.documentElement` access no longer throws on the server.** Replaced the top-level `const documentElement = document.documentElement` with a lazy `getDocumentElement()` helper that returns `null` when `document` is undefined. Every call site now null-checks; effects only run on the client, so the null branch is dead code in practice — the change exists purely to keep import-time evaluation pure for SSR. See `src/components/Helmet.tsx:19-22`.
+
+### Added
+
+- **First-pass test suite** — 42 happy-dom + `@testing-library/react` tests asserting real DOM output (`document.title`, `document.head.querySelector('meta[...]')`, `<html>` attribute / id / class state).
+- **`vitest.config.ts`** — happy-dom environment, `@vitejs/plugin-react`, and a self-detecting sibling alias that resolves `@mongez/dom` from the local monorepo when present and falls back to `node_modules` in CI checkouts.
+- **CI** — `.github/workflows/test.yml` running Node 18/20/22 on Ubuntu, Node 20 on Windows, and a React 19 cross-test on Node 20.
+- **AI kit** — `llms.txt`, `llms-full.txt`, and `skills/` (`README`, `overview`, `helmet`, `metadata`, `configuration`, `recipes`).
+- **`package.json` hygiene** — `sideEffects: false`, expanded `description`, broader `keywords`, `react >= 18` listed as a peer, dev dependencies for the test infra.
+
+### Changed
+
+- **Documentation** — `README.md` rewritten to match the marketing-style format used across the rest of the `@mongez/*` family: tagline, install, 30-second tour, props reference, configuration, examples, related packages, limitations.
+
+### Removed
+
+- _Nothing removed; the public API surface is unchanged._
+
+### Tests
+
+```
+42 tests passing, 0 skipped
+```

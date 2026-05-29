@@ -66,6 +66,22 @@ export default defineConfig({
             { label: "Which package?", link: "/which/" },
           ],
         },
+        {
+          // AI Agent Kit leads the sidebar — it's the flagship, most-marketed
+          // package. Splits into a developer-facing path (Overview → Agent
+          // integrations → CLI → Recipes) and an author-facing path
+          // (Authoring skills). Same package, two audiences.
+          label: "AI Agent Kit",
+          collapsed: true,
+          items: [
+            { slug: "agent-kit/overview" },
+            { slug: "agent-kit/agent-integrations" },
+            { slug: "agent-kit/cli-usage" },
+            { slug: "agent-kit/recipes" },
+            { slug: "agent-kit/authoring-skills" },
+            { slug: "agent-kit/changelog" },
+          ],
+        },
         // ── Foundations ──
         // The non-React utility belt every other @mongez/* package builds on.
         {
@@ -432,21 +448,6 @@ export default defineConfig({
             { slug: "copper/utilities" },
             { slug: "copper/recipes" },
             { slug: "copper/changelog" },
-          ],
-        },
-        {
-          // Agent Kit splits into a developer-facing path (Overview →
-          // Agent integrations → CLI → Recipes) and an author-facing
-          // path (Authoring skills). Same package, two audiences.
-          label: "Agent Kit",
-          collapsed: true,
-          items: [
-            { slug: "agent-kit/overview" },
-            { slug: "agent-kit/agent-integrations" },
-            { slug: "agent-kit/cli-usage" },
-            { slug: "agent-kit/recipes" },
-            { slug: "agent-kit/authoring-skills" },
-            { slug: "agent-kit/changelog" },
           ],
         },
       ],

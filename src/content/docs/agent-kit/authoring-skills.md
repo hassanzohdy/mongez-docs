@@ -2,7 +2,7 @@
 title: "Authoring skills"
 name: mongez-agent-kit-authoring-skills
 description: |
-  How to ship reusable skills from an npm package so consumers using `agent-kit sync` pick them up automatically — folder layout, `SKILL.md` frontmatter (`description`, `when_to_use`, `name`), the `files` field, flat destination naming, and the front-door / subskill convention.
+  How to ship reusable skills from an npm package so consumers using `agent-kit sync` pick them up automatically — folder layout, `SKILL.md` frontmatter (`description`, `name`), the `files` field, flat destination naming, and the front-door / subskill convention.
 sidebar:
   order: 18
 ---
@@ -117,13 +117,13 @@ Common mistakes and how to avoid them.
 
 ### Front-door skill convention
 
-When your package ships **multiple skills** (Pattern B with several subdirs), include one "front-door" skill whose `when_to_use` is the broadest — typically "user imports from this package" — and which **orients the agent to what's available** plus points at the deeper skills. This becomes the entry point; subskills handle specific tasks.
+When your package ships **multiple skills** (Pattern B with several subdirs), include one "front-door" skill whose `description` casts the broadest net — typically "user imports from this package" — and which **orients the agent to what's available** plus points at the deeper skills. This becomes the entry point; subskills handle specific tasks.
 
 The naming is up to you (`<pkg>-overview`, `<pkg>-conventions`, `<pkg>-fundamentals` all work). What matters is the role: one skill answering "what is this package, and what are the other skills inside it for?"
 
 For Pattern A packages (single root `skills/SKILL.md`), the root file IS the front door — same convention, simpler structure.
 
-The `description` field is the most important line for discovery — it determines whether an agent surfaces the skill at all. The `when_to_use` field is the most important line for noise control. Get both right.
+The `description` field is the most important line — it determines both whether an agent surfaces the skill *and* whether it loads it for the right task. Make it specific: name the concrete triggers (what the user imports, edits, or asks) so the skill fires when relevant and stays quiet otherwise. A vague description either never triggers or triggers on everything.
 
 ## Don't ship runtime concerns as skills
 

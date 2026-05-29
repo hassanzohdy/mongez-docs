@@ -1,5 +1,6 @@
 ---
 title: "Pkgist"
+
 name: mongez-pkgist-overview
 description: |
   @mongez/pkgist — build, version, and publish tool for TypeScript/React npm packages. Powered by tsdown (Rolldown/Rust-based). Standalone packages or version-synchronised families, dual ESM+CJS, git tag+push automation, dry-run mode.
@@ -9,6 +10,8 @@ sidebar:
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+# @mongez/pkgist — Overview
 
 A build, version, and publish tool for TypeScript/React npm packages. Powered by [tsdown](https://tsdown.dev) (Rolldown/Rust-based bundler). Configure once, ship many packages — standalone with independent versioning or grouped into families with synchronised versioning. Dual ESM+CJS output, asset cloning, git tag + push automation, dry-run mode that touches nothing.
 
@@ -91,6 +94,12 @@ pnpm add -D @mongez/pkgist
 
 </TabItem>
 </Tabs>
+
+```sh
+npm install -D @mongez/pkgist
+# or: yarn add -D @mongez/pkgist
+# or: pnpm add -D @mongez/pkgist
+```
 
 Prefer the dev-dep install — it pins the version per repo. Global install (`npm install -g @mongez/pkgist`) is also supported when you want one CLI binary across projects.
 

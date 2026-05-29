@@ -1,11 +1,14 @@
 ---
 title: "Pipeline"
+
 name: mongez-pkgist-pipeline
 description: |
   Per-package build pipeline: 1) load source package.json, 2) resolve new version, 3) create build dir, 4) snapshot source to sourcesDir (excludes .git/node_modules/dist), 5) compile via tsdown to esm/+cjs/, 6) clone extra files, 7) write clean build package.json, 8) update source package.json version in-place, 9) git add/commit/push/tag, 10) npm publish from build dir. Output structure with preserveModules true/false documented.
 sidebar:
   order: 50
 ---
+
+# Build pipeline
 
 What pkgist does for each package, in order. Steps 4 and 9 are conditional; the rest run for every successful build.
 

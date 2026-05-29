@@ -1,11 +1,14 @@
 ---
 title: "Package Options"
+
 name: mongez-pkgist-package-options
 description: |
   Every per-package field accepted in `standalone[]` and `families[].packages[]`: `name`, `root`, `type`, `formats`, `mainType`, `entries`, `srcDir`, `dts`, `sourcemap`, `minify`, `preserveModules`, `clone`, `publish`, `access`, `commit`, `branch`. Defaults, semantics, and which fields are standalone-only or family-level-only.
 sidebar:
   order: 50
 ---
+
+# Package options
 
 Every entry in `standalone[]` and `families[].packages[]` accepts these fields. Family entries use the same fields **except** `version` (family-level only).
 

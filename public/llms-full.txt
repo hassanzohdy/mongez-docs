@@ -5,7 +5,7 @@
 > per-package content, see each package's `/llms-full.txt` at
 > `https://mongez.js.org/<package>/llms-full.txt`.
 
-Generated: 2026-05-29T14:34:23.732Z
+Generated: 2026-05-29T18:41:08.683Z
 
 
 
@@ -10244,7 +10244,7 @@ await syncSkills({
 
 1. **One `AGENTS.md`, every agent.** `AGENTS.md` is the open standard — Codex, Cursor, Amp, Jules, Factory, Kilo, Windsurf, OpenCode read it natively. Claude Code, Gemini CLI, GitHub Copilot, and Aider want their own file. agent-kit derives them so they never drift.
 
-2. **Skills travel with packages.** Any npm package can ship skills by dropping a `skills/` folder at its root — `agent-kit` auto-discovers them. `agent-kit sync` walks `node_modules/` (plus any extra paths via `--path`) and copies each skill into per-agent skill directories with **flat, collision-free folder names** like `.claude/skills/warlock-js-core-add-connector/SKILL.md`.
+2. **Skills — your own, organized your way, plus skills from packages.** Drop a single `skills/` folder at your **project root**, grouped into nested category folders (`skills/backend/auth/SKILL.md`) as deep as you like. Claude Code only reads a flat `.claude/skills/`, so `agent-kit sync` flattens each nested path into a unique top-level name (`backend/auth` → `backend-auth`) — you organize for humans, agent-kit handles the flat requirement. The same walk also covers every package in `node_modules/` (plus any `--path` root), so **any npm package can ship skills too**, copied in with **flat, collision-free folder names** like `.claude/skills/warlock-js-core-add-connector/SKILL.md`.
 
 ## Key principles
 
@@ -10336,11 +10336,11 @@ Flags:
 > **Auto-trigger:** editing a `skills/**/SKILL.md` inside an npm package the user maintains; user asks "how do I ship a skill with my package", "how do consumers pick up my skill", "what should go in SKILL.md frontmatter", or "how should I write `when_to_use` / `description`"; `package.json` `files` field needs `"skills"` added; multi-skill package needs a "front-door" / `<pkg>-overview` orientation skill; user is structuring nested skills (`skills/backend/auth/SKILL.md`) under a category folder.
 > **Skip when:** user is invoking the agent-kit CLI or wiring `postinstall` — load `mongez-agent-kit-cli-usage` instead; user just wants the mental model of agent-kit — load `mongez-agent-kit-overview` instead; project-local skills inside an app the user is NOT publishing to npm (no special authoring concerns — just drop a `skills/` folder).
 
-If you maintain a library that benefits from a coding-agent skill, you can ship that skill with your package. Anyone using `agent-kit sync` in a downstream project will receive your skill in their `.claude/skills/`, `.cursor/skills/`, etc.
+There are two reasons to write skills, and they share the exact same folder layout. **(1) Your project's own skills** — drop a single `skills/` folder at your project root, organize it into nested category folders, and `agent-kit sync` mirrors it into `.claude/skills/` (and friends), flattening the nesting. This is the common case — no publishing required. **(2) Skills shipped from a package** — if you maintain a library that benefits from a coding-agent skill, ship it inside your package; anyone using `agent-kit sync` downstream receives it automatically.
 
 ## Folder layout
 
-Place skill folders inside `skills/` at your package root. Each skill is a directory containing a `SKILL.md`.
+Place skill folders inside `skills/` — at your project root, or at your package root if you're shipping them. Each skill is a directory containing a `SKILL.md`.
 
 ```
 my-package/

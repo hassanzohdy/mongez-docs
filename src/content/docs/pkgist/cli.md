@@ -1,11 +1,14 @@
 ---
 title: "CLI"
+
 name: mongez-pkgist-cli
 description: |
   pkgist CLI commands and flags: `build [pkg...]` (one or more standalone), `build:family <name>` (one synchronized family), `build:all` (every standalone + every family), `list` (show registered packages with current versions), `validate` (check config + paths). Common flags: `--dry-run`, `--no-publish`, `--no-git`, `--concurrency <n>`, `--config <path>`, `--verbose`.
 sidebar:
   order: 50
 ---
+
+# CLI reference
 
 The `pkgist` binary auto-discovers a config file in the current working directory unless `--config` is passed. It tries `pkgist.config.ts`, `pkgist.config.js`, `builder.ts`, `builder.js`, `mongez.ts`, `mongez.js` in that order — see the `configuration` skill for the full discovery rule.
 

@@ -1,11 +1,14 @@
 ---
 title: "Versioning"
+
 name: mongez-pkgist-versioning
 description: |
   Version-bump strategies for pkgist packages: `"auto"` / `"patch"` (default, bumps patch digit), `"minor"`, `"major"`, or any literal semver string. Standalone packages bump from their own current version. Families take the highest current version across all members and bump that, landing all members on the same new version.
 sidebar:
   order: 50
 ---
+
+# Versioning
 
 pkgist computes the next version per package from a strategy you pick, then writes it back to the source `package.json` before building.
 

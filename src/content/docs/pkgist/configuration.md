@@ -1,11 +1,14 @@
 ---
 title: "Configuration"
+
 name: mongez-pkgist-configuration
 description: |
   pkgist config file shape: `pkgist.config.ts` (or `builder.ts`) with `defineConfig({ settings, standalone, families })`. Auto-discovered from cwd; runtime-loaded via dynamic import so it can use ESM `import` syntax freely. Settings block covers concurrency, buildDir, sourcesDir.
 sidebar:
   order: 50
 ---
+
+# Configuration
 
 pkgist auto-discovers a config file in the current working directory. Filenames are tried in this order:
 

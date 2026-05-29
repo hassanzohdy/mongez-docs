@@ -1,11 +1,14 @@
 ---
 title: "Recipes"
+
 name: mongez-pkgist-recipes
 description: |
   Common pkgist patterns ready to copy: single TypeScript library, React component package, Vite/ESM-only plugin, package with library + CLI entries, build-only (no publish) package, family of synchronized packages, hands-off `commit: true` config, monorepo with mixed packages, dry-run-first release flow, hotfix one package, build everything without publishing.
 sidebar:
   order: 99
 ---
+
+# Recipes
 
 Each recipe is a complete, copy-paste-able `pkgist.config.ts` shape (or fragment) for a common situation.
 

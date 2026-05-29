@@ -1,11 +1,14 @@
 ---
 title: "Git Workflow"
+
 name: mongez-pkgist-git-workflow
 description: |
   pkgist git automation: `commit` field accepts `string` (explicit message), `true` (auto-generates `Released <new-version>`, added in 1.1.0), `false` (explicit skip), or omitted (skip, back-compat default). When git runs, pipeline is `git add . → git commit → git push → git tag v<version> → git push tags`. Family-level `commit` overrides per-package commit. Optional `branch` field overrides the push target.
 sidebar:
   order: 50
 ---
+
+# Git workflow
 
 pkgist optionally commits, tags, and pushes after each successful build. Whether git runs at all is controlled by the `commit` field.
 

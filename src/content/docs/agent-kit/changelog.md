@@ -9,6 +9,34 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 ---
 
+## [1.0.22]
+
+### Changed
+
+- **Docs now foreground organizing your *own* project's skills.** The README, bundled skills (`overview`, `authoring-skills`), and `llms`/`llms-full` files now lead with the everyday case: keep a single nested `skills/` folder at your project root (`skills/backend/auth/SKILL.md`) and `agent-kit sync` flattens it into the top-level `.claude/skills/` layout Claude Code requires. Shipping skills from an npm package is now framed as the same mechanism applied to `node_modules/`. No code/API changes.
+
+---
+
+## [1.0.21]
+
+### Fixed
+
+- **Linux skill discovery crash when a scan path's root holds a `package.json` file** — `readTextFile` now treats `ENOTDIR` and `EISDIR` as "no file here" (returning `null`), the same as `ENOENT`. Previously, probing a manifest path whose parent is a file (e.g. `package.json/package.json`, which happens when a scan path points at a project root) threw `ENOTDIR` on Linux but `ENOENT` on Windows — so discovery crashed on Linux only. Both platforms now behave identically.
+
+---
+
+## [1.0.20]
+
+### Fixed
+
+- **Cross-platform skill discovery order** — `scanForSkillPackages` and the nested-skill walk now sort their `readdir` results, so the set and order of discovered skills is identical on Linux (ext4) and Windows (NTFS). Previously the order tracked raw directory order, which differs per filesystem and made order-sensitive output non-deterministic in CI.
+
+### Added
+
+- **CI test workflow** — `.github/workflows/test.yml` runs the suite on Node 20/22 (ubuntu) plus Node 20 (windows) for path/CRLF coverage. Node 18 is excluded because a transitive test dependency (`chokidar@5`) requires Node >=20.19; the CLI itself still runs on Node 18+ at runtime.
+
+---
+
 ## [1.0.19] — Docs overhaul
 
 ### Added

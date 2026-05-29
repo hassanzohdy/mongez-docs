@@ -2,12 +2,17 @@
 title: "Authoring skills"
 name: mongez-agent-kit-authoring-skills
 description: |
-  How to ship reusable skills from an npm package so consumers using `agent-kit sync` pick them up automatically — folder layout, `SKILL.md` frontmatter (`description`, `name`), the `files` field, flat destination naming, and the front-door / subskill convention.
+  How to author and lay out skills for agent-kit — both your project's own skills in a single nested `skills/` folder at the project root, and reusable skills shipped from an npm package. Covers folder layout, nested category organization, `SKILL.md` frontmatter (`description`, `name`), the `files` field, flat destination naming, and the front-door / subskill convention.
 sidebar:
   order: 18
 ---
 
-If you maintain a library that benefits from a coding-agent skill (a model registration pattern, a CLI command shape, a domain-specific convention), you can ship that skill with your package. Anyone using `agent-kit sync` in a downstream project will receive your skill in their `.claude/skills/`, `.cursor/skills/`, etc.
+There are two reasons to write skills, and they share the exact same folder layout:
+
+1. **Your own project's skills** — drop a single `skills/` folder at your project root, organize it into nested category folders, and `agent-kit sync` mirrors it into `.claude/skills/` (and friends), flattening the nesting. This is the common case; see the [overview's "Organize your project's own skills"](../overview/) section for the quick start.
+2. **Skills shipped from a package** — if you maintain a library that benefits from a coding-agent skill (a model registration pattern, a CLI command shape, a domain convention), ship that skill inside your package. Anyone using `agent-kit sync` downstream receives it automatically.
+
+The rest of this page covers the layout and conventions that apply to **both**, with package-specific notes (the `files` field, distribution) called out where they differ.
 
 ## Folder layout
 

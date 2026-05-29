@@ -32,8 +32,8 @@ If you're working with AI coding agents — Claude Code, Cursor, Copilot, Codex,
 
 <div class="mongez-highlight" data-accent="fire">
   <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-  <h3>Custom scan paths + nested skills</h3>
-  <p>agent-kit reads <code>skills/</code> from three places: your own project root, every package inside <code>node_modules/</code>, and any extra root you hand it via <code>--path</code> (monorepo workspace, linked dev package, vendor mirror). Inside any of those <code>skills/</code> folders, SKILL.md files can sit at the top, in flat subdirs, or in nested category folders (<code>skills/backend/auth/SKILL.md</code>). Skills found in <code>--path</code> roots override same-named entries in <code>node_modules/</code>.</p>
+  <h3>One tidy <code>skills/</code> folder — nested how you think</h3>
+  <p>Keep all your project's skills in a single <code>skills/</code> folder at the root, grouped into category subfolders — <code>skills/backend/auth/</code>, <code>skills/frontend/forms/</code>, as deep as you like. Claude Code only reads a <em>flat</em> <code>.claude/skills/</code>, so agent-kit flattens each nested path into a unique name on sync (<code>backend/auth</code> → <code>backend-auth</code>). You organize for humans; agent-kit handles the flat requirement. The same layout is read from <code>node_modules/</code> and any extra <code>--path</code> root (monorepo, linked dev package, vendor mirror).</p>
 </div>
 
 <div class="mongez-highlight" data-accent="fire">
@@ -103,6 +103,38 @@ Wire `sync` into `postinstall` so every future `yarn install` / `npm install` re
 ```
 
 From here, the workflow is: edit `AGENTS.md` once, run `npx agent-kit sync`, and every supported agent picks up the change.
+
+### Organize your project's own skills in one nested folder
+
+You don't have to publish a package to benefit from skills. Drop a single `skills/` folder at your **project root** and organize it however you think — grouped into category subfolders, nested as deep as you like:
+
+```
+my-app/
+├── package.json
+└── skills/
+    ├── backend/
+    │   ├── auth/SKILL.md
+    │   └── jobs/SKILL.md
+    ├── frontend/
+    │   └── forms/SKILL.md
+    └── deployment/SKILL.md
+```
+
+Claude Code only discovers skills at the **top level** of `.claude/skills/` — no nested folders. That normally forces you to dump everything into one flat pile. agent-kit removes that constraint: it walks your nested `skills/` recursively and flattens each path into a unique top-level name on sync.
+
+```sh
+npx agent-kit sync
+```
+
+```
+.claude/skills/
+  backend-auth/
+  backend-jobs/
+  frontend-forms/
+  deployment/
+```
+
+You keep a tidy, human-readable source tree; Claude gets the flat layout it requires. Edit a `SKILL.md`, run `sync` (or `agent-kit watch` during active work), and the change lands. No naming ceremony — a directory containing a `SKILL.md` is a skill, and the folder path *is* its identity.
 
 ### Pulling skills from a custom folder
 

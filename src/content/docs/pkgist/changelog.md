@@ -9,11 +9,13 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 ---
 
-## [1.1.1]
+## [1.1.2]
 
-Current stable release — the tsdown-powered build/version/publish tool for TypeScript npm packages: standalone + version-synchronised families, dual ESM+CJS output, asset cloning, git tag + push automation, and `--dry-run`.
+### Added
 
-> This changelog was introduced at 1.1.1. Version history prior to this entry is available via the git tags and GitHub releases on [hassanzohdy/pkgist](https://github.com/hassanzohdy/pkgist). Future releases will be documented here.
+- This changelog. No code changes — the package remains the tsdown-powered build/version/publish tool: standalone + version-synchronised families, dual ESM+CJS output, asset cloning, git tag + push automation, and `--dry-run`.
+
+> Version history prior to 1.1.0 is available via the git tags and GitHub releases on [hassanzohdy/pkgist](https://github.com/hassanzohdy/pkgist).
 
 ## [1.1.0]
 

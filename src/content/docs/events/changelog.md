@@ -9,8 +9,10 @@ All notable changes to `@mongez/events` are documented here. The format follows 
 
 ---
 
-## [2.2.5]
+## [2.2.6]
 
-Current stable release — the namespace-aware global event bus (`subscribe` / `trigger` / `unsubscribe` / namespace cleanup) with `EventSubscription` and `EventTriggerResponse` types.
+### Added
 
-> This changelog was introduced at 2.2.5. Version history prior to this entry is available via the git tags and GitHub releases on [hassanzohdy/events](https://github.com/hassanzohdy/events). Future releases will be documented here.
+- This changelog. No code changes — the package remains the namespace-aware global event bus (`subscribe` / `trigger` / `unsubscribe` / namespace cleanup) with `EventSubscription` and `EventTriggerResponse` types.
+
+> Version history prior to 2.2.6 is available via the git tags and GitHub releases on [hassanzohdy/events](https://github.com/hassanzohdy/events). Future releases will be documented here.

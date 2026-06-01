@@ -1,0 +1,70 @@
+# @mongez/http
+
+Robust native-fetch HTTP client for TypeScript. Returns `{data, error}` discriminated unions. Per-request `.cancel()`. Typed errors. Caching, retry, interceptors. `Resource` class for RESTful CRUD.
+
+## Install
+
+```
+npm i @mongez/http
+```
+
+## Quick start
+
+```ts
+import { Http, setCurrentHttp, Resource } from '@mongez/http';
+
+const http = new Http({
+  baseURL: 'https://api.example.com',
+  auth: () => `Bearer ${getToken()}`,
+});
+setCurrentHttp(http);
+
+// Direct calls
+const { data, error } = await http.get<User[]>('/users');
+if (error) { /* handle */ }
+
+// Resource pattern
+class UsersResource extends Resource { route = '/users'; }
+const usersResource = new UsersResource();
+const { data: users } = await usersResource.list({ page: 1 });
+```
+
+## Key types
+
+- `HttpResult<T>` — `{ data: T; error: null } | { data: null; error: HttpError }`
+- `CancellablePromise<T>` — `Promise<T> & { cancel(reason?): void; signal: AbortSignal }`
+- `CancellableAsyncIterable<T>` — returned by `stream()`; has `.cancel()` and `.error`
+- `HttpError` — status, body, isAborted, isTimeout, isNetwork, isNotFound, isValidationError, …
+- `HttpConfig` — baseURL, auth, timeout, headers, cache, retry, putToPost, publishKey, serializer, fetchCache, dedupeKey
+- `RequestOptions` — params, headers, signal, cache, cacheKey, retry, throw, timeout, data, responseType, fetchCache, onDownloadProgress
+- `StreamRequestOptions` — method, data, format (sse/ndjson), parseLine, reconnect, reconnectDelay
+- `CacheDriver` — get / set / remove / clear interface
+- `ResourceService` — list / get / create / update / patch / delete / bulkDelete / publish
+
+## Skills
+
+- [`skills/overview/SKILL.md`](skills/overview/SKILL.md) — Bootstrap, exports table, package setup
+  - *Auto-trigger:* Load when installing or configuring `@mongez/http` globally with `setCurrentHttp`/`getCurrentHttp`.
+- [`skills/http-client/SKILL.md`](skills/http-client/SKILL.md) — Http class, request methods, HttpConfig, RequestOptions, cancellation, React patterns
+  - *Auto-trigger:* Load when calling `http.get/post/put/patch/delete/all/race`, `new Http(...)`, or configuring auth, timeout, putToPost, serializer, fetchCache, dedupeKey.
+- [`skills/error-handling/SKILL.md`](skills/error-handling/SKILL.md) — HttpError, HttpResult, status predicates, validation errors
+  - *Auto-trigger:* Load when handling `HttpError`, checking `isNotFound`/`isUnauthorized`/`isValidationError`, or narrowing `HttpResult<T>`.
+- [`skills/streaming/SKILL.md`](skills/streaming/SKILL.md) — stream(), responseType "stream", onDownloadProgress, SSE/NDJSON
+  - *Auto-trigger:* Load when using `http.stream()`, `responseType: "stream"`, SSE, NDJSON, or download progress bars.
+- [`skills/interceptors/SKILL.md`](skills/interceptors/SKILL.md) — before/after interceptors, events, retry config, 401 redirect
+  - *Auto-trigger:* Load when adding `before()`/`after()`, listening to lifecycle events, or configuring `HttpRetryConfig`.
+- [`skills/caching/SKILL.md`](skills/caching/SKILL.md) — CacheDriver, HttpCacheConfig, invalidate
+  - *Auto-trigger:* Load when caching GET responses with a `CacheDriver`, setting `cacheKey`, or calling `invalidate`/`invalidateAll`.
+- [`skills/resource/SKILL.md`](skills/resource/SKILL.md) — Resource class, CRUD, publish, action, pagination subclass
+  - *Auto-trigger:* Load when writing `class XResource extends Resource`, using CRUD methods, or building paginated/nested resources.
+
+## Files
+
+- `src/Http.ts` — main class
+- `src/HttpError.ts` — error class
+- `src/Resource.ts` — RESTful resource helper
+- `src/cancellable.ts` — CancellablePromise / CancellableAsyncIterable factory
+- `src/current-http.ts` — setCurrentHttp / getCurrentHttp
+- `src/Http.types.ts` — all type definitions
+- `src/utils/params.ts` — buildQueryString, appendParams
+- `src/utils/body.ts` — prepareBody, parseBody

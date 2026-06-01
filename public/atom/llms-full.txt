@@ -1,0 +1,308 @@
+# @mongez/atom — full reference
+
+> A framework-agnostic, action-shaped state primitive. This is the concatenated reference; load `llms.txt` for the structured index instead.
+
+## Install
+
+```sh
+yarn add @mongez/atom
+```
+
+## Public exports
+
+```ts
+import {
+  createAtom,
+  atomCollection,
+  derive,
+  AtomStore,
+  createAtomStore,
+  enableAtomDevtools,
+  localStorageAdapter,
+  resolvePersistAdapter,
+  getAtom,
+  atomsList,
+  atomsObject,
+  atoms,                        // module-level registry; usually internal
+  type Atom,
+  type AtomOptions,
+  type AtomActions,
+  type AtomChangeCallback,
+  type AtomCollectionActions,
+  type AtomPartialChangeCallback,
+  type AtomValue,
+  type BaseAtom,
+  type CollectionOptions,
+  type CreateAtomOptions,
+  type DeriveGetter,
+  type DeriveOptions,
+  type EnableDevtoolsOptions,
+  type IsObjectValue,
+  type ObjectAtom,
+  type PersistAdapter,
+  type PersistOption,
+} from "@mongez/atom";
+```
+
+## createAtom(options)
+
+> **Auto-trigger:** code imports or calls `createAtom`, `getAtom`, `atomsList`, `atomsObject`, or uses `atom.update`, `atom.silentUpdate`, `atom.merge`, `atom.change`, `atom.silentChange`, `atom.watch`, `atom.reset`, `atom.silentReset`, `atom.onChange`, `atom.onReset`, `atom.onDestroy`, `atom.clone`, `atom.destroy`, `beforeUpdate`; user asks "how do I define an atom", "what methods does an atom have", or "how do I subscribe to atom changes"; `import { createAtom } from "@mongez/atom"`.
+> **Skip when:** array-typed atom mutation verbs (use `mongez-atom-collections`); computed atoms (use `mongez-atom-derived` / `mongez-atom-derived-atoms`); attaching custom methods via `actions` bag (use `mongez-atom-actions`); SSR isolation (use `mongez-atom-atom-store` / `mongez-atom-stores`); persistence (use `mongez-atom-persist` / `mongez-atom-persistence`); React hooks (live in `@mongez/react-atom`).
+
+```ts
+createAtom<Value, Actions extends AtomActions<Value> = AtomActions<Value>>(
+  options: AtomOptions<Value, Actions>,
+  internal?: { register?: boolean }
+): Atom<Value, Actions>
+```
+
+Options:
+
+```ts
+type AtomOptions<V, A> = {
+  key: string;                                   // unique identifier
+  default: V;                                    // initial value
+  actions?: A & ThisType<Atom<V, A>>;            // bound methods + getters
+  beforeUpdate?: (next: V, prev: V, atom: Atom<V, A>) => V | void;
+  onUpdate?: (cb: AtomChangeCallback<V, A>) => EventSubscription;
+  get?: (key: string, defaultValue?: V, atomValue?: V) => V;
+};
+```
+
+Returns an `Atom<V, A>` carrying:
+
+### Base methods
+
+- `key: string`
+- `default: V`
+- `currentValue: V` (also `value`, `defaultValue`)
+- `update(next | (prev, atom) => next): void` — emits update event
+- `silentUpdate(next): void` — no event
+- `reset(): void` — restore default, emit update + reset
+- `silentReset(): void` — restore default, emit reset only
+- `onChange(cb): EventSubscription`
+- `onReset(cb): EventSubscription`
+- `onDestroy(cb): EventSubscription`
+- `clone(options?: { register?: boolean }): Atom<V, A>` — `.clone.{n}` suffix
+- `destroy(): void` — remove + unsubscribe namespace events
+- `type: string` — `"object" | "array" | typeof primitive`
+- `length: number` — when value is array/string
+
+### Object-only methods (when `V extends object`)
+
+- `merge(partial: Partial<V>): void`
+- `change<K extends keyof V>(key: K, value: V[K]): void`
+- `silentChange<K extends keyof V>(key: K, value: V[K]): void`
+- `get<K extends keyof V>(key: K, default?: any): V[K]`
+- `watch<K extends keyof V>(key: K, cb): EventSubscription`
+
+Primitive atoms (`Atom<boolean>`, `Atom<number>`, `Atom<string>`) do NOT carry these — calling them is a compile error. `Atom<any>` keeps both surfaces (legacy).
+
+## atomCollection(options)
+
+> **Auto-trigger:** code imports or calls `atomCollection`, or invokes `push`, `unshift`, `pop`, `shift`, `replace`, `remove`, `removeItem`, `removeAll`, `map`, `forEach`, `index`, `get(indexOrPredicate)`, `length` on an atom, or uses `AtomCollectionActions` / `CollectionOptions` types; user asks "how do I manage an array as atom state", "how do I push/pop/remove items in an atom", or "what's the difference between createAtom and atomCollection"; `import { atomCollection } from "@mongez/atom"`.
+> **Skip when:** scalar/object atoms (use `mongez-atom-atoms` or `mongez-atom-defining-atoms`); computed array views over collections (use `mongez-atom-derived` / `mongez-atom-derived-atoms`); React-list rendering hooks (live in `@mongez/react-atom`).
+
+```ts
+atomCollection<V>(options: CollectionOptions<V>): Atom<V[], AtomCollectionActions<V>>
+```
+
+`CollectionOptions<V> = Omit<AtomOptions<V[], ...>, "default"> & { default?: V[] }`.
+
+Adds array-mutation actions:
+
+- `push(...items)`, `unshift(...items)` — append/prepend
+- `pop()`, `shift()` — drop last/first
+- `replace(index, item)` — overwrite at index
+- `remove(indexOrPredicate)` — drop one by index or callback
+- `removeItem(item)` — strict-equality remove of first occurrence
+- `removeAll(item) → V[]` — returns filtered copy (non-mutating; historical name)
+- `map(cb) → V[]` — mutating map (rewrites value + returns)
+- `forEach(cb)` — read-only iteration
+- `index(predicate) → number` — `findIndex` wrapper
+- `get(indexOrPredicate) → V | undefined`
+- `length: number` — property getter
+
+## derive (computed atoms)
+
+> **Auto-trigger:** code imports or calls `derive`, uses `DeriveGetter` / `DeriveOptions` types, or builds a value from other atoms via a `get` argument; user asks "how do I create a computed/derived atom", "how do I auto-track atom dependencies", or "how do I chain derived atoms"; `import { derive } from "@mongez/atom"`.
+> **Skip when:** writable base atoms (use `mongez-atom-atoms` / `mongez-atom-defining-atoms`); array verbs over a collection (use `mongez-atom-collections`); React-side `useValue` / `useState` wiring (lives in `@mongez/react-atom`); the sibling `mongez-atom-derived` / `mongez-atom-derived-atoms` skill — only one of the two should fire for the same request.
+
+```ts
+derive<T>(
+  key: string,
+  compute: (get: <V>(atom: Atom<V>) => V) => T,
+  options?: { register?: boolean },
+): Atom<T>
+```
+
+Returns a regular `Atom<T>` whose value is built from other atoms. Dependencies are auto-tracked through the `get` argument. Recomputes eagerly when any dep changes. Dynamic dependency graphs (conditional reads) supported — diffed each run. Chained derivations propagate. Errors inside `compute` are re-thrown asynchronously to keep the source-atom update cycle intact. `destroy()` unsubscribes from all deps.
+
+```ts
+const first = createAtom({ key: "first", default: "Ada" });
+const last  = createAtom({ key: "last",  default: "Lovelace" });
+const fullName = derive("fullName", get => `${get(first)} ${get(last)}`);
+```
+
+## Persistence
+
+> **Auto-trigger:** code sets `persist: true` or `persist: { get, set, remove }` on a `createAtom` call, imports `PersistAdapter`, `PersistOption`, `localStorageAdapter`, or `resolvePersistAdapter`; user asks "how do I save atom state across reloads", "how do I write a custom localStorage / cookie / IndexedDB adapter", or "why is my atom value lost on refresh"; `import { type PersistAdapter, localStorageAdapter } from "@mongez/atom"`.
+> **Skip when:** per-request SSR isolation (use `mongez-atom-atom-store` / `mongez-atom-stores`); defining the atom itself (use `mongez-atom-atoms` / `mongez-atom-defining-atoms`); server-state caching with HTTP keys (use `@mongez/atomic-query`); the sibling `mongez-atom-persist` / `mongez-atom-persistence` skill — only one of the two should fire for the same request.
+
+```ts
+type PersistAdapter<V> = {
+  get(key: string): V | undefined | Promise<V | undefined>;
+  set(key: string, value: V): void | Promise<void>;
+  remove(key: string): void | Promise<void>;
+};
+
+type PersistOption<V> = boolean | PersistAdapter<V>;
+
+// On AtomOptions:
+persist?: PersistOption<V>;
+```
+
+- `persist: true` → built-in `localStorageAdapter`. JSON-encodes; no-ops on the server.
+- `persist: PersistAdapter` → custom adapter (sync or async).
+
+Behavior:
+1. Bootstrap: adapter is read; existing value applied via `silentUpdate`.
+2. Every `update`/`change`/`merge` writes through to the adapter. (`silentUpdate` does NOT.)
+3. `reset()` removes the entry.
+4. Sync throws and async rejections from the adapter are swallowed — never crashes the atom.
+
+```ts
+const themeAtom = createAtom({
+  key: "ui.theme",
+  default: "light",
+  persist: true,                  // localStorage
+});
+
+const userAtom = createAtom({
+  key: "user",
+  default: { name: "Anon" },
+  persist: cookieAdapter,         // custom adapter
+});
+```
+
+## AtomStore (SSR)
+
+> **Auto-trigger:** code imports `AtomStore`, `createAtomStore`, or calls `store.use`, `store.get`, `store.has`, `store.list`, `store.hydrate`, `store.snapshot`, `store.destroy` from `@mongez/atom`; user asks "how do I isolate atom state per SSR request", "why are atoms leaking between requests", or "how do I serialize and rehydrate atoms"; `import { createAtomStore, AtomStore } from "@mongez/atom"`.
+> **Skip when:** defining the atoms themselves (use `mongez-atom-atoms` or `mongez-atom-defining-atoms`); React-side `AtomStoreProvider` / `useAtomStore` wiring (lives in `@mongez/react-atom`); generic client-only state without SSR (no store needed); the sibling `mongez-atom-atom-store` / `mongez-atom-stores` skill — only one of the two should fire for the same request.
+
+```ts
+class AtomStore {
+  use<V, A>(template: Atom<V, A>): Atom<V, A>   // lazy clone
+  get<V>(key: string): Atom<V> | undefined
+  has(key: string): boolean
+  list(): Atom<any>[]
+  hydrate(snapshot: Record<string, unknown>): void
+  snapshot(): Record<string, unknown>
+  destroy(): void
+}
+
+createAtomStore(): AtomStore
+```
+
+Use one store per SSR request; call `destroy()` at the end of the request lifecycle. The React-side wiring (`AtomStoreProvider`, `useAtom`, `useAtomStore`) lives in `@mongez/react-atom`.
+
+## DevTools
+
+> **Auto-trigger:** code imports or calls `enableAtomDevtools`, uses `EnableDevtoolsOptions`, or passes `name` / `ignore` / `scanInterval` options for DevTools; user asks "how do I debug atoms with Redux DevTools", "how do I time-travel atom state", or "how do I skip noisy atoms in the DevTools timeline"; `import { enableAtomDevtools } from "@mongez/atom"`.
+> **Skip when:** defining atoms (use `mongez-atom-atoms` / `mongez-atom-defining-atoms`); production-only / non-debug code paths; logging atom values to console without the Redux extension; React-renderer profiling (DevTools handles state, React Profiler handles renders).
+
+```ts
+enableAtomDevtools(options?: EnableDevtoolsOptions): () => void
+
+type EnableDevtoolsOptions = {
+  name?: string;
+  ignore?: Array<RegExp | string>;
+  scanInterval?: number;   // default 1000ms
+};
+```
+
+Connects to `window.__REDUX_DEVTOOLS_EXTENSION__`. No-op when the extension isn't installed. Supports time-travel via `JUMP_TO_STATE` / `JUMP_TO_ACTION`.
+
+## Registry helpers
+
+- `getAtom(key)` → `Atom | undefined`
+- `atomsList()` → `Atom[]`
+- `atomsObject()` → `Record<string, Atom>`
+- `atoms` → the underlying registry (rarely used directly)
+
+## Lifecycle events
+
+Atom events are emitted on the `@mongez/events` bus under the namespace `atoms.${key}`:
+
+- `atoms.${key}.update` — fired by `update`, `change`, `merge`
+- `atoms.${key}.reset` — fired by `reset`, `silentReset`
+- `atoms.${key}.delete` — fired by `destroy`
+
+Namespace matching is segment-aware: `events.unsubscribeNamespace("atoms.users.1")` does NOT also wipe `atoms.users.10`.
+
+## Conditional types
+
+The `Atom<V, A>` type is built as:
+
+```ts
+type Atom<V, A> = BaseAtom<V, A>
+  & (IsObjectValue<V> extends true ? ObjectAtom<V> : {})
+  & A;
+```
+
+Where `IsObjectValue<V>` is true for object/array values (not for primitives, functions, or null). The result: `Atom<boolean>.change(...)` is a compile error.
+
+## Patterns
+
+> **Auto-trigger:** code combines several of `createAtom`, `atomCollection`, `derive`, `createAtomStore`, `enableAtomDevtools`, `onChange`, `watch` in one place; user asks "give me a real-world example", "show me an end-to-end SSR snapshot + hydrate pattern", "build a cart with computed totals", "how do I tear down `enableAtomDevtools` on HMR", or "how do I derive state into another atom via `onChange`"; `import { createAtom, atomCollection, derive, createAtomStore, enableAtomDevtools } from "@mongez/atom"` together.
+> **Skip when:** single-feature deep dives — route to the focused skill instead (`mongez-atom-atoms`, `mongez-atom-collections`, `mongez-atom-derived`, `mongez-atom-persist`, `mongez-atom-atom-store`, `mongez-atom-devtools`, `mongez-atom-actions`); React-specific composition (lives in `@mongez/react-atom`); query/cache patterns (use `@mongez/atomic-query`).
+
+### Action with custom domain verbs
+
+```ts
+const auth = createAtom({
+  key: "auth",
+  default: { user: null as User | null },
+  actions: {
+    async login(credentials: { email: string; password: string }) {
+      const user = await api.login(credentials);
+      this.merge({ user });
+    },
+    logout() {
+      this.merge({ user: null });
+    },
+  },
+});
+```
+
+### Getter-based derived property
+
+```ts
+const cart = atomCollection<Item>({
+  key: "cart",
+  actions: {
+    get total() {
+      return this.value.reduce((s, i) => s + i.price * i.qty, 0);
+    },
+  },
+});
+cart.total;  // recomputed per read
+```
+
+### Per-request store on the server
+
+```ts
+const store = createAtomStore();
+store.use(userAtom).update(currentRequestUser);
+const html = renderToString(<App store={store} />);
+const payload = JSON.stringify(store.snapshot());
+// embed payload in HTML, then:
+store.destroy();
+```
+
+## What this package does NOT do
+
+- React hooks → `@mongez/react-atom`
+- Server-state caching with query keys / invalidation → `@mongez/atomic-query`
+- The event bus itself → `@mongez/events`
+- Object/string/random utilities → `@mongez/reinforcements`

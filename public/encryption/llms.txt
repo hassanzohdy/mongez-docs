@@ -1,0 +1,53 @@
+# @mongez/encryption
+
+> A thin convenience wrapper around `crypto-js` for symmetric encrypt/decrypt of JSON-encodable values and hex-encoded `md5`/`sha1`/`sha256`/`sha512` hashes.
+
+This is a tiny utility layer, NOT a cryptography library. Understand the threat model before reaching for it.
+
+## Security boundary (read this first)
+
+| Concern | Status |
+|---|---|
+| Authenticated encryption (AEAD) | **No.** `crypto-js` `AES.encrypt(text, passphrase)` uses AES-CBC + OpenSSL-style MD5 KDF + random salt. Ciphertext can be tampered with undetectably. |
+| Modern KDF for passphrases | **No.** One round of MD5. Use PBKDF2/scrypt/argon2 for real password-derived keys. |
+| `md5` / `sha1` for integrity / signatures | **Broken.** Not collision-resistant. Fingerprints / ETags only. |
+| Constant-time hash comparisons | **No.** Output is a hex string; `===` is not timing-safe. |
+| Suitable for: query-string obfuscation, opaqued local-storage values, log masking, non-sensitive round-tripping | **Yes.** |
+| Suitable for: passwords, session tokens, PII at rest, anything under a compliance regime | **No — use libsodium / Node `crypto` AEAD / a KMS.** |
+
+Every export ships from the package root.
+
+## Docs
+
+- [Overview](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/overview.md): Pitch, install, mental model, security boundaries.
+  - *Auto-trigger:* First import from `@mongez/encryption`, or user asks what it does, whether it fits a use case, or about its security limits.
+- [README](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/README.md): Marketing-style index with the security notice.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/CHANGELOG.md): Release notes.
+
+## Reference (by namespace)
+
+- [Encrypt / Decrypt](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/encrypt-decrypt.md): `encrypt(value, key?, driver?)`, `decrypt(cipher, key?, driver?)`, the JSON `{ data: value }` wrapper, the non-deterministic-cipher and `null`-on-failure semantics.
+  - *Auto-trigger:* Code imports `encrypt`/`decrypt`, or user asks how to round-trip a value, why decrypt returns `null`, or why ciphertexts differ.
+- [Hashes](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/hashes.md): `md5`, `sha1`, `sha256`, `sha512`. Where each is appropriate. Why NOT to use them for password storage or message auth.
+  - *Auto-trigger:* Code imports `md5`/`sha1`/`sha256`/`sha512`, or user asks for a cache key, ETag, idempotency key, or whether a hash is safe for a use case.
+- [Configuration](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/configuration.md): `setEncryptionConfigurations`, `getEncryptionConfig`, the module-level defaults and how the per-call overload falls back to them.
+  - *Auto-trigger:* Code imports `setEncryptionConfigurations`/`getEncryptionConfig`, or user sets a default key/driver, configures at boot, or asks about fallback semantics.
+
+## Recipes
+
+- [Recipes](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/recipes.md): Opaqued URL tokens, content-addressed cache keys, switching drivers (AES → TripleDES), wrapping with HMAC when you need integrity.
+  - *Auto-trigger:* User wants a full pattern — opaqued URL token, cache key, boot-time setup, HMAC layering, or distinguishing `null` decrypt from `null` value.
+
+## Quick rules
+
+1. **`encrypt`/`decrypt` are symmetric, passphrase-keyed, and NOT authenticated.** Use only for non-sensitive data.
+2. **`decrypt` returns `null` on any failure** (wrong key, malformed input, empty string). It cannot distinguish failure modes — by design, because the wrapper has no authentication tag to check.
+3. **The JSON `{ data: value }` wrapper is internal.** Don't bypass it by calling `crypto-js` directly on the cipher; you'll get a parse error from `decrypt`.
+4. **Ciphertext is non-deterministic** for AES with a passphrase key. Don't use `encrypt(x) === encrypt(x)` as an equality test.
+5. **`setEncryptionConfigurations` writes module-level globals.** In multi-tenant servers (per-request keys) pass `key` explicitly per call.
+6. **`md5`/`sha1` are broken for collision resistance.** Use only for fingerprints / cache keys, never integrity or signatures.
+
+## Optional
+
+- [Full single-file reference (llms-full.txt)](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/llms-full.txt): All reference content concatenated.
+- [GitHub repository](https://github.com/hassanzohdy/mongez-encryption): Source, issues, releases.

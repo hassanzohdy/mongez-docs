@@ -1,0 +1,49 @@
+# @mongez/collection
+
+> A chainable, immutable-by-default array wrapper. ~100 helpers — `where(...)`, `groupBy`, `sortBy`, `partition`, `chunk`, `pluck`, math/string transforms — over a single shared array reference, callable in a fluent pipeline. Despite the name, four methods leak in-place mutation (`sort`, `reverse`, `shift`, `pop`); see Mutation.
+
+The factory is `collect(items)`. The class is `ImmutableCollection<T>`. Both ship from the package root.
+
+## Docs
+
+- [Overview](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/skills/overview.md): Pitch, install, mental model, scope boundary vs `@mongez/reinforcements`' array helpers.
+  - *Auto-trigger:* code imports `collect` / `ImmutableCollection`, or user is deciding whether to introduce the package or chain 3+ array operations.
+- [README](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/README.md): Marketing-style index.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/CHANGELOG.md): Release notes.
+
+## Reference (by namespace)
+
+- [Construction](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/skills/construction.md): `collect`, `ImmutableCollection`, static `fromIterator`, `create`. Constructor clones input; iterable-yielding.
+  - *Auto-trigger:* code calls `collect(...)`, `new ImmutableCollection(...)`, `collect.create`, or `collect.fromIterator` to wrap an array, Set, Map, or generator.
+- [Array-builtins](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/skills/builtins.md): `map`, `filter`, `reduce`, `forEach`, `flat`, `flatMap`, `find`, `every`, `some`, `join`, `keys`/`values`/`entries`. All delegate to `Array.prototype`.
+  - *Auto-trigger:* code calls `Array.prototype`-style methods on a collection (`map`, `filter`, `reduce`, `find`, `every`, `some`, `flat`, `join`, `forEach`, `toArray`).
+- [Mutation reference](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/skills/mutation.md): The full table of "returns new" vs "mutates" for every method. THE most important file in this package.
+  - *Auto-trigger:* user debugs an unexpected mutation, or asks about safety of `sort`, `reverse`, `flip`, `sortByDesc`, `shift`, `pop`, `clone`, or `toArray`.
+- [where(...)](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/skills/where.md): All 50+ operators (`=`, `>`, `like`, `between`, `in`, `is`, `exists`, `empty`, `null`, `regex`, ...) and shorthand helpers (`whereIn`, `whereBetween`, `whereNotNull`, ...). Plus `firstWhere` / `lastWhere`.
+  - *Auto-trigger:* code calls `where`, any `whereXxx` shorthand, `firstWhere`, `lastWhere`, or imports `Operators` / `ComparisonOperator`.
+- [Math](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/skills/math.md): `min`, `max`, `sum`, `average`, `median`, `plus`, `minus`, `multiply`, `divide`, `modulus`, `increment`, `decrement`, `even`, `odd`, `count`, `countBy`. Notes on `min`/`max`-of-empty returning 0.
+  - *Auto-trigger:* code calls aggregate (`sum`/`min`/`max`/`average`/`median`), per-item arithmetic, parity, or counting methods on a collection.
+- [Strings](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/skills/strings.md): `appendString`, `prependString`, `replaceString`, `replaceAllString`, `removeString`, `trim`, casting (`string`, `number`, `boolean`).
+  - *Auto-trigger:* code calls `appendString`, `prependString`, `concatString`, `replaceString`, `replaceAllString`, `removeString`, `removeAllString`, `trim`, `string`, `number`, or `boolean` on a collection.
+- [Pagination & slicing](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/skills/pagination.md): `take`, `limit`, `takeLast`, `takeUntil`, `skip`, `skipLast`, `slice`, `splice`, `chunk`, `random`, `shuffle`.
+  - *Auto-trigger:* code calls `take`, `limit`, `skip`, `slice`, `splice`, `chunk`, `random`, or `shuffle`, or user asks how to paginate.
+- [Sort / group / partition / unique](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/skills/sort-group.md): `sort`, `sortBy`, `sortByDesc`, `groupBy`, `partition`, `unique`, `uniqueList`, reorder helpers (`swap`, `move`, `reorder`).
+  - *Auto-trigger:* code calls `sort`, `sortBy`, `sortByDesc`, `groupBy`, `partition`, `unique`, `uniqueList`, `swap`, `move`, `reorder`, `reverse`, or `flip`.
+- [Recipes](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/skills/recipes.md): Top-N, paginate, partition+pipeline, dedupe-and-project, safe sort, batched processing.
+  - *Auto-trigger:* user wants a complete worked example or multi-method pipeline pattern rather than a single-method reference.
+
+## Quick rules
+
+1. **Import from the package root**: `import { collect, ImmutableCollection } from "@mongez/collection"`.
+2. **`collect(items)` is the factory**. Returns `ImmutableCollection<T>`.
+3. **Default behavior is "returns a new collection"** — `map`, `filter`, `where`, `push`, `unshift`, `delete`, `set`, `replace`, `slice`, `splice`, `merge`, `concat`, `sortBy`, `groupBy`, etc.
+4. **MUTATING methods**: `sort()`, `reverse()` (alias `flip`), `sortByDesc(key)`, `shift()`, `pop()`. Use `.clone()` first if you need to keep the original.
+5. **`where(...)`** has three overloads: `(key, value)`, `(key, operator, value)`, and a primitive-mode `(operator, value)` (the third is currently broken — see Mutation/where notes).
+6. **Dot-notation paths** work in every method that takes a `key` (`"total.price"`, `"0.name"`).
+7. **Items with a `.get(key)` method** override the dot-notation lookup — useful for model classes.
+8. **`length` is a getter** (`c.length`), not a function.
+
+## Optional
+
+- [Full single-file reference (llms-full.txt)](https://raw.githubusercontent.com/hassanzohdy/reinforcements/main/llms-full.txt): All reference content concatenated.
+- [Source repository](https://github.com/hassanzohdy/reinforcements): The collection ships from the `reinforcements` monorepo.

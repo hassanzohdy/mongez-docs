@@ -1,0 +1,256 @@
+# @mongez/dotenv — full reference
+
+> **Auto-trigger when loading this full reference:** code imports `loadEnv`, `loadEnvFile`, `parseLine`, `parseValue`, `env`, `env.all`, `resetEnv`, or `EnvLoaderOptions` from `@mongez/dotenv`; typical import pattern `import { loadEnv, loadEnvFile, parseLine, parseValue, env, resetEnv, type EnvLoaderOptions } from "@mongez/dotenv"`; user asks "how do I load .env files", "how do I pick env file by NODE_ENV", "how does `.env.shared` layering work", "how does `env()` coerce values", "why is my `null` becoming `undefined`", "how does `${VAR}` interpolation work", "how do I read a typed env value", "how do I bootstrap env at startup", "how do I build a typed config from env", or "how do I do a full `process.env` reset in tests".
+>
+> **Skip when:** the question is about the higher-level app-config layer with groups, dot-notation lookups, defaults, or schema — that's `@mongez/config`, not this `.env`-file parser; browser/cookie/localStorage env shims; caching concerns — that's `@mongez/cache`; runtime schema validation via `zod`/`valibot` (layered on top, not provided here); or the upstream `dotenv` package itself.
+
+> A small `.env` loader for Node.js. This is the concatenated reference; load `llms.txt` for the structured index instead.
+
+## Install
+
+```sh
+yarn add @mongez/dotenv
+```
+
+No runtime dependencies. No peer dependencies.
+
+## Public exports
+
+```ts
+import {
+  loadEnv,
+  loadEnvFile,
+  parseLine,
+  parseValue,
+  env,
+  resetEnv,
+  type EnvLoaderOptions,
+} from "@mongez/dotenv";
+```
+
+## loadEnv(envPath?, options?)
+
+```ts
+function loadEnv(envPath?: string, options?: EnvLoaderOptions): void
+```
+
+```ts
+type EnvLoaderOptions = {
+  override?: boolean;       // default true — also write into process.env
+  dir?: string;             // default cwd() — search root for .env files
+  loadSharedEnv?: boolean;  // default true — load .env.shared first
+};
+```
+
+Resolution order when `envPath` is omitted:
+
+1. If `loadSharedEnv` is true (default) and `${dir}/.env.shared` exists, load it.
+2. Try `${dir}/.env.${process.env.NODE_ENV}`. If it exists, load it.
+3. Otherwise load `${dir}/.env`.
+
+`override` controls whether parsed values are also written to `process.env[key]`. Defaults to `true`. Even with `override: false`, values are still stored internally and accessible via `env(...)` / `env.all()`.
+
+## loadEnvFile(envPath, override)
+
+```ts
+function loadEnvFile(envPath: string, override: boolean): void
+```
+
+Loads exactly one file. Throws if the path does not exist:
+
+```
+.env file not found at /path/to/file
+```
+
+This is the building block used by `loadEnv`. Useful when you have a non-standard layout (multiple env files in different directories, deferred loading, etc.).
+
+## parseLine(line)
+
+```ts
+function parseLine(line: string): [string, any] | []
+```
+
+Returns `[]` for:
+
+- Empty / whitespace-only lines
+- Lines starting with `#` (comments)
+- Lines without an `=`
+
+Otherwise returns `[key, parseValue(rhs)]`. The right-hand side is split on the FIRST `=`; the remainder is joined back together, so `KEY=a=b` yields `["KEY", "a=b"]`.
+
+## parseValue(value)
+
+```ts
+function parseValue(value: any): any
+```
+
+Coercion table:
+
+| Input | Output |
+|---|---|
+| `"3000"` | `3000` (number) |
+| `"3.14"` | `3.14` (number) |
+| `"-7"` | `-7` (number) |
+| `"true"` | `true` (boolean) |
+| `"false"` | `false` (boolean) |
+| `"null"` | `null` |
+| `"My App"` | `"My App"` (string) |
+| `'"3000"'` | `"3000"` (string — quotes opt out of coercion) |
+| `'"a \\"b\\" c"'` | `'a "b" c'` (string — `\"` unescaped) |
+| `""` | `""` (empty string passes through) |
+| `undefined` | `undefined` |
+
+`true` / `false` / `null` are case-sensitive. `True`, `YES`, `1` stay as strings.
+
+`${VAR}` is resolved against the internal store (NOT `process.env`). Unresolved references become the literal string `"undefined"`:
+
+```ts
+parseValue("prefix:${NOT_DEFINED}:suffix");
+// "prefix:undefined:suffix"
+```
+
+## env(key, defaultValue?)
+
+```ts
+const env: {
+  (key: string, defaultValue?: any): any;
+  all(): Record<string, any>;
+};
+```
+
+Reads from the internal store. Falls back to `defaultValue` (or `undefined`) when the key is missing.
+
+```ts
+env("APP_PORT");          // 3000
+env("APP_PORT", 8080);    // 3000 (loaded value wins)
+env("MISSING", 0);        // 0
+env.all();                // { APP_PORT: 3000, ... }  (by reference — do not mutate)
+```
+
+**Sharp edge:** `env` uses `??`, so a deliberately-loaded `null` collapses to the default / `undefined`. Use `env.all()[key]` to see the raw stored value when you need to distinguish "missing" from "loaded as null".
+
+## resetEnv()
+
+```ts
+function resetEnv(): void
+```
+
+1. Clears every key from the internal store.
+2. Copies the initial `process.env` snapshot (captured at module import time) back onto `process.env`.
+
+It does NOT delete keys that have been added to `process.env` since module load. If you need a clean slate, delete the keys explicitly before calling `resetEnv`.
+
+## File-format rules
+
+- `KEY=value` — type-coerced.
+- `KEY="value"` — string, even if it looks numeric.
+- `KEY="value with spaces"` — quotes preserve whitespace.
+- `KEY="value \"with\" escapes"` — `\"` becomes `"`.
+- `KEY=${OTHER}` — interpolation of an already-loaded key.
+- `# comment line` — ignored.
+- Blank lines — ignored.
+- `KEY=` — yields `["KEY", ""]`.
+- `JUST_A_KEY` — ignored (no `=`).
+
+## NODE_ENV semantics
+
+```bash
+# Filesystem
+.env
+.env.shared
+.env.development
+.env.production
+.env.staging
+```
+
+```ts
+process.env.NODE_ENV = "production";
+loadEnv();
+// Loads .env.shared first, then .env.production (overwrites shared keys).
+
+process.env.NODE_ENV = "staging";
+loadEnv();
+// Loads .env.shared first, then .env.staging.
+
+process.env.NODE_ENV = "test";
+loadEnv();
+// Loads .env.shared first; .env.test does not exist, so falls back to .env.
+```
+
+## Override semantics
+
+```ts
+loadEnv();                              // override: true (default)
+process.env.APP_PORT;                   // "3000"  — string (Node coerces on assignment)
+env("APP_PORT");                        // 3000    — number (typed store)
+```
+
+```ts
+loadEnv(undefined, { override: false });
+process.env.APP_PORT;                   // unchanged (was undefined → still undefined)
+env("APP_PORT");                        // 3000
+```
+
+Override only affects `process.env`. The internal store is populated either way.
+
+## Known limitations
+
+- **`null` is swallowed by `env()`** — see "Sharp edge" above.
+- **Quoted values with `#` AND a trailing comment trim wrongly**: `KEY="abc#def" # comment` returns `ab` (the parser splits on `#`, takes the left half, then slices off both ends — but the right end is no longer a quote).
+- **`resetEnv` does not delete later-added keys** from `process.env`.
+- **`parseValue` is called twice per line** inside `loadEnvFile` (once in `parseLine`, once in the loop). Currently idempotent for supported value shapes.
+
+All four are reproduced as `.skip()`'d tests in `src/__tests__/known-bugs.test.ts`. Flipping `.skip` to `it` reproduces each.
+
+## Patterns
+
+### Boot at process start
+
+```ts
+import { loadEnv } from "@mongez/dotenv";
+
+loadEnv();  // before requiring anything else that reads env
+```
+
+### Per-environment config with shared defaults
+
+```bash
+# .env.shared
+APP_NAME="My App"
+
+# .env.development
+DB_URL="mongodb://localhost/dev"
+DEBUG=true
+
+# .env.production
+DB_URL="mongodb+srv://prod-host/app?retryWrites=true&w=majority"
+DEBUG=false
+```
+
+```ts
+loadEnv();
+env("DB_URL");
+```
+
+### Read typed values
+
+```ts
+const port: number  = env("APP_PORT", 3000);
+const debug: boolean = env("DEBUG", false);
+const name: string = env("APP_NAME", "App");
+```
+
+### Lower-level load by absolute path
+
+```ts
+import { loadEnvFile } from "@mongez/dotenv";
+
+loadEnvFile("/etc/myapp/secrets.env", /* override */ false);
+```
+
+## What this package does NOT do
+
+- Validation / schema. Use `zod` / `valibot` on top of `env()` if you need it.
+- Type-safe key narrowing. `env("KEY")` returns `any`.
+- Async / dynamic re-loading.
+- Cookies / browser storage. This is a Node-only filesystem reader.

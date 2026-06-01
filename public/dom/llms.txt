@@ -1,0 +1,50 @@
+# @mongez/dom
+
+> Browser-side DOM utilities. Flat, side-effect-free function exports for page metadata, fonts, stylesheets, CSS variables, keyboard helpers, viewport dimensions, and small DOM conveniences. No runtime dependencies.
+
+This package targets the browser. There is no SSR layer — calling `setTitle` / `googleFont` / `userPrefersDarkMode` on the server will throw because `document`, `window.matchMedia`, and `FontFace` don't exist there. Guard with `typeof window !== "undefined"` at the call site, or call from a client-only effect.
+
+Every export ships from the package root.
+
+## Docs
+
+- [Overview](https://raw.githubusercontent.com/hassanzohdy/dom/main/skills/overview.md): Pitch, install, mental model.
+  - *Auto-trigger:* User asks what `@mongez/dom` is, needs the full API surface, or imports a wide slice for the first time.
+- [README](https://raw.githubusercontent.com/hassanzohdy/dom/main/README.md): Marketing-style index.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/dom/main/CHANGELOG.md): Release notes.
+
+## Reference (by area)
+
+- [Metadata](https://raw.githubusercontent.com/hassanzohdy/dom/main/skills/metadata.md): `setPageMeta`, `setTitle`, `setDescription`, `setKeywords`, `setImage`, `setPageColor`, `setFavIcon`, `setCanonicalUrl`, `getMetaData`, and the social/Open-Graph fan-out.
+  - *Auto-trigger:* Code imports any of `setPageMeta` / `setTitle` / `setDescription` / `getMetaData`, or user asks about page title, Open Graph, Twitter Card, canonical URL, favicon, or theme color.
+- [Head elements](https://raw.githubusercontent.com/hassanzohdy/dom/main/skills/head-elements.md): Lower-level helpers — `createHeadElement`, `createNewMeta`, `meta`, `itemprop`, `metaLink`, `styleSheet`, `twitter`, `og`. Plus the element-attribute helpers `setHTMLAttributes`, `setElementAttributes`, `getElementAttributes`.
+  - *Auto-trigger:* Code imports `createHeadElement` / `meta` / `metaLink` / `itemprop` / `setHTMLAttributes`, or user needs custom `og:*` / manifest links / `html[lang]` / arbitrary element attributes.
+- [Assets](https://raw.githubusercontent.com/hassanzohdy/dom/main/skills/assets.md): Loading external resources — `googleFont`, `loadFont`, `styleSheet`, `loadScript`, `cssVariable`, `setCssVariable`, `getCssVariable`.
+  - *Auto-trigger:* Code imports `googleFont` / `loadFont` / `styleSheet` / `loadScript` / `cssVariable`, or user is loading fonts, swapping themes, or reading/writing CSS custom properties.
+- [Interactions](https://raw.githubusercontent.com/hassanzohdy/dom/main/skills/interactions.md): User-input + viewport helpers — `pressed`, `TAB_KEY`/`ESC_KEY`/`ENTER_KEY`/`CONTROL_KEY`, `scrollTo`, `userPrefersDarkMode`, `htmlToText`, `getWindowWidth`/`getWindowHeight`/`getScreenWidth`/`getScreenHeight`.
+  - *Auto-trigger:* Code imports `pressed` / `scrollTo` / `userPrefersDarkMode` / `htmlToText` / viewport getters, or user handles keyboard shortcuts, smooth scroll, dark mode, or strips HTML to text.
+
+## Recipes
+
+- [Recipes](https://raw.githubusercontent.com/hassanzohdy/dom/main/skills/recipes.md): Per-page metadata in a SPA, multi-weight font loading, dark-mode CSS-variable theming, keyboard-shortcut tables, smooth-scrolling table of contents.
+  - *Auto-trigger:* Code combines two or more `@mongez/dom` features in one file, or user asks for a complete working example (SPA route metadata, theme switching, article OG, smooth-scroll TOC, consent-gated scripts).
+
+## Quick rules
+
+1. Flat imports: `import { setPageMeta, googleFont, cssVariable, scrollTo } from "@mongez/dom"`. No subpath entry points.
+2. Browser-only. There is no server-safe build — guard with `typeof window !== "undefined"` if the same module loads on the server.
+3. Functions that emit `<head>` tags reuse existing tags by their key attribute (e.g. `meta[property="og:title"]`). Repeat calls update instead of duplicating.
+4. `meta(name, value)` uses `name=` for `description` and `keywords` only; everything else lands on `property=`.
+5. `styleSheet(href, id)` and `googleFont(href, id)` reuse a link by its id when provided. Without an id, a new link with `id="link-<random>"` is created on each call.
+6. `setHTMLAttributes` is `setElementAttributes(document.documentElement, ...)`.
+7. `pressed(event, key)` reads `event.keyCode || event.charCode`. The exported `*_KEY` constants are numeric keycodes.
+
+## Known bugs (see CHANGELOG)
+
+- `setFavIcon` and `setCanonicalUrl` write to `currentMetaData.color` instead of their own fields — `getMetaData("favIcon")` / `getMetaData("url")` will not reflect the change.
+- `setPageColor` emits `meta[property="theme-color"]` instead of the spec-defined `meta[name="theme-color"]`.
+
+## Optional
+
+- [Full single-file reference (llms-full.txt)](https://raw.githubusercontent.com/hassanzohdy/dom/main/llms-full.txt): All reference content concatenated.
+- [GitHub repository](https://github.com/hassanzohdy/dom): Source code, issues, releases.

@@ -1,0 +1,35 @@
+# @mongez/react-localization
+
+> React adapter for `@mongez/localization`. Adds a JSX-aware placeholder converter so `trans(...)` can interpolate React elements, plus `transX` — a JSX-bound `trans` variant that works regardless of which converter is configured globally.
+
+Tiny by design. The entire public API is two exports: `jsxConverter` and `transX`. Everything else — locales, registries, count rules, events — lives in `@mongez/localization`.
+
+## Docs
+
+- [Overview](https://raw.githubusercontent.com/hassanzohdy/mongez-react-localization/main/skills/overview.md): Pitch, install, the two exports.
+  - *Auto-trigger:* Importing from `@mongez/react-localization`, deciding between global `jsxConverter` vs per-call `transX`, or asking what the package does.
+- [README](https://raw.githubusercontent.com/hassanzohdy/mongez-react-localization/main/README.md): Usage, recipes, limitations.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/mongez-react-localization/main/CHANGELOG.md): Release notes.
+
+## Reference
+
+- [`jsxConverter`](https://raw.githubusercontent.com/hassanzohdy/mongez-react-localization/main/skills/jsx-converter.md): The converter function. Wire globally via `setLocalizationConfigurations({ converter: jsxConverter })`.
+  - *Auto-trigger:* Importing `jsxConverter`, wiring it via `setLocalizationConfigurations`, debugging missing-key fallback or the null-placeholder crash.
+- [`transX`](https://raw.githubusercontent.com/hassanzohdy/mongez-react-localization/main/skills/trans-x.md): `trans` pre-bound to `jsxConverter`. Use per-call when the global converter stays as `plainConverter`.
+  - *Auto-trigger:* Calling `transX` to interpolate React elements at a specific JSX call site without changing the global converter.
+- [Recipes](https://raw.githubusercontent.com/hassanzohdy/mongez-react-localization/main/skills/recipes.md): JSX inside sentences, atom-driven locale switch, pluralization.
+  - *Auto-trigger:* Rendering JSX inside translations, building `useLocale` over `localizationEvents`, atom/state-driven locale re-renders, or a `<Translate>` wrapper.
+
+## Quick rules
+
+1. The package exports exactly two things: `jsxConverter` and `transX`. There is no `useLocale`, no `useTranslate`, no `<Translate>` component, no context provider.
+2. **Pick a converter at config time.** Either wire `jsxConverter` globally and use `trans(...)` everywhere, OR keep `plainConverter` (the default) and use `transX(...)` at JSX call sites.
+3. **`transX` always uses `jsxConverter`** — that's the entire reason the function exists.
+4. **No automatic re-render on locale change.** `transX` is a plain function call. Components that already rendered will keep their old translation when `setCurrentLocaleCode` flips. Drive a re-render through state / atoms / events.
+5. **React 18+ only** for the peer dep. The package itself only consumes `React.Fragment`, but the rest of the `@mongez/*` family standardized on 18.
+6. **Bug** (`src/converters.tsx:18`): `jsxConverter` throws on `null`/`undefined` placeholders. Don't call it directly with a nullish bag — `trans` already short-circuits that path.
+
+## Optional
+
+- [Full single-file reference (llms-full.txt)](https://raw.githubusercontent.com/hassanzohdy/mongez-react-localization/main/llms-full.txt)
+- [GitHub repository](https://github.com/hassanzohdy/mongez-react-localization)

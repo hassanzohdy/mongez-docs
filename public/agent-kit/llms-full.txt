@@ -1,0 +1,273 @@
+# agent-kit — Full Reference
+
+> Authoring and distribution toolkit for AI coding agent artifacts. Treats `AGENTS.md` as a single source of truth and derives the tool-specific files each agent reads. Also syncs reusable skills bundled inside npm packages into per-agent skill directories with collision-free flat folder names.
+
+---
+
+# README
+
+One file, every coding agent. `agent-kit` treats your project's `AGENTS.md` as the single source of truth and generates the tool-specific files that each AI coding agent reads — `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md` — so you write your project instructions once and every agent stays in sync. It also syncs skills bundled inside npm packages into your project's agent skill directories with collision-free flat names.
+
+## Install
+
+```bash
+npm install -D @mongez/agent-kit   # or yarn add -D @mongez/agent-kit, or pnpm add -D @mongez/agent-kit
+```
+
+> npm package: `@mongez/agent-kit`. CLI binary: `agent-kit` (no scope when invoking).
+
+## Quick start
+
+```bash
+npx agent-kit init                         # Scaffold AGENTS.md + derive (idempotent)
+npx agent-kit sync                         # Derive + sync skills
+npx agent-kit watch                        # Re-sync on change (dev loop)
+```
+
+Wire into postinstall:
+
+```json
+{ "scripts": { "postinstall": "agent-kit sync" } }
+```
+
+## Derivation targets
+
+| Tool | Output |
+| --- | --- |
+| Claude Code | `CLAUDE.md` |
+| Gemini CLI | `.gemini/GEMINI.md` |
+| GitHub Copilot | `.github/copilot-instructions.md` |
+| Aider | `CONVENTIONS.md` |
+
+Tools that read root `AGENTS.md` natively (Codex, Cursor, Amp, Jules, Factory, Kilo, Windsurf, OpenCode, Goose) need no derivation.
+
+## CLI reference
+
+```bash
+agent-kit init                              # Scaffold AGENTS.md + derive
+agent-kit sync                              # Derive + sync skills
+agent-kit sync --derive-only                # Skip skills export
+agent-kit sync --skills-only                # Skip derivation
+agent-kit sync --target claude,cursor       # Pick skill targets
+agent-kit sync --path @warlock.js           # Add extra scan dirs (monorepo / dev-server)
+agent-kit sync --override                   # Replace user-authored dest folders
+agent-kit watch                             # Re-sync on changes
+agent-kit watch --path @warlock.js          # Watch extra dirs too
+```
+
+Skill targets: `claude`, `copilot`, `cursor`, `codex`, `opencode`, `amp`, `goose`, `kiro`, `antigravity` (claude by default — or `agentKit.targets` from `package.json` if set).
+
+## Programmatic API
+
+```typescript
+import {
+  deriveAll,
+  syncSkills,
+  findProjectRoot,
+  scanForSkillPackages,
+  deriveSlugForSkill,
+} from "@mongez/agent-kit";
+
+const root = await findProjectRoot();
+await deriveAll({ root });
+await syncSkills({
+  root,
+  targets: ["claude", "cursor"],
+  scanPaths: ["@warlock.js"],
+  override: false,
+});
+```
+
+---
+
+# Skill: overview
+
+> **Auto-trigger:** project contains `AGENTS.md`, `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, or `CONVENTIONS.md`; folder `.claude/skills/<pkg-slug>-*/` or `.agent-kit-managed` sentinel exists; user asks "what is agent-kit", "how does AGENTS.md derivation work", "how do skills get into `.claude/skills/`", or "why is my skill folder named `<pkg-slug>-<skill>`"; `package.json` has `agentKit` config block or `postinstall: agent-kit sync`; `import { deriveAll, syncSkills, findProjectRoot } from "@mongez/agent-kit"`.
+> **Skip when:** user is invoking, scripting, or debugging a specific CLI command / flag — load `mongez-agent-kit-cli-usage` instead; user is authoring a `SKILL.md` inside an npm package they publish — load `mongez-agent-kit-authoring-skills` instead; runtime AI features (model calls, embeddings) belong in `@warlock.js/ai*`, not here.
+
+`agent-kit` solves two distinct but related problems for projects that work with AI coding agents:
+
+1. **One `AGENTS.md`, every agent.** `AGENTS.md` is the open standard — Codex, Cursor, Amp, Jules, Factory, Kilo, Windsurf, OpenCode read it natively. Claude Code, Gemini CLI, GitHub Copilot, and Aider want their own file. agent-kit derives them so they never drift.
+
+2. **Skills — your own, organized your way, plus skills from packages.** Drop a single `skills/` folder at your **project root**, grouped into nested category folders (`skills/backend/auth/SKILL.md`) as deep as you like. Claude Code only reads a flat `.claude/skills/`, so `agent-kit sync` flattens each nested path into a unique top-level name (`backend/auth` → `backend-auth`) — you organize for humans, agent-kit handles the flat requirement. The same walk also covers every package in `node_modules/` (plus any `--path` root), so **any npm package can ship skills too**, copied in with **flat, collision-free folder names** like `.claude/skills/warlock-js-core-add-connector/SKILL.md`.
+
+## Key principles
+
+- **Folder name = identity.** Claude Code routes by folder name; the SKILL.md frontmatter `name:` field is purely cosmetic display polish. agent-kit derives the destination folder as `<pkg-slug>[-skill-path]` — collisions impossible by construction across packages.
+- **SKILL.md content is copied verbatim.** agent-kit never reads or rewrites frontmatter.
+- **Sentinel-based prune.** Only folders with `.agent-kit-managed` get blown away on re-sync. User-authored skills are safe.
+- **Stateless.** Every sync re-derives from disk truth. No lockfile, no cache.
+
+# Skill: cli-usage
+
+> **Auto-trigger:** command line invokes `agent-kit init`, `agent-kit sync`, or `agent-kit watch` (or `npx agent-kit ...`); `package.json` has `"postinstall": "agent-kit sync"` or any `agent-kit` script; flags `--target`, `--path`, `-p`, `--override`, `--skills-only`, `--derive-only`, `--cwd` appear; user asks "how do I wire agent-kit into CI / postinstall / monorepo", "what does `--path` do", "how do I run agent-kit on every install", or "how do I sync skills for cursor/claude/copilot"; code imports `deriveAll`, `syncSkills`, `findProjectRoot`, `scanForSkillPackages`, or `deriveSlugForSkill` from `@mongez/agent-kit`.
+> **Skip when:** general "what is agent-kit / mental model" questions — load `mongez-agent-kit-overview` instead; authoring a `SKILL.md` to ship from an npm package — load `mongez-agent-kit-authoring-skills` instead; tasks unrelated to invoking the agent-kit binary or its API.
+
+Three commands. All are idempotent — running them twice in a row is a no-op the second time.
+
+## `agent-kit init`
+
+Scaffold a starter `AGENTS.md` (only if it does not exist) and derive the per-tool files from it.
+
+Flags:
+
+- `--cwd <path>` — start from a different working directory.
+
+Behavior:
+
+- If `AGENTS.md` exists → leave it alone.
+- If `AGENTS.md` is missing → write a starter template.
+- Always derives `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md`.
+
+## `agent-kit sync`
+
+Re-derive the per-tool files from `AGENTS.md` and export skills from installed packages.
+
+Flags:
+
+- `--cwd <path>` — working directory override.
+- `--target <names>` — comma-separated skill targets. Defaults to `claude` (or whatever is set in `agentKit.targets`).
+- `--derive-only` — skip skills export.
+- `--skills-only` — skip derivation.
+- `--path <dirs>` / `-p` — comma-separated extra dirs to scan, each treated like a `node_modules/`. Use for monorepos and local dev setups. Packages found in scan paths override same-named entries in `node_modules/`.
+- `--override` — replace user-authored destination folders (skipped by default).
+
+This is the command to wire into your project's `postinstall`.
+
+## Project-level config (`agentKit` in package.json)
+
+Configure defaults and filters from the project root's `package.json`:
+
+```json
+{
+  "agentKit": {
+    "targets": ["claude", "cursor"],
+    "pick": {
+      "@warlock.js/core": true,
+      "@my-org/lib": ["only-this-skill"]
+    },
+    "omit": {
+      "@warlock.js/core": ["add-connector"]
+    }
+  }
+}
+```
+
+- `targets` — default skill-sync targets. CLI `--target` overrides this completely (no merge). Empty array `[]` is honored as "no targets" + a warning.
+- **`pick`** (allowlist) — when set, ONLY listed packages are included.
+  - `pick[pkg] = true` → include all of the package's skills.
+  - `pick[pkg] = ["skill-name"]` → include only those specific skills.
+  - Empty `pick: {}` or pick names that don't match installed packages → result is empty + warning.
+- **`omit`** (denylist) — runs AFTER `pick` when both are set.
+  - `omit[pkg] = true` → skip the entire package's skills.
+  - `omit[pkg] = ["skill-name"]` → skip specific skills from that package (matched against the source folder name, not the flat slug).
+  - Entries for packages not installed are silently ignored.
+- Common pattern: `pick` an allowlist of packages, then `omit` a noisy skill from one of them.
+
+## `agent-kit watch`
+
+Watch `AGENTS.md`, the project's local `skills/**/SKILL.md`, `node_modules/**/skills/**/SKILL.md`, and any `--path` skill globs; re-derive and re-sync on change. Debounced 150ms.
+
+Flags:
+
+- `--cwd <path>` — working directory override.
+- `--path <dirs>` / `-p` — extra dirs whose `**/skills/**/SKILL.md` should also be watched.
+- `--override` — replace user-authored destination folders on each re-sync.
+
+---
+
+# Skill: authoring-skills
+
+> **Auto-trigger:** editing a `skills/**/SKILL.md` inside an npm package the user maintains; user asks "how do I ship a skill with my package", "how do consumers pick up my skill", "what should go in SKILL.md frontmatter", or "how should I write `when_to_use` / `description`"; `package.json` `files` field needs `"skills"` added; multi-skill package needs a "front-door" / `<pkg>-overview` orientation skill; user is structuring nested skills (`skills/backend/auth/SKILL.md`) under a category folder.
+> **Skip when:** user is invoking the agent-kit CLI or wiring `postinstall` — load `mongez-agent-kit-cli-usage` instead; user just wants the mental model of agent-kit — load `mongez-agent-kit-overview` instead; project-local skills inside an app the user is NOT publishing to npm (no special authoring concerns — just drop a `skills/` folder).
+
+There are two reasons to write skills, and they share the exact same folder layout. **(1) Your project's own skills** — drop a single `skills/` folder at your project root, organize it into nested category folders, and `agent-kit sync` mirrors it into `.claude/skills/` (and friends), flattening the nesting. This is the common case — no publishing required. **(2) Skills shipped from a package** — if you maintain a library that benefits from a coding-agent skill, ship it inside your package; anyone using `agent-kit sync` downstream receives it automatically.
+
+## Folder layout
+
+Place skill folders inside `skills/` — at your project root, or at your package root if you're shipping them. Each skill is a directory containing a `SKILL.md`.
+
+```
+my-package/
+└── skills/
+    ├── using-the-thing/
+    │   ├── SKILL.md
+    │   └── examples/example.ts
+    └── another-skill/
+        └── SKILL.md
+```
+
+### Nested organization
+
+agent-kit walks `skills/` recursively, so you can group skills under category folders:
+
+```
+my-app/
+└── skills/
+    ├── backend/
+    │   ├── auth/SKILL.md           ← name "backend/auth"
+    │   └── db/SKILL.md             ← name "backend/db"
+    └── frontend/
+        └── page-builder/SKILL.md   ← name "frontend/page-builder"
+```
+
+A directory containing `SKILL.md` is treated as a leaf — we don't recurse into it (matches warlock-style "root + subskills" convention).
+
+## No declaration needed — `skills/` is discovered automatically
+
+Drop a `skills/` folder at your package root. agent-kit walks it recursively for any directory containing a `SKILL.md`. No `package.json` config required.
+
+## Destination naming
+
+Claude Code only discovers skills at the top level of `.claude/skills/` (no nested folders). agent-kit exports every skill with a flat folder name:
+
+```
+.claude/skills/
+  my-org-my-package-using-the-thing/
+    SKILL.md
+    examples/example.ts
+    .agent-kit-managed       ← sentinel, do not commit edits
+```
+
+The folder name is **always derived** as `<pkg-slug>[-skill-path]`:
+
+- Single-skill packages (root `skills/SKILL.md`): `<pkg-slug>` — e.g. `@warlock.js/ai` → `warlock-js-ai`
+- Multi-skill: `<pkg-slug>-<skill-folder-path>` — e.g. `@my-org/pkg/skills/using-the-thing` → `my-org-pkg-using-the-thing`
+- Nested: `<pkg-slug>-<flattened-path>` — e.g. `skills/backend/auth` → `<pkg-slug>-backend-auth`
+
+The slug strips the leading `@`, replaces `/` and `.` with `-`, lowercases. You don't pick a globally-unique name — agent-kit guarantees uniqueness via package prefixing.
+
+## SKILL.md `name:` is optional
+
+Per the Claude Code Skills docs: *"name — Display name for the skill. If omitted, uses the directory name."* So you have two choices:
+
+- **Omit `name:` from frontmatter** — Claude uses the folder name (the auto-derived slug). Simplest.
+- **Set `name:` to a custom display label** — e.g. `name: Using the thing` for a prettier label in Claude's UI. Routing still happens by folder name; this is purely cosmetic.
+
+agent-kit **never reads or modifies** the SKILL.md content during sync. Your source file is copied verbatim into the destination folder.
+
+## Ship the skills folder
+
+Make sure your package's `files` field (or absent `.npmignore`) includes the `skills/` directory:
+
+```json
+{ "files": ["dist", "skills", "README.md"] }
+```
+
+## Writing a good SKILL.md
+
+```markdown
+---
+description: One sentence telling an agent when to read this skill.
+---
+
+# Using the thing
+
+## How to use
+Concrete steps, with code examples where it helps.
+
+## Pitfalls
+Common mistakes and how to avoid them.
+```
+
+The `description` field is the most important line — it determines whether an agent picks up the skill in the first place. Make it specific.

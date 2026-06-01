@@ -1,0 +1,51 @@
+# @mongez/query-string
+
+> Tiny query-string parse/serialize with nested-object and array support. Default-export object: `parse`, `toQueryString`, plus browser helpers `all`, `get`, `update`, `toString` that read/write `window.location`. No runtime dependencies.
+
+The package targets the browser for its four `window`-bound methods (`all`, `get`, `update`, `toString`). The pure data methods (`parse`, `toQueryString`) work in any environment.
+
+The single default export carries every method:
+
+```ts
+import queryString from "@mongez/query-string";
+```
+
+## Docs
+
+- [Overview](https://raw.githubusercontent.com/hassanzohdy/mongez-query-string/main/skills/overview.md): Pitch, install, mental model, environment.
+  - *Auto-trigger:* Load when code imports the default-export `queryString` and the user asks what the package does or whether it works server-side.
+- [README](https://raw.githubusercontent.com/hassanzohdy/mongez-query-string/main/README.md): Marketing-style index.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/mongez-query-string/main/CHANGELOG.md): Release notes, documented quirks.
+
+## Reference (by area)
+
+- [Parse](https://raw.githubusercontent.com/hassanzohdy/mongez-query-string/main/skills/parse.md): `queryString.parse(text)` and `queryString.all(text?)`. Numeric coercion (`age=42` → `{ age: 42 }`), `decodeURIComponent` on non-numeric values, `key[]` arrays, `key[sub]` nesting. Edge cases: empty input, missing `=`, leading `?`.
+  - *Auto-trigger:* Load when code calls `queryString.parse`, `queryString.all`, or `queryString.get`, or the user asks how to read a URL query string.
+- [Serialize](https://raw.githubusercontent.com/hassanzohdy/mongez-query-string/main/skills/serialize.md): `queryString.toQueryString(params)` and `queryString.update(params)`. Object → query string, array `[]=` syntax, nested `parent[child]=` syntax, string passthrough. Known quirks: no percent-encoding, `null` drops the key.
+  - *Auto-trigger:* Load when code calls `queryString.toQueryString`, `queryString.update`, or `queryString.toString`, or the user asks how to build/update a URL query string.
+
+## Recipes
+
+- [Recipes](https://raw.githubusercontent.com/hassanzohdy/mongez-query-string/main/skills/recipes.md): URL-driven filters, pagination, list-page sync, round-tripping safely.
+  - *Auto-trigger:* Load when code combines multiple `queryString.*` calls for filter/pagination/multi-select flows, store sync, or safe round-tripping with `encodeURIComponent`.
+
+## Quick rules
+
+1. Default import only: `import queryString from "@mongez/query-string"`. The package has one default export — no named exports for the public API.
+2. `parse` and `toQueryString` are pure (work on server or client). `all`, `get`, `update`, `toString` use `window.location` / `history.replaceState` — browser only.
+3. Numeric-looking values coerce on parse: `"42"` → `42`, `"007"` → `7`. To preserve a number-as-string, transport it under a key the consumer parses differently.
+4. Arrays use `key[]=value` (one entry per occurrence). Nested objects use `key[sub]=value`. Deep nesting (`a[b][c]=1`) is supported.
+5. `toQueryString` does NOT percent-encode values. Strings containing `&` or `=` produce ambiguous output. Either avoid reserved chars or pre-encode.
+6. `update` calls `history.replaceState` — no reload, no `popstate` event, no new history entry. Use `pushState` directly if you need an entry.
+7. `get(key, fallback)` returns `fallback` for any falsy parsed value (including `0`, `""`, `false`). Use `all()` for strict presence checks.
+
+## Documented quirks (tested as .skip)
+
+- `toStringParser` does NOT encode values (`src/query-string-parsers.ts:55-60`). Round-tripping fails for values containing `&` or `=`.
+- `toStringParser` drops `null` values entirely (`src/query-string-parsers.ts:55`). `typeof null === "object"` routes `null` into the recursive branch and the spread collapses to `{}`.
+- `toObjectParser` writes the literal string `"undefined"` for a key with no `=` (`src/query-string-parsers.ts:14`).
+
+## Optional
+
+- [Full single-file reference (llms-full.txt)](https://raw.githubusercontent.com/hassanzohdy/mongez-query-string/main/llms-full.txt): All reference content concatenated.
+- [GitHub repository](https://github.com/hassanzohdy/mongez-query-string): Source code, issues, releases.

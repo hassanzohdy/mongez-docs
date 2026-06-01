@@ -1,0 +1,350 @@
+# @mongez/atomic-query — full reference
+
+> Client-only query cache built on `@mongez/react-atom`. React-Query-style API. Ships `useQuery`, `useMutation`, invalidation, refetch, optimistic updates, list mutation helpers, and SSR integration via `<HydrateQueries>`.
+
+## Install
+
+```sh
+yarn add @mongez/atomic-query
+# peer: @mongez/atom, @mongez/react-atom, react >= 18
+```
+
+## Public exports
+
+```ts
+import {
+  // Cache atom (carries the action methods)
+  queryAtom,
+
+  // Hooks
+  useQuery,
+  useMutation,
+  useInfiniteQuery,
+  useSuspenseQuery,
+  useQueryChange,
+  useLoadChange,
+  useErrorChange,
+  useDataChange,
+
+  // SSR helper
+  HydrateQueries,
+
+  // Imperative API (re-exported as plain functions)
+  invalidate,
+  invalidateAll,
+  invalidateBackground,
+  invalidateBackgroundAll,
+  refetchQuery,
+  refetchMultipleQueries,
+  refetchQueryBackground,
+  refetchMultipleQueriesBackground,
+  updateQueryData,
+  seedQuery,
+  getData,
+  getQuery,
+  destroyQuery,
+  isStale,
+
+  // Cache lifecycle
+  clearCache,
+  garbageCollect,
+  getCacheStats,
+  limitCacheSize,
+  setupAutoGC,
+
+  // Array helpers
+  push, unshift, pop, shift,
+  replace, remove, removeByIndex, clear,
+  sort, reverse,
+
+  // Low-level utilities
+  parseQueryKey,
+  serializeQueryKey,
+  matchesQueryPrefix,
+  refetch,
+  refetchBackground,
+  refetchMultiple,
+  refetchMultipleBackground,
+  runInBackground,
+
+  // Types
+  type Query,
+  type QueryKey,
+  type QueryState,
+  type QueryChangeType,
+  type QueryChangeTypeToValue,
+  type QueryActions,
+  type QueryPayload,
+  type AddQueryOptions,
+  type InvalidateOptions,
+  type SeedEntry,
+  type CacheStats,
+  type GenericObject,
+  type HydrateQueriesProps,
+  type MutationStatus,
+  type UseMutationOptions,
+  type UseMutationResult,
+  type InfiniteQueryData,
+  type InfiniteQueryFnContext,
+  type UseInfiniteQueryOptions,
+  type UseInfiniteQueryResult,
+} from "@mongez/atomic-query";
+```
+
+## queryAtom.useQuery(options)
+
+> **Auto-trigger:** code imports `useQuery`, `queryAtom`, `useLoadChange`, `useDataChange`, `useErrorChange`, `useQueryChange`, `Query`, `QueryKey`, `QueryState`, or `AddQueryOptions` from `@mongez/atomic-query`; user asks "how does useQuery work / what's in Query<T> / what is staleTime vs gcTime / how does retry / refetchOnWindowFocus work / how are query keys hashed"; typical import `import { queryAtom, useQuery } from "@mongez/atomic-query"`.
+> **Skip when:** quick-start framing for first-time users — use `mongez-atomic-query-basic-query`; suspense-mode behavior — use `mongez-atomic-query-suspense`; write-side mutations — use `mongez-atomic-query-mutations`; invalidation/refetch patterns — use `mongez-atomic-query-invalidation` or `mongez-atomic-query-cache`; cursor/page-based pagination — use `mongez-atomic-query-infinite`.
+
+```ts
+useQuery<T>(options: AddQueryOptions<T>): Query<T>
+
+type AddQueryOptions<T> = {
+  queryKey: QueryKey;
+  queryFn: (ctx: { signal: AbortSignal }) => Promise<T>;
+  onSuccess?: (data: T, query: Query<T>) => void;
+  onError?: (error: any, query: Query<T>) => void;
+  watch?: boolean;                                  // default true
+  retry?: number;                                   // default 0
+  retryDelay?: number | ((attempt: number) => number);
+  retryCondition?: (error: any, attempt: number) => boolean;
+  staleTime?: number;                               // default 0
+  gcTime?: number;                                  // default 5 * 60_000
+  refetchOnMount?: boolean;                         // default true
+  refetchOnWindowFocus?: boolean;                   // default false
+  refetchOnReconnect?: boolean;                     // default false
+};
+
+type Query<T> = {
+  data: T | undefined;
+  isLoading: boolean;   // first fetch only
+  isFetching: boolean;  // any fetch
+  isError: boolean;
+  error: unknown | null;
+  state: "idle" | "loading" | "error" | "success";
+  isRetrying: boolean;
+  fetchCount, retryCount, maxRetries: number;
+  lastModified, lastAccessed, createdAt: number;
+  lastSuccessAt?, lastErrorAt?: number;
+  queryKey: QueryKey;
+  hashKey: string;
+  queryFn: (...) => Promise<T>;
+  options: Partial<AddQueryOptions<T>>;
+};
+```
+
+## useMutation
+
+> **Auto-trigger:** code imports `useMutation`, `updateQueryData`, `UseMutationOptions`, `UseMutationResult`, or `MutationStatus` from `@mongez/atomic-query`, or references `mutate`, `mutateAsync`, `onMutate`, `onSuccess`, `onError`, `onSettled`, `isPending`, or `reset` in a mutation context; user asks "how do I POST / PUT / PATCH / DELETE / do an optimistic update / roll back on error / write to the cache without refetching"; typical import `import { useMutation, queryAtom } from "@mongez/atomic-query"`.
+> **Skip when:** read-side `useQuery` calls — use `mongez-atomic-query-basic-query` or `mongez-atomic-query-queries`; forcing a refetch after a mutation completes — use `mongez-atomic-query-invalidation`; array-shaped helpers `push`/`remove`/`sort` for list updates — use `mongez-atomic-query-list-helpers`; cache lifecycle/GC questions — use `mongez-atomic-query-cache`.
+
+```ts
+useMutation<TData, TVariables, TContext>(
+  options: UseMutationOptions<TData, TVariables, TContext>,
+): UseMutationResult<TData, TVariables>
+
+type UseMutationOptions<TData, TVariables, TContext> = {
+  mutationFn: (variables: TVariables, ctx: { signal: AbortSignal }) => Promise<TData>;
+  onMutate?: (variables) => TContext | Promise<TContext>;
+  onSuccess?: (data, variables, context?) => void | Promise<void>;
+  onError?: (error, variables, context?) => void | Promise<void>;
+  onSettled?: (data | undefined, error, variables, context?) => void | Promise<void>;
+};
+
+type UseMutationResult<TData, TVariables> = {
+  mutate(variables): Promise<TData>;
+  mutateAsync: mutate;
+  reset(): void;
+  data: TData | undefined;
+  error: unknown;
+  variables: TVariables | undefined;
+  status: "idle" | "pending" | "success" | "error";
+  isIdle, isPending, isSuccess, isError: boolean;
+};
+```
+
+A second `mutate` aborts the first. Unmount aborts in-flight.
+
+## useInfiniteQuery
+
+> **Auto-trigger:** code imports `useInfiniteQuery`, `InfiniteQueryData`, `InfiniteQueryFnContext`, `UseInfiniteQueryOptions`, or `UseInfiniteQueryResult` from `@mongez/atomic-query`, or calls `fetchNextPage`, `getNextPageParam`, `hasNextPage`, or `isFetchingNextPage`; user asks "how do I implement infinite scroll / load more / cursor pagination / offset pagination"; typical import `import { useInfiniteQuery } from "@mongez/atomic-query"`.
+> **Skip when:** single-page `useQuery` calls — use `mongez-atomic-query-basic-query` or `mongez-atomic-query-queries`; mutating cached array values via `push`/`unshift`/`remove`/`sort` — use `mongez-atomic-query-list-helpers`; write-side mutations — use `mongez-atomic-query-mutations`.
+
+```ts
+useInfiniteQuery<TPage, TPageParam>(
+  options: UseInfiniteQueryOptions<TPage, TPageParam>,
+): UseInfiniteQueryResult<TPage, TPageParam>
+
+type UseInfiniteQueryOptions<TPage, TPageParam> = Omit<AddQueryOptions<...>, "queryFn"> & {
+  queryFn: (ctx: { pageParam: TPageParam; signal: AbortSignal }) => Promise<TPage>;
+  initialPageParam: TPageParam;
+  getNextPageParam: (
+    lastPage: TPage,
+    allPages: TPage[],
+    lastPageParam: TPageParam,
+    allPageParams: TPageParam[],
+  ) => TPageParam | undefined;
+};
+
+type UseInfiniteQueryResult<TPage, TPageParam> = Query<{
+  pages: TPage[];
+  pageParams: TPageParam[];
+}> & {
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  fetchNextPage(): Promise<void>;
+};
+```
+
+Cached as `{ pages, pageParams }`. `fetchNextPage()` computes the next param via `getNextPageParam` and appends. Each page fetch has its own AbortController. Invalidation refetches starting from page 1.
+
+## useSuspenseQuery
+
+> **Auto-trigger:** code imports `useSuspenseQuery` from `@mongez/atomic-query`, or uses it together with `<Suspense>` and `ErrorBoundary`; user asks "how do I use React Suspense with atomic-query / get data typed as non-undefined / pair Suspense with ErrorBoundary"; typical import `import { useSuspenseQuery } from "@mongez/atomic-query"`.
+> **Skip when:** plain non-suspense `useQuery` usage — use `mongez-atomic-query-basic-query` or `mongez-atomic-query-queries`; SSR streaming / server-component-driven loading — use `mongez-atomic-query-ssr`; write-side mutations — use `mongez-atomic-query-mutations`; cache invalidation triggered while suspended — use `mongez-atomic-query-invalidation`.
+
+```ts
+useSuspenseQuery<T>(options: AddQueryOptions<T>): Query<T> & { data: T }
+```
+
+While the query is loading and has no data, throws the in-flight promise (React suspends). On error, throws the error (ErrorBoundary catches). Returns the query with `data: T` (non-undefined) when settled.
+
+Render-time cache init: ensures the cache entry exists and the fetch is running before throwing the promise. This is necessary because a suspended-from-first-render component never commits its `useEffect`. The init is idempotent.
+
+Pair with `<Suspense>` and an `ErrorBoundary` (outside the Suspense):
+
+```tsx
+<ErrorBoundary fallback={<p>failed</p>}>
+  <Suspense fallback={<Spinner />}>
+    <UserList />
+  </Suspense>
+</ErrorBoundary>
+```
+
+## Cache management
+
+> **Auto-trigger:** code imports `invalidate`, `invalidateAll`, `invalidateBackground`, `invalidateBackgroundAll`, `refetchQuery`, `refetchMultipleQueries`, `refetchQueryBackground`, `refetchMultipleQueriesBackground`, `updateQueryData`, `seedQuery`, `getQuery`, `getData`, `isStale`, `destroyQuery`, `clearCache`, `garbageCollect`, `limitCacheSize`, `getCacheStats`, `setupAutoGC`, or `onQueryChange` from `@mongez/atomic-query`; user asks "how do I read/write/expire the cache without a hook / invalidate after a mutation / configure GC"; typical import `import { queryAtom, invalidate, updateQueryData } from "@mongez/atomic-query"`.
+> **Skip when:** writing `useQuery`/`useSuspenseQuery` calls — use `mongez-atomic-query-basic-query` or `mongez-atomic-query-queries`; running mutations (POST/PUT/PATCH/DELETE) — use `mongez-atomic-query-mutations`; array-shaped helpers like `push`/`remove`/`sort` — use `mongez-atomic-query-list-helpers`; SSR seeding via `<HydrateQueries>` — use `mongez-atomic-query-ssr`.
+
+```ts
+queryAtom.invalidate({ queryKey, exact?: boolean }): Promise<void>
+queryAtom.invalidateAll(): Promise<void>
+queryAtom.invalidateBackground({ queryKey }): void
+queryAtom.invalidateBackgroundAll(): void
+
+queryAtom.refetchQuery(queryKey): Promise<void>
+queryAtom.refetchMultipleQueries(queryKey[]): Promise<void>
+queryAtom.refetchQueryBackground(queryKey): void
+queryAtom.refetchMultipleQueriesBackground(queryKey[]): void
+
+queryAtom.updateQueryData<T>(queryKey, (old: T | undefined) => T): void
+queryAtom.seedQuery<T>({ queryKey, data, freshFor? }): void
+queryAtom.destroyQuery(queryKey): void
+
+queryAtom.getQuery(queryKey): Query | undefined
+queryAtom.getData(queryKey): unknown
+queryAtom.isStale(queryKey, staleTime?): boolean
+
+queryAtom.getCacheStats(): CacheStats
+queryAtom.clearCache(): void
+queryAtom.garbageCollect(gcTime?): number
+queryAtom.limitCacheSize(maxQueries?): number
+queryAtom.setupAutoGC(interval?, gcTime?, maxQueries?): () => void
+```
+
+Invalidation matching is segment-aware: `["users", 1]` matches `["users", 1]` and `["users", 1, "profile"]` but NOT `["users", 10]`.
+
+## List helpers
+
+> **Auto-trigger:** code imports `push`, `unshift`, `pop`, `shift`, `replace`, `remove`, `removeByIndex`, `clear`, `sort`, or `reverse` from `@mongez/atomic-query`, or calls `queryAtom.push`/`queryAtom.remove`/`queryAtom.sort` etc.; user asks "how do I append/prepend/remove/reorder items in a cached list without refetching"; typical import `import { queryAtom, push, remove } from "@mongez/atomic-query"`.
+> **Skip when:** cursor/offset pagination via `useInfiniteQuery` — use `mongez-atomic-query-infinite`; full-replacement optimistic writes via `updateQueryData` — use `mongez-atomic-query-mutations` or `mongez-atomic-query-cache`; invalidating instead of mutating — use `mongez-atomic-query-invalidation`; native `Array.prototype` work that doesn't go through `queryAtom`.
+
+```ts
+queryAtom.push(queryKey, data)
+queryAtom.unshift(queryKey, data)
+queryAtom.pop(queryKey)
+queryAtom.shift(queryKey)
+queryAtom.replace(queryKey, index, data)
+queryAtom.removeByIndex(queryKey, index)
+queryAtom.remove(queryKey, item)
+queryAtom.clear(queryKey)
+queryAtom.sort(queryKey, (a, b) => number)
+queryAtom.reverse(queryKey)
+```
+
+All immutable under the hood. No-op when the value is undefined.
+
+## SSR integration
+
+> **Auto-trigger:** code imports `HydrateQueries`, `seedQuery`, `SeedEntry`, or `HydrateQueriesProps` from `@mongez/atomic-query`; user asks "how do I SSR with atomic-query / seed cache from Next.js server component / hydrate from a Remix loader / prefetch on hover"; typical import `import { HydrateQueries } from "@mongez/atomic-query"`.
+> **Skip when:** pure client-side `useQuery` usage — use `mongez-atomic-query-basic-query` or `mongez-atomic-query-queries`; cache invalidation/refetch after first paint — use `mongez-atomic-query-invalidation`; suspense rendering boundaries — use `mongez-atomic-query-suspense`; non-SSR cache-API questions — use `mongez-atomic-query-cache`.
+
+```ts
+<HydrateQueries entries={[{ queryKey, data, freshFor? }]}>
+  <App />
+</HydrateQueries>
+```
+
+Seeds the cache synchronously during render. Consumers see seeded data on first paint. The package is marked `react-server: null`; server components cannot import it directly — fetch in the framework loader and seed via this component.
+
+## Granular subscriptions
+
+```ts
+queryAtom.useQueryChange<T extends QueryChangeType>(queryKey, changeType: T): QueryChangeTypeToValue<T> | undefined
+queryAtom.useLoadChange(queryKey): boolean
+queryAtom.useErrorChange(queryKey): Error | null
+queryAtom.useDataChange<T>(queryKey): T | null
+```
+
+Each subscribes to one field of the named query. Re-renders only when that field changes.
+
+## Non-React subscription
+
+```ts
+queryAtom.onQueryChange(
+  queryKey,
+  (next: Query | undefined, prev: Query | undefined) => void,
+): EventSubscription
+```
+
+Fires on create (prev undefined), update (both defined), and destroy (next undefined).
+
+## Key hashing
+
+Canonical JSON with sorted object keys. Properties:
+
+- Order-independent for objects: `{ a: 1, b: 2 }` and `{ b: 2, a: 1 }` hash identically.
+- Collision-free vs. pipe-joined hash: `["users", "1|2"]` and `["users", 1, 2]` differ.
+- Boundary-aware: `["users", 1]` matches `["users", 1, "profile"]` but NOT `["users", 10]`.
+
+## Concurrent fetch dedup
+
+Multiple `useQuery` mounts with the same hash share one in-flight promise. The same applies to manual `refetchQuery` calls that race a hook-initiated fetch.
+
+## queryFn freshness
+
+The latest `queryFn` closure is stored in a registry keyed by hash. Hooks update the registry on every render via a ref. Refetches always invoke the latest closure — never a stale one captured at first-mount time.
+
+## AbortSignal handling
+
+- Passed to every `queryFn`: `queryFn: ({ signal }) => fetch(url, { signal })`.
+- Aborted when a newer fetch starts for the same key (race-condition mitigation).
+- Aborted when `destroyQuery(key)` is called.
+- NOT aborted on consumer unmount (Strict Mode / route bounces don't kill fetches).
+
+## Reference-counted GC
+
+`useQuery` registers/unregisters observers via `attachObserver` / `detachObserver`. `garbageCollect` only evicts queries with zero observers AND a stale `lastAccessed`. Actively-observed queries never get evicted, even if they've gone unused.
+
+`setupAutoGC` runs automatically on the first `useQuery` call. Default cadence: every minute, evict anything unobserved for more than 5 minutes.
+
+## Client-only enforcement
+
+Every source file carries `"use client"`. The `exports` map declares `"react-server": null`. Bundlers (Next.js, others) refuse to import the package from RSC contexts. SSR fetching is the framework's job.
+
+## What this package does NOT do
+
+- Server-side fetching → use Next.js / Remix / TanStack loaders
+- Streaming Suspense (`useSuspenseQuery`) → push to the framework loader
+- Infinite queries with `getNextPageParam` → model as a single array query with `queryAtom.push(...)`
+- Persistent cache to localStorage/IndexedDB → use `@mongez/cache`

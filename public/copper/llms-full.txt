@@ -1,0 +1,470 @@
+# @mongez/copper — Full reference
+
+> Complete API reference for `@mongez/copper` v2.0. This file is the concatenation of every per-feature skill, intended for single-fetch loading by AI agents.
+
+Install: `yarn add @mongez/copper` or `npm i @mongez/copper`.
+
+Every export comes from the package root:
+
+```ts
+import {
+  colors, createColors, type Colors, type ColorName, type ChainFormatter, type Formatter,
+  spinner, type SpinnerHandle, type SpinnerOptions,
+  progress, type ProgressHandle, type ProgressOptions,
+  box, type BoxOptions, type BoxStyle,
+  log, createLogger, type Logger, type LogLevel, type LoggerOptions,
+  link,
+  stripAnsi,
+  symbols, type SymbolName,
+  isColorSupported, detectColorSupport,
+} from "@mongez/copper";
+```
+
+---
+
+# Overview
+
+> **Auto-trigger:** code first imports anything from `@mongez/copper`; user asks "what is @mongez/copper / how do I install it / what does this package replace / how does it compare to chalk / ora / boxen"; package.json adds `"@mongez/copper"` as a dependency; v1 → v2 migration questions.
+> **Skip when:** a specific feature skill (colors, spinner, progress, log, box, utilities, recipes) already covers the concrete task — load that directly; questions about browser-only styling (use CSS); React component theming.
+
+`@mongez/copper` is a zero-dependency, TypeScript-first CLI toolkit. One install gives you colors, spinners, progress bars, boxed messages, a themed logger, and OSC-8 hyperlinks — without the maintenance burden of pulling in `chalk` + `ora` + `cli-progress` + `boxen` separately.
+
+## Install
+
+```sh
+yarn add @mongez/copper
+# or
+npm i @mongez/copper
+```
+
+## Where features live
+
+| Need | Use |
+|---|---|
+| Color/style text | `colors.red("…")`, `colors.bold(…)` |
+| Animated loading | `spinner({ text }).start()` |
+| Known-total bar | `progress({ total })` |
+| Themed CLI logs | `log.info / warn / error / success` |
+| Boxed message | `box("text", { borderStyle })` |
+| Hyperlinks, ANSI strip, symbols | `link`, `stripAnsi`, `symbols` |
+
+## Color-support detection
+
+`isColorSupported` is resolved at module-load. Priority:
+
+1. `NO_COLOR` env or `--no-color` argv → off (per [no-color.org](https://no-color.org)).
+2. `FORCE_COLOR=0` / `FORCE_COLOR=false` → off.
+3. `FORCE_COLOR` (any other value) or `--color` argv → on.
+4. Windows → on (cmd / pwsh / Windows Terminal all render ANSI on Win10+).
+5. TTY stdout with `TERM !== "dumb"` → on.
+6. Any `CI` env var → on.
+7. Otherwise → off.
+
+`createColors(false)` short-circuits this — every formatter becomes the identity `String`.
+
+## v2 breaking changes
+
+- `brown2*` → `brown*` (matches v1 README contract).
+- `limeGreen*` → `lime*` (matches v1 README contract).
+- `displayLoadingBar` / `displayThreeDotsAnimation` are kept but **return a stop handle** instead of leaking intervals — they're shims around the new `progress` / `spinner` APIs. Prefer the new ones.
+- `FORCE_COLOR=0` now correctly **disables** colors (v1 enabled them as long as `FORCE_COLOR` was *defined*).
+- The `tty` module is loaded lazily — importing `@mongez/copper` in a browser bundle no longer blows up.
+- New: `spinner`, `progress`, `box`, `log`, `createLogger`, `link`, `stripAnsi`, `symbols`, `detectColorSupport`.
+
+---
+
+# Colors
+
+> **Auto-trigger:** code imports `colors`, `createColors`, `Colors`, `ColorName`, or `Formatter` from `@mongez/copper`; user asks "how do I color CLI text / replace chalk / detect NO_COLOR / force colors / 256-color terminal output / get a typed color name"; calls like `colors.red(x)`, `colors.bgGold(x)`, `colors.bold(colors.cyan(x))`.
+> **Skip when:** browser/CSS styling (this is ANSI only); `console.log` without `@mongez/copper`; React/JSX text styling.
+
+Chain colors and modifiers chalk-style. Each chain step builds a fresh callable formatter — lazy, stateless, reusable.
+
+```ts
+import { colors, createColors, type ColorName, type ChainFormatter } from "@mongez/copper";
+
+colors.red("error");
+colors.red.bold("error");
+colors.bgWhite.black.bold(" WARN ");
+colors.red.bold.underline("critical");
+
+const danger = colors.red.bold.underline;
+danger("File not found");
+```
+
+> Composition (`colors.red(colors.bold(x))`) produces identical ANSI output. The composition shape is the natural fit when the color name is decided at runtime: `colors[name](x)` where `name: ColorName`.
+
+## Modifiers
+
+`bold` `dim` `italic` `underline` `strikethrough` `inverse` `hidden` `reset`
+
+## Palette
+
+Foreground colors. Each row also has `*Bright`, `bg*`, and `bgBright*` variants:
+
+- Neutral: `black`, `gray`, `white`, `blackBright`, `whiteBright`
+- Slate: `slate`, `slateBright`
+- Red: `red`, `redBright`
+- Orange: `orange`, `orangeBright`
+- Yellow: `yellow`, `yellowBright`
+- Gold: `gold`, `goldBright`
+- Chocolate: `chocolate`, `chocolateBright`
+- Brown: `brown`, `brownBright`
+- Green: `green`, `greenBright`
+- Lime: `lime`, `limeBright`
+- Teal: `teal`, `tealBright`
+- Cyan: `cyan`, `cyanBright`
+- Blue: `blue`, `blueBright`
+- Magenta: `magenta`, `magentaBright`
+- Purple: `purple`, `purpleBright`
+- Pink: `pink`, `pinkBright`
+- Lavender: `lavender`, `lavenderBright`
+- Indigo: `indigo`, `indigoBright`
+
+The standard 4-bit colors use the 30-37 / 90-97 SGR sequences. The extended hues use 256-color sequences (`\x1b[38;5;Nm`).
+
+## `createColors(enabled?)`
+
+```ts
+const off = createColors(false);
+off.red("hi");        // "hi"
+off.isColorSupported; // false
+
+const on = createColors(true);
+on.red("hi");         // "\x1b[31mhi\x1b[39m"
+```
+
+## Typed color names
+
+```ts
+import { colors, type ColorName } from "@mongez/copper";
+
+function paint(level: "ok" | "fail", text: string) {
+  const c: ColorName = level === "ok" ? "green" : "red";
+  return colors[c](text);
+}
+```
+
+`ColorName` excludes `isColorSupported` and `createColors`.
+
+## Replacing chalk
+
+Near-1:1 import swap thanks to chaining:
+
+```diff
+- import chalk from "chalk";
++ import { colors } from "@mongez/copper";
+
+- chalk.red(text);
++ colors.red(text);
+
+- chalk.red.bold(text);
++ colors.red.bold(text);
+```
+
+For chalk's tagged-template syntax pair with `colorize-template`:
+
+```ts
+import { createColorize } from "colorize-template";
+import { colors } from "@mongez/copper";
+
+const colorize = createColorize(colors);
+colorize`{red.bold Build} took {yellow ${ms}ms}`;
+```
+
+## Composition safety
+
+Nested calls do not leak — copper rewrites internal closers to re-open the outer color.
+
+---
+
+# Spinner
+
+> **Auto-trigger:** code imports `spinner`, `SpinnerHandle`, or `SpinnerOptions` from `@mongez/copper`; user asks "how do I show a spinner / loading indicator / ora replacement / busy indicator while awaiting an async task".
+> **Skip when:** progress-with-known-total scenarios — use the progress section; browser/React loading indicators.
+
+```ts
+import { spinner } from "@mongez/copper";
+
+const sp = spinner({ text: "Compiling…" }).start();
+try {
+  await build();
+  sp.succeed("Build complete");
+} catch (err) {
+  sp.fail("Build failed");
+  throw err;
+}
+```
+
+## Options
+
+| Option | Default | Note |
+|---|---|---|
+| `text` | `""` | Trailing message; live-updatable via `.update(...)` |
+| `frames` | `symbols.spinner` | Array of strings, cycled |
+| `interval` | `80` | ms between frames |
+| `color` | `"cyan"` | Any `ColorName` |
+| `stream` | `process.stdout` | |
+
+## Handle methods
+
+`start(text?)`, `update(text)`, `stop()`, `succeed(text?)`, `fail(text?)`, `warn(text?)`, `info(text?)`, `.isSpinning`.
+
+## Non-TTY fallback
+
+In CI / piped streams, `.start()` prints the text once with a newline; finalizers print their colored marker + final text on a single line.
+
+The spinner's interval is `unref`'d, so a forgotten `.stop()` won't keep Node alive — but always pair `start()` with a finalizer in `try/finally`.
+
+---
+
+# Progress
+
+> **Auto-trigger:** code imports `progress`, `ProgressHandle`, or `ProgressOptions` from `@mongez/copper`; user asks "how do I draw a progress bar / show percentage of N items processed / ETA in CLI"; replacing `cli-progress`, `progress`, `gauge`.
+> **Skip when:** unknown-total / indeterminate loading — use spinner; React/web progress UI.
+
+```ts
+import { progress } from "@mongez/copper";
+
+const bar = progress({ total: files.length });
+for (const file of files) {
+  await upload(file);
+  bar.tick();
+}
+bar.done();
+```
+
+## Options
+
+| Option | Default | Note |
+|---|---|---|
+| `total` | — (required) | Target |
+| `width` | `30` | Bar character width |
+| `complete` | `"█"` | Filled glyph |
+| `incomplete` | `"░"` | Empty glyph |
+| `color` | `"green"` | Applied to filled segment |
+| `format` | `":bar :percent  :current/:total"` | Template tokens below |
+| `stream` | `process.stdout` | |
+
+### Format tokens
+
+`:bar` `:current` `:total` `:percent` `:elapsed` `:eta`.
+
+## Handle methods
+
+`tick(delta = 1)`, `update(value)`, `done()`, `stop()`, `.current`, `.total`, `.isComplete`.
+
+## TTY vs non-TTY
+
+In TTY: redraws in place. Non-TTY: `tick`/`update` are silent; only `done()` writes a single rendered line.
+
+---
+
+# Log
+
+> **Auto-trigger:** code imports `log`, `createLogger`, `Logger`, `LogLevel`, or `LoggerOptions` from `@mongez/copper`; user asks "how do I print colored info / warn / error logs in a CLI / silence info messages in quiet mode / log to stderr"; replacing `consola`, `signale`.
+> **Skip when:** pino/winston-style structured JSON for servers; browser console.
+
+```ts
+import { log } from "@mongez/copper";
+
+log.info("Starting server on", 4000);
+log.success("Build complete");
+log.warn("Cache miss");
+log.error(new Error("DB unreachable"));
+log.debug("payload", payload);
+```
+
+Each call writes one line prefixed with a colored level symbol — `ℹ` info, `✔` success, `⚠` warn, `✖` error, `•` debug.
+
+## `createLogger(options)`
+
+| Option | Default | Note |
+|---|---|---|
+| `level` | `"debug"` | Suppress lower priorities. Order: `debug < info < success < warn < error` |
+| `stream` | `process.stdout` | |
+| `levels` | (built-ins) | Per-level `{ symbol, label, color }` overrides |
+
+## Argument handling
+
+Args joined by space:
+
+- `string` → as-is
+- `Error` → `error.stack ?? error.message`
+- else → `JSON.stringify(value)`
+
+---
+
+# Box
+
+> **Auto-trigger:** code imports `box`, `BoxOptions`, or `BoxStyle` from `@mongez/copper`; user asks "how do I draw a box around CLI text / banner / framed message / call-out / boxen replacement"; calls like `box("Deploy ok", { borderStyle: "round", borderColor: "green" })`.
+> **Skip when:** HTML/CSS bordered components; ASCII-art bigger than a small framed message.
+
+```ts
+import { box } from "@mongez/copper";
+
+console.log(
+  box("Deploy successful", {
+    borderStyle: "round",
+    borderColor: "green",
+    padding: 1,
+  }),
+);
+```
+
+## Options
+
+| Option | Default | Note |
+|---|---|---|
+| `padding` | `1` | Internal blank lines + side spaces |
+| `margin` | `0` | Blank lines above/below |
+| `borderStyle` | `"round"` | `"single"` `"double"` `"round"` `"bold"` `"ascii"` |
+| `borderColor` | (none) | Any `ColorName` |
+| `align` | `"left"` | `"left"` `"center"` `"right"` |
+
+Border styles:
+
+- `single` `┌─┐ │ └─┘`
+- `double` `╔═╗ ║ ╚═╝`
+- `round` `╭─╮ │ ╰─╯`
+- `bold` `┏━┓ ┃ ┗━┛`
+- `ascii` `+-+ | +-+`
+
+Multi-line content is padded to the longest line. Width measurement strips ANSI first, so colored input lines up correctly.
+
+---
+
+# Utilities
+
+> **Auto-trigger:** code imports `link`, `stripAnsi`, `symbols`, `SymbolName`, `isColorSupported`, or `detectColorSupport` from `@mongez/copper`; user asks "how do I make a clickable terminal link / strip ANSI from a string / get a check or cross symbol / detect color support / handle NO_COLOR".
+> **Skip when:** HTML anchor tags; emoji-only output with no `@mongez/copper` import.
+
+## `link(text, url, options?)`
+
+OSC-8 hyperlink. Falls back to `text (url)` in unsupported terminals.
+
+```ts
+console.log(`See ${link("the docs", "https://github.com/hassanzohdy/copper")}`);
+```
+
+Pass `{ fallback: "text-only" }` to suppress the trailing `(url)` in unsupported terminals.
+
+## `stripAnsi(input)`
+
+Removes every ANSI escape — colors, modifiers, cursor moves, and OSC-8 hyperlinks.
+
+```ts
+stripAnsi(colors.red("hi"));                       // "hi"
+stripAnsi(link("docs", "https://example.com"));    // "docs"
+```
+
+## `symbols`
+
+| Key | Fancy | ASCII fallback |
+|---|---|---|
+| `tick` | `✔` | `√` |
+| `cross` | `✖` | `×` |
+| `info` | `ℹ` | `i` |
+| `warning` | `⚠` | `‼` |
+| `arrow` | `→` | `->` |
+| `pointer` | `❯` | `>` |
+| `ellipsis` | `…` | `...` |
+| `bullet` | `•` | `*` |
+| `line` | `─` | `-` |
+| `spinner` | Braille array | `["-", "\\", "|", "/"]` |
+
+Fallback triggered on `win32` without `WT_SESSION` / `TERM_PROGRAM` / `TERM=xterm-256color`.
+
+## `isColorSupported` / `detectColorSupport()`
+
+`isColorSupported` is the cached boolean. `detectColorSupport()` re-evaluates against current env/argv — useful after a CLI flag parser mutates `process.env`.
+
+---
+
+# Recipes
+
+> **Auto-trigger:** user asks "show me a real example using @mongez/copper / how do I structure a CLI with @mongez/copper / build a polished CLI experience"; combining two or more `@mongez/copper` primitives in one flow.
+> **Skip when:** single-function lookups; React/web UI.
+
+## Themed deploy script
+
+```ts
+import { spinner, progress, box, log } from "@mongez/copper";
+
+const auth = spinner({ text: "Authenticating…" }).start();
+await login();
+auth.succeed("Authenticated");
+
+const bar = progress({ total: files.length, color: "lime" });
+for (const f of files) {
+  await upload(f);
+  bar.tick();
+}
+bar.done();
+
+console.log(box(`${files.length} files deployed`, {
+  borderStyle: "round",
+  borderColor: "green",
+  padding: 1,
+}));
+```
+
+## Honoring `--quiet`
+
+```ts
+const log = createLogger({
+  level: process.argv.includes("--quiet") ? "warn" : "debug",
+  stream: process.stderr,
+});
+```
+
+## Capturing CLI output for tests
+
+```ts
+const lines: string[] = [];
+const stream = { write(c: string) { lines.push(c); return true; } } as any;
+const log = createLogger({ stream });
+log.info("started"); log.success("done");
+lines.map(stripAnsi);  // ["ℹ started\n", "✔ done\n"]
+```
+
+## Clickable error link
+
+```ts
+console.error(`${colors.red(symbols.cross)} ${msg}`);
+console.error(`  ${colors.gray("See:")} ${link(code, `https://errors.example.com/${code}`)}`);
+```
+
+## Startup banner
+
+```ts
+console.log(box([
+  colors.bold(colors.cyan("my-cli")) + " " + colors.gray("v" + pkg.version),
+  "",
+  `Docs: ${link("read here", "https://example.com/docs")}`,
+].join("\n"), {
+  borderStyle: "double",
+  borderColor: "cyan",
+  padding: 1,
+  align: "center",
+}));
+```
+
+## Walking a directory with progress
+
+```ts
+const sp = spinner({ text: "Scanning…" }).start();
+const files = await listAll("./src");
+sp.succeed(`Found ${files.length} files`);
+
+const bar = progress({ total: files.length });
+for (const f of files) { await processFile(f); bar.tick(); }
+bar.done();
+```
+
+## Error-only stderr, info to stdout
+
+```ts
+const out = createLogger({ stream: process.stdout, level: "info" });
+const err = createLogger({ stream: process.stderr, level: "warn" });
+```

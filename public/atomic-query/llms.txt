@@ -1,0 +1,45 @@
+# @mongez/atomic-query
+
+> Client-only query cache for the `@mongez/atom` ecosystem. React-Query-style API: `useQuery`, `useMutation`, invalidate, refetch, optimistic updates. Built-in list helpers (push/unshift/remove/replace/sort/reverse). Hands SSR data fetching back to your framework's loader and seeds the cache via `<HydrateQueries>`.
+
+The package is **client-only** — every file carries `"use client"` and the exports map marks it `"react-server": null`. RSC bundlers will refuse to import it from a server component. SSR is the framework's job; this is the cache layer.
+
+## Docs
+
+- [Overview](https://raw.githubusercontent.com/hassanzohdy/mongez-atomic-query/main/skills/overview.md): Pitch, install, mental model, what this does and what it deliberately doesn't.
+  - *Auto-trigger:* User asks what `@mongez/atomic-query` is, whether to adopt it, or how it differs from TanStack Query and fits with `@mongez/atom`.
+- [README](https://raw.githubusercontent.com/hassanzohdy/mongez-atomic-query/main/README.md): Full usage guide with framework integration examples.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/mongez-atomic-query/main/CHANGELOG.md): Release notes.
+
+## Reference
+
+- [Queries](https://raw.githubusercontent.com/hassanzohdy/mongez-atomic-query/main/skills/queries.md): `useQuery`, `Query<T>` shape, key matching, retries, refetch triggers.
+  - *Auto-trigger:* Code imports `useQuery`/`queryAtom` or user asks how `useQuery`, `staleTime`/`gcTime`, retries, refetch-on-focus, or query-key hashing work.
+- [Mutations](https://raw.githubusercontent.com/hassanzohdy/mongez-atomic-query/main/skills/mutations.md): `useMutation`, onMutate/onSuccess/onError/onSettled, abort behavior.
+  - *Auto-trigger:* Code imports `useMutation`/`updateQueryData`, or user asks how to POST/PUT/DELETE, optimistically update, or roll back on error.
+- [Infinite queries](https://raw.githubusercontent.com/hassanzohdy/mongez-atomic-query/main/skills/infinite.md): `useInfiniteQuery`, `fetchNextPage`, `hasNextPage`, cursor-based + offset-based patterns.
+  - *Auto-trigger:* Code imports `useInfiniteQuery` or user asks about infinite scroll, load more, `getNextPageParam`, or cursor/offset pagination.
+- [Suspense mode](https://raw.githubusercontent.com/hassanzohdy/mongez-atomic-query/main/skills/suspense.md): `useSuspenseQuery`, render-time cache init, ErrorBoundary pairing.
+  - *Auto-trigger:* Code imports `useSuspenseQuery` or user asks about React Suspense, non-undefined `data` typing, or ErrorBoundary pairing.
+- [Cache management](https://raw.githubusercontent.com/hassanzohdy/mongez-atomic-query/main/skills/cache.md): `invalidate` (segment-aware), `refetchQuery`, `updateQueryData`, `destroyQuery`, `getCacheStats`, GC.
+  - *Auto-trigger:* Code imports `invalidate`/`refetchQuery`/`updateQueryData`/`destroyQuery`/GC helpers, or user asks how to read/write/expire the cache outside a hook.
+- [List helpers](https://raw.githubusercontent.com/hassanzohdy/mongez-atomic-query/main/skills/list-helpers.md): `push`, `unshift`, `pop`, `shift`, `replace`, `remove`, `removeByIndex`, `clear`, `sort`, `reverse`.
+  - *Auto-trigger:* Code imports `push`/`unshift`/`remove`/`sort`/etc., or user asks how to append/prepend/remove/reorder a cached list without refetching.
+- [SSR integration](https://raw.githubusercontent.com/hassanzohdy/mongez-atomic-query/main/skills/ssr.md): `<HydrateQueries>`, `seedQuery`, Next.js / Remix / TanStack Start patterns.
+  - *Auto-trigger:* Code imports `HydrateQueries`/`seedQuery`, or user asks about SSR seeding, Next.js server components, Remix/TanStack loaders, or hover prefetch.
+
+## Quick rules
+
+1. **Client-only.** Don't import from a server component — your bundler will refuse. SSR fetches happen in your framework's loader; `<HydrateQueries>` seeds the result.
+2. **Cache keys are JSON-hashed with sorted object keys.** Two semantically-equivalent keys produce the same hash; pipe-character footguns from older implementations are gone.
+3. **Invalidation is segment-aware.** `invalidate(["users", 1])` matches `["users", 1, "profile"]` but NOT `["users", 10]`.
+4. **Concurrent same-key fetches are deduped.** Three components calling `useQuery({queryKey: ["users"], queryFn})` simultaneously result in one network call.
+5. **`isLoading` is the first-fetch flag, `isFetching` is the any-fetch flag.** Background refetches set `isFetching` but leave `isLoading` alone.
+6. **`queryFn` is always fresh.** Re-rendering with a new closure ensures refetches use the latest fetcher (the cache stores a fallback but the hook ref takes precedence).
+7. **AbortSignal is passed to every fetcher** as `({ signal })`. `destroyQuery` aborts in-flight; a new fetch aborts the previous one for the same key.
+8. **No mutation in the cache during render.** Hooks create the query in an effect, not in `useState` initializers. Strict Mode safe.
+
+## Optional
+
+- [Full single-file reference (llms-full.txt)](https://raw.githubusercontent.com/hassanzohdy/mongez-atomic-query/main/llms-full.txt)
+- [GitHub repository](https://github.com/hassanzohdy/mongez-atomic-query)

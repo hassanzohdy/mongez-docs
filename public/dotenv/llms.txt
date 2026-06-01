@@ -1,0 +1,37 @@
+# @mongez/dotenv
+
+> A small `.env` loader for Node.js. Parses `KEY=VALUE` lines, coerces values to typed primitives (number, boolean, null), supports `${VAR}` interpolation, picks the right file based on `NODE_ENV`, and layers a `.env.shared` file of defaults underneath.
+
+Every export ships from the package root. No subpath entries.
+
+## Docs
+
+- [Overview](https://raw.githubusercontent.com/hassanzohdy/mongez-dotenv/main/skills/overview.md): Pitch, install, mental model.
+  - *Auto-trigger:* Load on first import from `@mongez/dotenv` or when asking what the package is, how the store works, or whether to use it.
+- [README](https://raw.githubusercontent.com/hassanzohdy/mongez-dotenv/main/README.md): Marketing-style index.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/mongez-dotenv/main/CHANGELOG.md): Release notes.
+
+## Reference (by surface)
+
+- [Loader](https://raw.githubusercontent.com/hassanzohdy/mongez-dotenv/main/skills/loader.md): `loadEnv`, `loadEnvFile`, `EnvLoaderOptions`, the NODE_ENV → `.env.shared` → fallback resolution chain, override semantics, `resetEnv`.
+  - *Auto-trigger:* Load when code calls `loadEnv`/`loadEnvFile`/`resetEnv` or asks about NODE_ENV file selection, `.env.shared` layering, or override behaviour.
+- [Parser](https://raw.githubusercontent.com/hassanzohdy/mongez-dotenv/main/skills/parser.md): `parseLine`, `parseValue`, the type coercion table (number / boolean / null / quoted-string), `${VAR}` interpolation, `env(key, defaultValue?)`, `env.all()`.
+  - *Auto-trigger:* Load when code calls `parseLine`/`parseValue`/`env` or asks about value coercion rules, `${VAR}` interpolation, or the null-collapse edge case.
+
+## Recipes
+
+- [Recipes](https://raw.githubusercontent.com/hassanzohdy/mongez-dotenv/main/skills/recipes.md): Boot at process start, per-environment config with shared defaults, reading typed values, lower-level single-file loads.
+  - *Auto-trigger:* Load when composing `loadEnv`/`env` into bootstrap or typed config, or asking about read-only mode, null workarounds, or full test reset.
+
+## Quick rules
+
+1. Call `loadEnv()` once at process startup. Idempotent — subsequent calls merge.
+2. `env("KEY")` reads the TYPED value (number/boolean/string/null). `process.env.KEY` returns the string-coerced form.
+3. `${VAR}` is resolved at parse time. The referenced key must appear earlier in the file (or in `.env.shared`, which is loaded first).
+4. `null` is a known sharp edge: `env(key)` collapses `null` to `undefined` via `??`. Use `env.all()[key]` if you need the literal stored value.
+5. `.env.shared` loads first; `.env.${NODE_ENV}` (or `.env`) loads second and overwrites shared keys when `override` is `true`.
+
+## Optional
+
+- [Full single-file reference (llms-full.txt)](https://raw.githubusercontent.com/hassanzohdy/mongez-dotenv/main/llms-full.txt): All reference content concatenated.
+- [GitHub repository](https://github.com/hassanzohdy/mongez-dotenv): Source code, issues, releases.

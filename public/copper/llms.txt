@@ -1,0 +1,39 @@
+# @mongez/copper
+
+> Zero-dependency CLI toolkit: ANSI colors (20+ named hues across fg/bg/bright variants), spinners, progress bars, themed loggers, boxed messages, OSC-8 hyperlinks, and ANSI stripping. TypeScript-first, NO_COLOR / FORCE_COLOR aware, browser-safe imports.
+
+This package is the CLI ergonomics layer in a Mongez-flavoured stack. It replaces the typical `chalk + ora + cli-progress + boxen + figures + ansi-escapes` pile with a single, tree-shakeable import.
+
+Every export ships from the package root: `import { colors, spinner, progress, log, box, link, stripAnsi, symbols } from "@mongez/copper"`.
+
+## Docs
+
+- [Overview](https://raw.githubusercontent.com/hassanzohdy/copper/main/skills/overview/SKILL.md): Package pitch, install, import surface, color-support detection, v2 breaking changes.
+  - *Auto-trigger:* Load on first import from `@mongez/copper`, install/orientation questions, or v1 → v2 migration questions.
+- [README](https://raw.githubusercontent.com/hassanzohdy/copper/main/README.md): Marketing-style README with recipes and feature tables.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/copper/main/CHANGELOG.md): v1.0 → v2.0 release notes.
+
+## Reference (by feature)
+
+- [Colors](https://raw.githubusercontent.com/hassanzohdy/copper/main/skills/colors/SKILL.md): `colors.red/blue/green/...`, 20+ named hues, foreground/background/bright variants, modifiers, `createColors(enabled)`, `Colors`/`ColorName` types, chalk migration.
+  - *Auto-trigger:* Load on imports of `colors`/`createColors`/`Colors`/`ColorName`/`Formatter` or any CLI text-coloring question, NO_COLOR / FORCE_COLOR handling, or chalk/picocolors replacement.
+- [Spinner](https://raw.githubusercontent.com/hassanzohdy/copper/main/skills/spinner/SKILL.md): `spinner({ text }).start()` with `update` / `stop` / `succeed` / `fail` / `warn` / `info`. TTY-aware fallback for CI / piped output.
+  - *Auto-trigger:* Load on imports of `spinner`/`SpinnerHandle`/`SpinnerOptions` or questions about loading indicators, busy spinners, ora replacement.
+- [Progress](https://raw.githubusercontent.com/hassanzohdy/copper/main/skills/progress/SKILL.md): `progress({ total })` with `tick` / `update` / `done`, format tokens (`:bar` `:percent` `:eta` …), TTY-aware fallback.
+  - *Auto-trigger:* Load on imports of `progress`/`ProgressHandle`/`ProgressOptions` or questions about CLI progress bars, ETA, percentage rendering.
+- [Log](https://raw.githubusercontent.com/hassanzohdy/copper/main/skills/log/SKILL.md): `log.debug/info/success/warn/error` + `createLogger({ level, stream, levels })`. Colored symbol prefixes, level filtering, error stack serialization.
+  - *Auto-trigger:* Load on imports of `log`/`createLogger`/`Logger`/`LogLevel`/`LoggerOptions` or themed CLI logging, --quiet flag handling, stdout vs stderr routing.
+- [Box](https://raw.githubusercontent.com/hassanzohdy/copper/main/skills/box/SKILL.md): `box(text, { borderStyle, borderColor, padding, margin, align })` — single/double/round/bold/ascii borders, ANSI-aware width measurement.
+  - *Auto-trigger:* Load on imports of `box`/`BoxOptions`/`BoxStyle` or questions about CLI banners, framed messages, boxen replacement.
+- [Utilities](https://raw.githubusercontent.com/hassanzohdy/copper/main/skills/utilities/SKILL.md): `link` (OSC-8 hyperlinks), `stripAnsi` (escape removal), `symbols` (✔ ✖ ℹ ⚠ → ❯ … with Windows fallbacks), `isColorSupported`, `detectColorSupport`.
+  - *Auto-trigger:* Load on imports of `link`/`stripAnsi`/`symbols`/`SymbolName`/`isColorSupported`/`detectColorSupport` or clickable terminal links, ANSI cleanup, terminal glyph fallbacks.
+
+## Recipes
+
+- [End-to-end recipes](https://raw.githubusercontent.com/hassanzohdy/copper/main/skills/recipes/SKILL.md): Themed deploy script, --quiet flag, capturing CLI output for tests, clickable error links, startup banner, directory walker with progress, stdout/stderr split.
+  - *Auto-trigger:* Load when combining two or more `@mongez/copper` primitives in one flow or building a polished CLI end-to-end.
+
+## Optional
+
+- [Full single-file reference (llms-full.txt)](https://raw.githubusercontent.com/hassanzohdy/copper/main/llms-full.txt): All reference content concatenated — load once, no follow-up fetches.
+- [GitHub repository](https://github.com/hassanzohdy/copper): Source, issues, releases.

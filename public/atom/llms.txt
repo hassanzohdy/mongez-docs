@@ -1,0 +1,49 @@
+# @mongez/atom
+
+> A framework-agnostic, action-shaped state primitive. Each atom is a typed value with action methods bound to it (`atom.update(...)`, `atom.merge(...)`, `atomCollection.push(...)`). Stores scope atoms to a request for SSR; Redux DevTools integration is opt-in.
+
+This is the core of the `@mongez/atom` family. The React layer lives in [`@mongez/react-atom`](https://github.com/hassanzohdy/mongez-react-atom); the query/cache layer in [`@mongez/atomic-query`](https://github.com/hassanzohdy/mongez-atomic-query).
+
+Every export ships from the package root.
+
+## Docs
+
+- [Overview](https://raw.githubusercontent.com/hassanzohdy/atom/main/skills/overview.md): Pitch, install, mental model.
+  - *Auto-trigger:* Load on first `@mongez/atom` import or when a user asks what the package is or which Mongez state package to pick.
+- [README](https://raw.githubusercontent.com/hassanzohdy/atom/main/README.md): Marketing-style index.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/atom/main/CHANGELOG.md): Release notes.
+
+## Reference (by namespace)
+
+- [Atoms](https://raw.githubusercontent.com/hassanzohdy/atom/main/skills/atoms.md): `createAtom`, `getAtom`, `atomsList`, `atomsObject`. Methods on `Atom<V>`: `update`, `silentUpdate`, `change`, `merge`, `silentChange`, `get(key)`, `watch(key, cb)`, `onChange`, `onReset`, `onDestroy`, `reset`, `silentReset`, `clone`, `destroy`. Conditional types: keyed methods only exist when V is an object.
+  - *Auto-trigger:* Load on `createAtom` imports/calls or any `atom.update` / `merge` / `change` / `watch` / `onChange` reference.
+- [Atom Collections](https://raw.githubusercontent.com/hassanzohdy/atom/main/skills/collections.md): `atomCollection` for arrays. Adds `push`, `unshift`, `pop`, `shift`, `replace`, `remove`, `removeItem`, `removeAll`, `map`, `forEach`, `index`, `get`, `length`.
+  - *Auto-trigger:* Load on `atomCollection` imports/calls or any `push` / `pop` / `remove` / `replace` / `map` mutation on an atom.
+- [Derived atoms](https://raw.githubusercontent.com/hassanzohdy/atom/main/skills/derived.md): `derive(key, get => …)`. Auto-tracked dependencies, dynamic dep graphs, chained derivations, error isolation.
+  - *Auto-trigger:* Load on `derive` imports/calls or any question about computed atoms with auto-tracked dependencies.
+- [Persistence](https://raw.githubusercontent.com/hassanzohdy/atom/main/skills/persist.md): `persist: true \| PersistAdapter`. Built-in localStorage adapter or any custom sync/async adapter (cookies, IndexedDB, @mongez/cache, …).
+  - *Auto-trigger:* Load when `persist: true` or a `PersistAdapter` is set, or a user asks how to save atom state across reloads.
+- [Atom Stores (SSR)](https://raw.githubusercontent.com/hassanzohdy/atom/main/skills/stores.md): `AtomStore`, `createAtomStore`. Per-request isolation for Next.js / Remix / TanStack Start.
+  - *Auto-trigger:* Load on `AtomStore` / `createAtomStore` imports, `store.use` / `hydrate` / `snapshot` / `destroy` calls, or SSR-leak questions.
+- [Actions](https://raw.githubusercontent.com/hassanzohdy/atom/main/skills/actions.md): Inline action methods bound with correct `this`. Pattern for `useState`-style hooks, `Provider`-style components, domain verbs.
+  - *Auto-trigger:* Load when an `actions` bag is defined on `createAtom` / `atomCollection`, or `this.update` / getters appear inside.
+- [Devtools](https://raw.githubusercontent.com/hassanzohdy/atom/main/skills/devtools.md): `enableAtomDevtools()` — Redux DevTools bridge with time-travel.
+  - *Auto-trigger:* Load on `enableAtomDevtools` imports/calls or any Redux DevTools / time-travel question about atoms.
+
+## Recipes
+
+- [Recipes](https://raw.githubusercontent.com/hassanzohdy/atom/main/skills/recipes.md): Toggles via `openAtom`-style patterns, derived-state-by-watch, multi-atom coordination, SSR snapshot/hydrate, devtools wiring.
+  - *Auto-trigger:* Load when code combines several `@mongez/atom` features at once, or a user asks for an end-to-end real-world example.
+
+## Quick rules
+
+1. Atoms are created with `createAtom({ key, default, actions? })`. The `key` is the unique identifier — duplicates overwrite.
+2. Module-level singletons are fine for client-only apps. For SSR, wrap consumers in an `AtomStore` so request A and request B don't share state.
+3. `change` / `merge` / `silentChange` / `watch(key)` / `get(key)` only typecheck when the atom's value is an object.
+4. `update` triggers events; `silentUpdate` does not. Use silent variants for hydration and time-travel.
+5. Actions on the atom factory get bound to the atom instance — write `this.update(...)` inside them.
+
+## Optional
+
+- [Full single-file reference (llms-full.txt)](https://raw.githubusercontent.com/hassanzohdy/atom/main/llms-full.txt): All reference content concatenated.
+- [GitHub repository](https://github.com/hassanzohdy/atom): Source code, issues, releases.

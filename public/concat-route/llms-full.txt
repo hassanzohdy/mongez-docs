@@ -1,0 +1,127 @@
+# @mongez/concat-route — full reference
+
+> **Auto-trigger when loading this full reference:** code uses the default export `concatRoute` or matches `import concatRoute from "@mongez/concat-route"`; user asks about joining/concatenating URL path segments, normalizing slashes, building API URLs, locale-prefixed routes, normalizing a configurable base path, paginated routes, sub-resources, spreading a breadcrumb array, why the result is missing a leading slash, what `concatRoute` returns for empty/`null`/`undefined`, or "should I use `concatRoute` or `path.posix.join`"; helpers like `userUrl(id)` or `route(locale, ...rest)` appear near the import.
+>
+> **Skip when:** query-string parsing/building (use `@mongez/query-string`); absolute URL composition with protocol/host (use the platform `URL`); route pattern matching like `/users/:id` (use `@mongez/react-router`); percent-encoding (use `encodeURIComponent`); `node:path` / `path.posix.join` or other generic string joiners.
+
+> A tiny, dependency-free path joiner. This is the concatenated reference; load `llms.txt` for the structured index instead.
+
+## Install
+
+```sh
+yarn add @mongez/concat-route
+```
+
+No runtime dependencies. Default export only.
+
+## Public export
+
+```ts
+import concatRoute from "@mongez/concat-route";
+```
+
+The default export is the only public surface. There are no named exports, no types exported alongside it.
+
+## Signature
+
+```ts
+function concatRoute(...segments: string[]): string;
+```
+
+Variadic. Returns a single normalized path string.
+
+## Normalization rules
+
+The function applies these steps in order:
+
+1. **Filter falsy.** Segments that fail `value && String(value).length > 0` are dropped. This removes `""`, `null`, `undefined`, `0`, and `false` before joining. The TypeScript signature is `string[]`, but the runtime check uses truthiness.
+2. **Strip outer slashes per segment.** A leading `/` and a trailing `/` are each removed once per segment via `String(text).replace(/^\/|\/$/g, "")`. Despite the `/g` flag, the anchors `^` and `$` limit each side to one match, so `"///foo///"` becomes `"//foo//"` after this step.
+3. **Prefix each surviving segment with `/` and join.** `["foo", "bar"]` becomes `"/foo/bar"`.
+4. **Collapse runs of `/` to a single `/`.** The previous step can leave embedded `//` from segments like `"//foo//"`; `.replace(/(\/)+/g, "/")` flattens them.
+5. **Strip outer slashes one more time, then prepend `/`.** Guarantees the result starts with exactly one `/` and never ends with `/`.
+
+## Return contract
+
+- Always a `string`.
+- Always starts with exactly one `/`.
+- Never ends with `/` **except** when the result is the empty/root path, in which case the return value is `"/"`.
+- `concatRoute()`, `concatRoute("")`, `concatRoute("/")`, `concatRoute(null as any)`, `concatRoute(undefined as any)`, and `concatRoute("", "", "")` all return `"/"`.
+
+## Behavior table
+
+| Input | Output | Why |
+|---|---|---|
+| `()` | `"/"` | Empty input → root |
+| `("")` | `"/"` | Filtered as falsy |
+| `("/")` | `"/"` | Outer slash stripped, joined to empty, root prepended |
+| `("foo")` | `"/foo"` | Leading slash always added |
+| `("/foo/")` | `"/foo"` | Trailing slash stripped |
+| `("/", "home")` | `"/home"` | Slash segment collapses |
+| `("foo", "bar")` | `"/foo/bar"` | Joined with `/` |
+| `("//foo//", "bar")` | `"/foo/bar"` | Inner doubles collapsed by step 4 |
+| `("a/b", "c")` | `"/a/b/c"` | Embedded `/` is preserved |
+| `("a//b", "c")` | `"/a/b/c"` | Embedded `//` collapses too |
+| `("", null, undefined, 0, false)` | `"/"` | All filtered as falsy |
+| `("/api", "v1", "users", "42")` | `"/api/v1/users/42"` | Typical usage |
+| `("/home", "?q=1")` | `"/home/?q=1"` | Query string treated as a segment; **gets a leading slash** |
+| `("/home", "#x")` | `"/home/#x"` | Hash treated as a segment; **gets a leading slash** |
+| `("https://example.com", "/api")` | `"/https:/example.com/api"` | The `//` of the protocol is collapsed by step 4 — function is path-only, not URL-aware |
+
+## What this package does NOT do
+
+- It does not parse or build query strings. See [`@mongez/query-string`](https://github.com/hassanzohdy/mongez-query-string).
+- It does not encode URL components. Use `encodeURIComponent`.
+- It does not handle absolute URLs. The protocol's `//` is destroyed by the slash-collapse step. Use the platform `URL` for that.
+- It does not validate that the result is a legal URL path. Reserved characters, encoded sequences, and dot segments (`.`, `..`) pass through unchanged.
+- It does not generate route patterns or match parameters — that's the router's job.
+
+## Patterns
+
+### Building an API URL from a base path
+
+```ts
+import concatRoute from "@mongez/concat-route";
+
+const apiBase = "/api/v1";
+const userRoute = concatRoute(apiBase, "users", String(userId));
+// "/api/v1/users/42"
+```
+
+### Locale-prefixed routes
+
+```ts
+const locale = currentLocale ?? "";
+const path = concatRoute("/", locale, "products", productSlug);
+// locale = "en"  → "/en/products/foo"
+// locale = ""    → "/products/foo"     (falsy segment dropped)
+```
+
+### Normalizing user-provided base paths
+
+```ts
+function buildPath(base: string | undefined, ...rest: string[]) {
+  return concatRoute(base ?? "", ...rest);
+}
+
+buildPath("/app/",      "settings");  // "/app/settings"
+buildPath("app",        "settings");  // "/app/settings"
+buildPath(undefined,    "settings");  // "/settings"
+buildPath("",           "settings");  // "/settings"
+buildPath("/",          "settings");  // "/settings"
+```
+
+### Composing with a query string
+
+```ts
+const path = concatRoute("/api", "v1", "search");
+const url  = `${path}?q=${encodeURIComponent(query)}`;
+// path "/api/v1/search", then add the query yourself
+```
+
+Do NOT pass `"?q=..."` as a segment to `concatRoute` — it will be wrapped in `/` and produce `/api/v1/search/?q=...`, which may or may not be what your router expects.
+
+## Related packages
+
+- [`@mongez/react-router`](https://github.com/hassanzohdy/mongez-react-router) — the router this helper feeds.
+- [`@mongez/query-string`](https://github.com/hassanzohdy/mongez-query-string) — query parameter parsing/stringifying.
+- [`@mongez/localization`](https://github.com/hassanzohdy/mongez-localization) — locale segments commonly prepended via `concatRoute`.

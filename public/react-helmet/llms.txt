@@ -1,0 +1,36 @@
+# @mongez/react-helmet
+
+> React adapter for `@mongez/dom`'s metadata module. A single `<Helmet>` component sets the document title (with optional app-name suffix), description, keywords, Open Graph / Twitter meta, canonical URL, favicon, and `<html>` attributes — declarative, with cleanup on unmount.
+
+Every export ships from the package root. The component is effect-only (returns `null`), so it can be dropped at any depth in a tree.
+
+## Docs
+
+- [Overview](https://raw.githubusercontent.com/hassanzohdy/mongez-react-helmet/main/skills/overview.md): What `<Helmet>` does, install, mental model.
+  - *Auto-trigger:* User is new to `@mongez/react-helmet`, asks what it does, how it differs from `@mongez/dom`, or about SSR / `"use client"` constraints.
+- [README](https://raw.githubusercontent.com/hassanzohdy/mongez-react-helmet/main/README.md): Usage and recipes.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/mongez-react-helmet/main/CHANGELOG.md): Release notes.
+
+## Reference
+
+- [The Helmet component](https://raw.githubusercontent.com/hassanzohdy/mongez-react-helmet/main/skills/helmet.md): Props, lifecycle, return value.
+  - *Auto-trigger:* Code imports `Helmet` / `HelmetProps` or renders `<Helmet>` with `title`, `description`, `image`, `url`, `htmlAttributes`, etc.
+- [Metadata tags produced](https://raw.githubusercontent.com/hassanzohdy/mongez-react-helmet/main/skills/metadata.md): Which `<meta>` / `<link>` / `<title>` tags are produced by each prop.
+  - *Auto-trigger:* User debugs missing `og:title` / `twitter:card` / canonical tags or asks which DOM tags a `<Helmet>` prop writes.
+- [App-wide configuration](https://raw.githubusercontent.com/hassanzohdy/mongez-react-helmet/main/skills/configuration.md): `setHelmetConfigurations`, `getHelmetConfigurations`, `getHelmetConfig`, translation.
+  - *Auto-trigger:* Code calls `setHelmetConfigurations` / `getHelmetConfig`, or user sets up app-wide defaults, `appName`, or `translationFunction`.
+- [Recipes](https://raw.githubusercontent.com/hassanzohdy/mongez-react-helmet/main/skills/recipes.md): Static pages, async-data pages, localized RTL pages, custom canonical URLs.
+  - *Auto-trigger:* User wants a working example, app boot setup, RTL / i18n title flow, canonical URL pattern, or Next.js App Router integration.
+
+## Quick rules
+
+1. **One default export**: `import Helmet from "@mongez/react-helmet"`. Named exports: `setHelmetConfigurations`, `getHelmetConfigurations`, `getHelmetConfig`, and the `HelmetProps` / `HelmetConfigurations` types.
+2. **Only `title` is required**. Every other prop falls back to the config or simply isn't touched.
+3. **The component returns `null`** — all writes happen in effects on the real `document.head` / `document.documentElement`.
+4. **Browser-only**: the module accesses `document` at import time. Wrap in a `"use client"` boundary (Next.js App Router) or a `dynamic(..., { ssr: false })` import (Pages Router / Remix).
+5. **Under the hood it's `@mongez/dom`**: `setTitle`, `setDescription`, `setKeywords`, `setImage`, `setCanonicalUrl`, `setHTMLAttributes`. If you need finer-grained control outside React, use `@mongez/dom` directly.
+
+## Optional
+
+- [Full single-file reference (llms-full.txt)](https://raw.githubusercontent.com/hassanzohdy/mongez-react-helmet/main/llms-full.txt)
+- [GitHub repository](https://github.com/hassanzohdy/mongez-react-helmet)

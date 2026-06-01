@@ -1,0 +1,793 @@
+# @mongez/pkgist — Full reference
+
+> Complete API + workflow reference for `@mongez/pkgist`. Concatenation of every per-topic skill, intended for single-fetch loading by AI agents.
+
+> **Auto-trigger when loading this full reference:** code or config imports `defineConfig` from `@mongez/pkgist`; user runs `pkgist build`, `pkgist build:family`, `pkgist build:all`, `pkgist list`, `pkgist validate`; user edits `pkgist.config.ts` or `builder.ts`; user asks "how do I release my packages with pkgist", "how do I configure pkgist for X", "what does pkgist do step by step", "how do family versions work", "how do I auto-generate commit messages", "what's `commit: true`", "what files end up in the published package"; user is debugging a pkgist build or pipeline step.
+>
+> **Skip when:** questions about other release tools (lerna, changesets, semantic-release, release-please); questions about the underlying bundler `tsdown` specifically (use tsdown docs); operational playbook for releasing a specific monorepo (use that project's own RELEASING.md or `.claude/skills/`); generic semver/npm/git questions not tied to pkgist.
+
+Install: `npm install -g @mongez/pkgist` or `npm install -D @mongez/pkgist`.
+
+Use:
+```ts
+import { defineConfig } from "@mongez/pkgist";
+
+export default defineConfig({ /* ... */ });
+```
+```sh
+pkgist build:all --dry-run
+pkgist build:all
+```
+
+---
+
+# Overview
+
+> **Auto-trigger:** user installs, imports, or asks about `@mongez/pkgist`; user mentions `pkgist` CLI; user asks "how do I release my packages", "how do I build TypeScript packages with ESM+CJS", "what tool builds @mongez packages"; questions about monorepo release tooling for TS packages.
+> **Skip when:** questions about other release tools; questions about the underlying `tsdown` bundler specifically; operational playbook for a specific monorepo.
+
+A build, version, and publish tool for TypeScript/React npm packages. Powered by tsdown (Rolldown/Rust-based bundler).
+
+## What it does
+
+For each registered package, pkgist:
+
+1. Reads source `package.json` and resolves the next version (auto-patch by default).
+2. Compiles `src/` with tsdown into `esm/` + `cjs/` + `.d.ts` files.
+3. Clones whitelisted assets (README, LICENSE, skills, llms.txt, etc.) into the build.
+4. Writes a clean `package.json` for the build (no devDeps, no scripts).
+5. Updates the source `package.json` version in place.
+6. Commits, tags `v<version>`, and pushes (when `commit` is set).
+7. Publishes to npm with the configured access.
+
+Runs per-package in parallel up to the configured concurrency.
+
+## Install
+
+```sh
+npm install -g @mongez/pkgist
+# or
+npm install -D @mongez/pkgist
+```
+
+## Minimum viable config
+
+```ts
+import { defineConfig } from "@mongez/pkgist";
+
+export default defineConfig({
+  settings: { buildDir: "../builds" },
+  standalone: [
+    { name: "@my-scope/utils", root: "../utils" },
+  ],
+});
+```
+
+# Configuration
+
+> **Auto-trigger:** user creating or editing `pkgist.config.ts` or `builder.ts`; user asks "how do I set up pkgist", "what goes in the config", "where do I configure pkgist"; user imports `defineConfig`; questions about `settings.concurrency`, `settings.buildDir`, `settings.sourcesDir`, or how `standalone[]` differs from `families[]`.
+> **Skip when:** per-package field details (use Package options); CLI invocation (use CLI); semver rules (use Versioning); git behavior (use Git workflow).
+
+pkgist auto-discovers a config file in cwd. Two filenames are recognised:
+- `pkgist.config.ts` (preferred)
+- `builder.ts` (legacy alias)
+
+Loaded at runtime via dynamic `import()`. Use ESM `import` syntax freely.
+
+## defineConfig shape
+
+```ts
+import { defineConfig } from "@mongez/pkgist";
+
+export default defineConfig({
+  settings: { /* ... */ },
+  standalone: [ /* ... */ ],
+  families: [ /* ... */ ],
+});
+```
+
+## settings
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `concurrency` | `number` | `4` | Max parallel package builds |
+| `buildDir` | `string` | **required** | Where compiled packages are written, relative to config |
+| `sourcesDir` | `string` | — | Optional. Where source snapshots are archived |
+
+## standalone[]
+
+Independent-lifecycle packages. Each entry is one npm package.
+
+```ts
+standalone: [
+  {
+    name: "@my-scope/utils",
+    root: "../utils",
+    version: "patch",
+    commit: true,
+    clone: ["README.md", "LICENSE", "skills", "llms.txt"],
+  },
+]
+```
+
+## families[]
+
+Synchronized-version package groups. The family picks the highest current version across all members, then bumps it.
+
+```ts
+families: [
+  {
+    name: "state",
+    version: "patch",
+    commit: true,
+    packages: [
+      { name: "@my-scope/core",       root: "../core" },
+      { name: "@my-scope/react-core", root: "../react-core", type: "react" },
+    ],
+  },
+]
+```
+
+Members use the same fields as standalone packages except `version` (family-level only).
+
+## Override config path
+
+```sh
+pkgist build:all --config ./packaging/pkgist.config.ts
+```
+
+## Sharing constants
+
+```ts
+const RELEASE_COMMIT = "chore: release";
+const STANDARD_CLONE = ["README.md", "LICENSE", "skills", "llms.txt", "llms-full.txt"];
+
+export default defineConfig({
+  settings: { buildDir: "../builds" },
+  standalone: [
+    { name: "@x/a", root: "../a", commit: RELEASE_COMMIT, clone: STANDARD_CLONE },
+    { name: "@x/b", root: "../b", commit: RELEASE_COMMIT, clone: STANDARD_CLONE },
+  ],
+});
+```
+
+## Gitignoring local configs
+
+If your config carries operational secrets (commit conventions, internal layouts), add it to `.gitignore` and ship a `pkgist.config.example.ts` template instead.
+
+---
+
+# Package options
+
+> **Auto-trigger:** user configures a package entry; user asks about `clone`, `entries`, `srcDir`, `mainType`, `formats`, `preserveModules`, `dts`, `sourcemap`, `minify`, `publish`, `access`, `type`; user asks "what fields can I set on a package", "what's the default for X", "what does preserveModules do"; user asks about React vs TypeScript package config.
+> **Skip when:** `version` semantics (Versioning); `commit` semantics in depth (Git workflow); top-level `settings` (Configuration); CLI flags (CLI).
+
+## Required
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | npm package name |
+| `root` | `string` | Path to package root, relative to config file |
+
+## Build shape
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `type` | `"typescript" \| "react"` | `"typescript"` | React enables JSX/TSX transform |
+| `formats` | `("esm" \| "cjs")[]` | `["esm", "cjs"]` | Output formats |
+| `mainType` | `"cjs" \| "esm"` | `"cjs"` | Primary format — determines `main` field |
+| `entries` | `string \| string[]` | `["index.ts"]` | Entry files inside `srcDir` |
+| `srcDir` | `string` | `"src"` | Source directory name |
+| `dts` | `boolean` | `true` | Generate declarations |
+| `sourcemap` | `boolean` | `true` | Emit sourcemaps |
+| `minify` | `boolean` | `false` | Minify output (rarely useful for libraries) |
+| `preserveModules` | `boolean` | `true` | Keep one output file per source module (preserves stack traces) |
+
+## preserveModules — why it matters
+
+`true` (default): each source file becomes its own output file. Stack traces show real file names (`array/chunk.mjs:4`) instead of bundle offsets (`index.js:1027`).
+
+`false`: everything bundled into single `esm/index.js` + `cjs/index.js`. Only acceptable for trivial single-file packages.
+
+## Cloning extras
+
+```ts
+clone: [
+  "README.md",
+  "LICENSE",
+  "skills",                              // directory copy
+  "llms.txt",
+  "llms-full.txt",
+  ["dist-extras/icon.svg", "icon.svg"],  // [src, dest] rename form
+]
+```
+
+The only way to ship non-source files. Skip README → no README on npmjs.com.
+
+## Publish
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `publish` | `boolean` | `true` | Run `npm publish` after build |
+| `access` | `"public" \| "restricted"` | `"public"` | `npm publish --access` value |
+
+## Git
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `commit` | `string \| true \| false` | omitted | Drives git. See Git workflow |
+| `branch` | `string` | current branch | Branch to push to |
+
+## Standalone-only
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `version` | `"auto" \| "patch" \| "minor" \| "major" \| string` | `"auto"` | Version bump strategy |
+
+Not allowed on family-member entries — families declare one shared version.
+
+## Common shapes
+
+```ts
+// Standard library
+{ name: "@scope/util", root: "../util", commit: true, clone: ["README.md", "LICENSE"] }
+
+// React components
+{ name: "@scope/ui", root: "../ui", type: "react", commit: true, clone: ["README.md", "LICENSE"] }
+
+// ESM-only Vite plugin
+{ name: "@scope/vite-plugin", root: "../vite-plugin",
+  mainType: "esm", formats: ["esm"], commit: true }
+
+// Library + CLI entries
+{ name: "@scope/agent-kit", root: "../agent-kit",
+  entries: ["index.ts", "cli/index.ts"], commit: true, clone: ["README.md", "LICENSE", "bin"] }
+
+// Build-only, no publish
+{ name: "@scope/internal", root: "../internal", publish: false, commit: true }
+```
+
+---
+
+# Versioning
+
+> **Auto-trigger:** user asks about `version: "auto" | "patch" | "minor" | "major"`; user asks "how does pkgist pick the next version", "how do family versions work", "what if family members have different starting versions"; user sets explicit version like `version: "3.0.0"`; semver questions in pkgist context.
+> **Skip when:** general semver concepts not tied to pkgist; commit/git questions (Git workflow); CLI (CLI).
+
+## Five strategies
+
+| Strategy | Behaviour |
+|---|---|
+| `"auto"` (default) | Bump patch. `2.1.0` → `2.1.1` |
+| `"patch"` | Identical to `"auto"` |
+| `"minor"` | Bump minor, reset patch. `2.1.0` → `2.2.0` |
+| `"major"` | Bump major, reset minor + patch. `2.1.0` → `3.0.0` |
+| Literal semver string | Use exactly this version. `"3.0.0"` → `3.0.0` |
+
+## Standalone packages
+
+```ts
+{ name: "@scope/utils", root: "../utils", version: "auto" }   // 2.1.0 → 2.1.1
+{ name: "@scope/utils", root: "../utils", version: "minor" }  // 2.1.0 → 2.2.0
+{ name: "@scope/utils", root: "../utils", version: "3.0.0" }  // any → 3.0.0
+```
+
+## Family packages
+
+Family picks the **highest current version** across all members, then bumps it. All members land on the same new version.
+
+```
+Members on disk:
+  atom         = 1.0.5
+  react-atom   = 5.1.3   ← highest
+  atomic-query = 0.1.0
+
+family version: "patch"  →  all three become 5.1.4
+```
+
+Adding a low-versioned package to a family means it jumps to match the family on first build. The family version is the compatibility contract.
+
+`version` is family-level only — members don't declare their own.
+
+## Picking the right strategy
+
+| Change type | Use |
+|---|---|
+| Bug fixes, internal refactors, docs, lockfile/CI updates with NO API surface change | `"patch"` |
+| Strictly additive: new exports, new optional params, new fields on result types | `"minor"` |
+| Anything a consumer's code would need to change for (removals, renames, signature changes, default-behavior flips, runtime deps bumped major) | `"major"` |
+
+For families: pick based on the most significant change in any member.
+
+## Explicit-string use cases
+
+- First `1.0.0` release (vs bumping 0.x.x)
+- Re-publishing after a botched release attempt (only works if version isn't already on npm)
+- Pre-releases: `"2.0.0-beta.1"`, then `"2.0.0-beta.2"`, then `"2.0.0"`
+- Hotfix lineage on an older major
+
+---
+
+# Git workflow
+
+> **Auto-trigger:** user asks about pkgist git automation; user sets or asks about `commit: true`, `commit: false`, `commit: "message"`, `branch`; user asks "how do I auto-generate release commit messages", "how do I skip git in pkgist", "what does pkgist tag look like", "does pkgist push tags"; debugging why git ops did or didn't run; questions about `--no-git`.
+> **Skip when:** npm publish (Pipeline / CLI); version-bump rules (Versioning); CLI in general (CLI).
+
+## Four commit shapes
+
+| Value | Behaviour |
+|---|---|
+| `"explicit message"` (string) | Use that exact message |
+| `true` (boolean) | Auto-generate `Released <new-version>` (added in pkgist 1.1.0) |
+| `false` (boolean) | Explicitly skip git for this package |
+| omitted (`undefined`) | Skip git (back-compat default) |
+
+`false` and omitted are functionally identical — use `false` when intent should be obvious in the config diff.
+
+```ts
+{ name: "@scope/utils", root: "../utils", commit: "fix: prevent overflow" }
+{ name: "@scope/utils", root: "../utils", commit: true }       // "Released 2.1.1"
+{ name: "@scope/utils", root: "../utils" }                      // skip
+{ name: "@scope/utils", root: "../utils", commit: false }       // explicit skip
+```
+
+## What "git runs" means
+
+When `commit` resolves to a non-empty message, in the package's `root`:
+
+```
+1. git add .
+2. git commit -m "<message>"
+3. git push origin <branch>
+4. git tag v<new-version>
+5. git push origin v<new-version>
+```
+
+Branch from `pkg.branch` or `git rev-parse --abbrev-ref HEAD`.
+
+**`git add .` adds everything dirty**, not just the version bump. Clean the tree before release to keep commits focused.
+
+## Family-level commit override
+
+Family `commit` overrides per-package `commit`. Same shape (`string | true | false`).
+
+```ts
+// Single message for every member
+{ name: "atom-family", commit: "feat: improved API", packages: [ /* ... */ ] }
+
+// Auto-message for every member with shared family version
+{ name: "atom-family", commit: true, packages: [ /* ... */ ] }
+// → atom commits "Released 6.0.5", react-atom commits "Released 6.0.5"
+```
+
+Per-package `commit` on a family member is ignored when the family has `commit` set.
+
+## Tagging
+
+Tags: `v<new-version>` (`v2.1.1`, `v6.0.0-beta.1`). Created locally, pushed to remote in the same step.
+
+Tag already exists on remote → push fails loudly. Reasons:
+- Re-running a build for an already-released version → bump first
+- Concurrent releases racing → `git fetch --tags` before retry
+
+## Branch handling
+
+Default: pushes to currently-checked-out branch in `root`. Override:
+
+```ts
+{ name: "@scope/utils", root: "../utils", commit: true, branch: "main" }
+```
+
+Use when:
+- Multiple long-lived branches but releases only from one
+- Want a config-level assertion (defends against accidental release from feature branch)
+
+## Skipping git for local test builds
+
+```ts
+{ name: "@scope/test", root: "../test" }              // omitted
+{ name: "@scope/test", root: "../test", commit: false } // explicit
+{ name: "@scope/test", root: "../test", commit: "" }   // empty string also skips
+```
+
+Or `pkgist build:all --no-git` to skip git for the whole run, overriding any `commit` config.
+
+---
+
+# CLI
+
+> **Auto-trigger:** user runs or asks about `pkgist build`, `pkgist build:family`, `pkgist build:all`, `pkgist list`, `pkgist validate`; user asks about `--dry-run`, `--no-publish`, `--no-git`, `--concurrency`, `--config`, `--verbose`; "how do I release just one package", "how do I dry-run", "what does pkgist list show".
+> **Skip when:** per-package config (Package options); pipeline internals (Pipeline); git/publish in depth (Git workflow).
+
+## Commands
+
+### `build [pkg...]`
+
+Build one or more standalone packages by name.
+
+```sh
+pkgist build @my-scope/utils
+pkgist build @my-scope/utils @my-scope/cache @my-scope/events
+pkgist build --all
+```
+
+Family packages can't be targeted with `build` — use `build:family`.
+
+### `build:family <name>`
+
+Build every package in a family with a single shared version.
+
+```sh
+pkgist build:family atom
+pkgist build:family localization
+```
+
+`<name>` matches the family object's `name` field. `pkgist list` shows family names.
+
+### `build:all`
+
+Build every standalone package and every family.
+
+```sh
+pkgist build:all
+```
+
+Use for fleet-wide releases. For incremental, prefer targeted commands to avoid no-op bumps.
+
+### `list`
+
+Show every registered package + family with current version + type + format info.
+
+```sh
+pkgist list
+```
+
+```
+=== Standalone Packages ===
+  @my-scope/utils v2.1.0 [typescript] [esm, cjs]
+    root: /path/to/utils
+
+=== Families ===
+  Family: state
+    @my-scope/atom       v6.0.7 [typescript] [esm, cjs]
+    @my-scope/react-atom v6.0.7 [react]      [esm, cjs]
+```
+
+### `validate`
+
+Verify config parses + every `root` exists on disk.
+
+```sh
+pkgist validate
+```
+
+Catches typos, missing dirs, malformed config. Cheap as a pre-commit / CI step.
+
+## Common flags
+
+| Flag | Description |
+|---|---|
+| `--dry-run` | Print every step without writing to disk, git, or npm. Always run before real release |
+| `--no-publish` | Skip `npm publish`. Build + commit + tag still run |
+| `--no-git` | Skip git entirely, overriding per-package `commit` |
+| `--concurrency <n>` | Override `settings.concurrency`. Use `1` to serialize for debugging |
+| `--config <path>` | Use specific config file. Path relative to cwd |
+| `--verbose` | Debug-level log lines |
+
+## Typical invocations
+
+| Scenario | Command |
+|---|---|
+| Sanity-check before release | `pkgist validate` |
+| Inventory current versions | `pkgist list` |
+| Preview release | `pkgist build:all --dry-run` |
+| Real release everything | `pkgist build:all` |
+| Hot-fix one package | `pkgist build @scope/the-pkg` |
+| Release synchronized group | `pkgist build:family atom` |
+| Verify build but don't ship | `pkgist build:all --no-publish --no-git` |
+| Debug a failing build | `pkgist build @scope/the-pkg --verbose --concurrency 1` |
+
+## Exit codes
+
+- `0` — all targeted builds succeeded
+- non-zero — at least one package failed
+
+Builds run in parallel; one failure doesn't stop others.
+
+---
+
+# Build pipeline
+
+> **Auto-trigger:** user asks "what does pkgist do step by step", "how does pkgist build a package", "what does the build output look like", "what's in the published package.json"; user wants to understand pipeline order; questions about source snapshots, generated `exports` map, why ESM-only gets `"type": "module"`; debugging build artifacts.
+> **Skip when:** per-package config (Package options); CLI (CLI); semver decisions (Versioning); git automation (Git workflow).
+
+## The 10 steps
+
+```
+1. Load source package.json → read current version
+2. Resolve new version (auto-bump or explicit)
+3. Create build output directory (buildDir/<name>/<new-version>/)
+4. Snapshot source to sourcesDir/<name>/ — full copy excluding .git, node_modules, dist
+   (only if settings.sourcesDir is set)
+5. Compile with tsdown → esm/ and cjs/ subdirectories
+6. Clone extra files/directories listed in `clone`
+7. Write clean package.json for the build (no devDeps, no scripts)
+8. Update source package.json version in-place
+9. Git: add . → commit → push → tag v<version> → push tags
+   (only if commit resolves to a non-empty string)
+10. npm publish --access <public|restricted> from build directory
+    (only if publish !== false)
+```
+
+Build/clone/write/git/publish run in parallel across packages up to `concurrency`. Within a package, steps are sequential.
+
+## Output structure — preserveModules: true (default)
+
+Each source file → its own output file:
+
+```
+builds/
+└── utils/
+    └── 2.1.1/
+        ├── package.json
+        ├── README.md
+        ├── LICENSE
+        ├── skills/
+        ├── llms.txt
+        ├── llms-full.txt
+        ├── esm/
+        │   ├── index.mjs / index.mjs.map / index.d.mts
+        │   ├── array/chunk.mjs / .map / .d.mts
+        │   └── string/trim.mjs / .d.mts
+        └── cjs/
+            ├── index.cjs / .map / index.d.cts
+            └── array/chunk.cjs / .d.cts
+```
+
+Generated `package.json`:
+
+```json
+{
+  "main":   "./cjs/index.cjs",
+  "module": "./esm/index.mjs",
+  "types":  "./esm/index.d.mts",
+  "exports": {
+    ".": {
+      "import":  { "types": "./esm/index.d.mts", "default": "./esm/index.mjs" },
+      "require": { "types": "./cjs/index.d.cts", "default": "./cjs/index.cjs" }
+    }
+  }
+}
+```
+
+Standard dual-publish shape. Bundlers, Node ESM, Node CJS, TypeScript all resolve correctly.
+
+## Output structure — preserveModules: false
+
+Everything bundled per format:
+
+```
+builds/tiny-pkg/1.0.0/
+├── esm/index.js / .map / .d.ts
+└── cjs/index.js / .map / .d.ts
+```
+
+```json
+{
+  "main":   "./cjs/index.js",
+  "module": "./esm/index.js",
+  "types":  "./esm/index.d.ts"
+}
+```
+
+Trivial single-file packages only.
+
+## ESM-only packages
+
+When `mainType: "esm"` or `formats: ["esm"]`:
+- `"type": "module"` in generated package.json
+- `require` condition omitted from exports
+- No `cjs/` directory
+- `main` points to ESM file
+
+```json
+{
+  "type": "module",
+  "main":   "./esm/index.mjs",
+  "module": "./esm/index.mjs",
+  "types":  "./esm/index.d.mts",
+  "exports": {
+    ".": { "import": { "types": "./esm/index.d.mts", "default": "./esm/index.mjs" } }
+  }
+}
+```
+
+## What's in the published package.json
+
+Clean generation — NOT a verbatim copy:
+
+- **Kept**: `name`, `description`, `version`, `author`, `license`, `repository`, `homepage`, `bugs`, `keywords`, `dependencies`, `peerDependencies`, `optionalDependencies`, `peerDependenciesMeta`, `engines`, `sideEffects`, `bin`, `os`, `cpu`, `funding`, `files`, `publishConfig`
+- **Replaced**: `main`, `module`, `types`, `exports`, `type`
+- **Dropped**: `devDependencies`, `scripts`, `private`, `workspaces`, everything else
+
+### bin normalization
+
+Leading `./` stripped from `bin` values. `{"my-cli": "./dist/cli.js"}` → `{"my-cli": "dist/cli.js"}`.
+
+## Source snapshots (optional)
+
+If `settings.sourcesDir` is set, pkgist archives source per build (minus `.git`, `node_modules`, `dist`) into `<sourcesDir>/<name>/`. Useful for:
+- Reconstructing what shipped at any time
+- Diffing published versions without checking out tags
+- Recovering from edits between build and publish
+
+Omit `sourcesDir` to skip.
+
+## Publish step
+
+`npm publish --access <public|restricted>` from the **build directory**. The clean `package.json` + compiled output + cloned files is what ships.
+
+`publish: false` → skip publish for that package. `--no-publish` → skip for the whole run.
+
+## What's NOT in the pipeline
+
+- Running tests
+- Linting / formatting
+- Changelog generation
+- `node_modules` install
+
+Run these as pre-commit hooks or separate CI steps. pkgist trusts you.
+
+---
+
+# Recipes
+
+> **Auto-trigger:** user asks "how do I configure X with pkgist", "show me an example pkgist config for Y", "how do I release a family"; user wants copy-paste-able pattern; setting up pkgist for new monorepo.
+> **Skip when:** detailed option reference (Package options); semver (Versioning); CLI flags (CLI); pipeline internals (Pipeline).
+
+## Single TypeScript library, hands-off
+
+```ts
+import { defineConfig } from "@mongez/pkgist";
+
+export default defineConfig({
+  settings: { buildDir: "../builds" },
+  standalone: [
+    {
+      name: "@scope/utils",
+      root: "../utils",
+      commit: true,
+      clone: ["README.md", "LICENSE"],
+    },
+  ],
+});
+```
+
+Release: `pkgist build:all`.
+
+## React component library
+
+```ts
+{ name: "@scope/ui", root: "../ui", type: "react", commit: true, clone: ["README.md", "LICENSE"] }
+```
+
+## ESM-only Vite/build-tool plugin
+
+```ts
+{
+  name: "@scope/vite-plugin", root: "../vite-plugin",
+  mainType: "esm", formats: ["esm"],
+  commit: true, clone: ["README.md", "LICENSE"],
+}
+```
+
+## Library + CLI entries
+
+```ts
+{
+  name: "@scope/agent-kit", root: "../agent-kit",
+  entries: ["index.ts", "cli/index.ts"],
+  commit: true, clone: ["README.md", "LICENSE", "bin"],
+}
+```
+
+`bin` field in source package.json preserved; leading `./` stripped automatically.
+
+## Build-only (no publish)
+
+```ts
+{ name: "@scope/internal-tools", root: "../internal-tools", publish: false, commit: true }
+```
+
+## Family of synchronized packages
+
+```ts
+families: [
+  {
+    name: "state",
+    version: "patch",
+    commit: true,
+    packages: [
+      { name: "@scope/state-core",  root: "../state-core" },
+      { name: "@scope/react-state", root: "../react-state", type: "react" },
+      { name: "@scope/svelte-state",root: "../svelte-state" },
+    ],
+  },
+],
+```
+
+`pkgist build:family state` → all three land on the same new version.
+
+## Mixed monorepo with shared constants
+
+```ts
+const STANDARD_CLONE = ["README.md", "LICENSE", "skills", "llms.txt", "llms-full.txt"];
+
+export default defineConfig({
+  settings: { buildDir: "../builds", concurrency: 8 },
+  standalone: [
+    { name: "@scope/utils",    root: "../utils",    commit: true, clone: STANDARD_CLONE },
+    { name: "@scope/ui",       root: "../ui",       commit: true, clone: STANDARD_CLONE, type: "react" },
+    { name: "@scope/vite-plug",root: "../vite-plug",commit: true, clone: STANDARD_CLONE, mainType: "esm", formats: ["esm"] },
+  ],
+  families: [
+    {
+      name: "state",
+      commit: true,
+      packages: [
+        { name: "@scope/state-core",  root: "../state-core",  clone: STANDARD_CLONE },
+        { name: "@scope/react-state", root: "../react-state", clone: STANDARD_CLONE, type: "react" },
+      ],
+    },
+  ],
+});
+```
+
+## Per-release custom commit messages
+
+```ts
+const RELEASE_COMMIT = "fix: prevent overflow on large arrays";
+
+standalone: [
+  { name: "@scope/utils", root: "../utils", commit: RELEASE_COMMIT },
+  { name: "@scope/cache", root: "../cache", commit: RELEASE_COMMIT },
+]
+```
+
+Update `RELEASE_COMMIT` before each release run. Use targeted `pkgist build` to release only changed packages.
+
+## Dry-run-first release flow
+
+```sh
+pkgist validate                # verify config + paths
+pkgist build:all --dry-run     # preview every step
+# review for: correct versions, intended commit message, sane clone lists
+pkgist build:all               # real run
+```
+
+## Hotfix one package
+
+```sh
+pkgist build @scope/the-pkg --dry-run
+pkgist build @scope/the-pkg
+```
+
+Others untouched.
+
+## Build everything without publishing
+
+```sh
+pkgist build:all --no-publish --no-git
+```
+
+For verifying the fleet compiles before committing to publish.
+
+## CI-friendly: publish without git
+
+When CI tags separately:
+
+```sh
+pkgist build:all --no-git
+```
+
+Or per-package `commit: false`.

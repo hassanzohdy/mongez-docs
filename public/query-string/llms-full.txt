@@ -1,0 +1,237 @@
+# @mongez/query-string — full reference
+
+> **Auto-trigger when loading this full reference:** code imports or calls `queryString`, `parse`, `all`, `get`, `toString`, `toQueryString`, or `update`; dev phrasings like "how do I read a URL query string", "how do I extract a query param", "how do I build a query string from an object", "how do I update the URL without reloading", "how do I parse `tags[]=a&tags[]=b`", "how do I do URL-driven filters", "how do I do pagination in the URL", "how do I round-trip values", "why does `?zip=007` become `7`", "why isn't `&` encoded", "why does `null` disappear", "how do I clear the query string", "how do I parse a query string server-side", or "which @mongez package handles query strings"; the import pattern `import queryString from "@mongez/query-string"`.
+>
+> **Skip when:** the task is URL/path joining without query strings — use `@mongez/concat-route`; React-aware URL hooks, route params, or `useSearchParams` — use `@mongez/react-router`; or the code uses native `URLSearchParams`, the `qs` npm package, or the `query-string` npm package instead of `@mongez/query-string`.
+
+> Tiny query-string parse/serialize with nested-object and array support. Default-export API. Browser helpers for `window.location`. This is the concatenated reference; load `llms.txt` for the structured index instead.
+
+## Install
+
+```sh
+yarn add @mongez/query-string
+```
+
+No runtime dependencies.
+
+## Public export
+
+```ts
+import queryString from "@mongez/query-string";
+```
+
+The default export is a single object with six methods:
+
+```ts
+{
+  parse(searchParams: string): Record<string, any>;
+  all(searchParams?: string): Record<string, any>;
+  get(key: string, defaultValue?: any): any;
+  toString(): string;
+  toQueryString(params: Record<string, any> | string): string;
+  update(params: Record<string, any> | string): void;
+}
+```
+
+## queryString.parse(searchParams)
+
+```ts
+queryString.parse(searchParams: string): Record<string, any>
+```
+
+Parses a query string into an object.
+
+- A leading `?` is stripped.
+- Empty input returns `{}`.
+- Values that look numeric (`!isNaN(value - parseFloat(value))`) become numbers.
+- Non-numeric values are passed through `decodeURIComponent`. (`+` is NOT translated to a space — use `replace(/\+/g, "%20")` first if your producer uses it.)
+- Keys suffixed with `[]` produce array values. Repeat the key for multiple elements.
+- Keys with `[sub]` produce nested objects. Any depth: `a[b][c]=1` → `{ a: { b: { c: 1 } } }`.
+- Duplicate non-array keys overwrite — last write wins.
+
+Behavior table:
+
+| Input | Output |
+|---|---|
+| `""` | `{}` |
+| `"?"` | `{}` |
+| `"?foo=bar"` | `{ foo: "bar" }` |
+| `"a=1&b=2"` | `{ a: 1, b: 2 }` |
+| `"n=42"` | `{ n: 42 }` |
+| `"zip=007"` | `{ zip: 7 }` (number coercion is lossy) |
+| `"q=hello%20world"` | `{ q: "hello world" }` |
+| `"tags[]=a&tags[]=b"` | `{ tags: ["a", "b"] }` |
+| `"user[name]=alice&user[age]=30"` | `{ user: { name: "alice", age: 30 } }` |
+| `"a[b][c]=1"` | `{ a: { b: { c: 1 } } }` |
+| `"foo=true"` | `{ foo: "true" }` (no boolean coercion) |
+| `"foo=NaN"` | `{ foo: "NaN" }` (NaN check excludes itself) |
+| `"foo"` (no `=`) | `{ foo: "undefined" }` (documented bug) |
+
+## queryString.all(searchParams?)
+
+```ts
+queryString.all(searchParams?: string): Record<string, any>
+```
+
+Same parsing rules as `parse`, but `searchParams` defaults to `window.location.search`. Use `all()` (no arg) to read the current URL; pass an explicit string to override.
+
+```ts
+// On URL: /products?tag=books&page=2
+queryString.all();          // { tag: "books", page: 2 }
+queryString.all("?x=1");    // { x: 1 }
+queryString.all("");        // {}
+```
+
+## queryString.get(key, defaultValue?)
+
+```ts
+queryString.get(key: string, defaultValue?: any = null): any
+```
+
+Reads one key from `queryString.all()`. Returns `defaultValue` if the parsed value is falsy (because the implementation uses `all[key] || defaultValue`). The default `defaultValue` is `null`.
+
+```ts
+// On URL: /products?page=2&empty=
+queryString.get("page");                // 2
+queryString.get("missing");             // null
+queryString.get("missing", 1);          // 1
+queryString.get("missing", { x: 1 });   // { x: 1 }
+queryString.get("empty", "fallback");   // "fallback" — falsy values fall through
+```
+
+For strict presence checks ("did the user pass `?empty=`?"), use `queryString.all()` and look up the key yourself.
+
+## queryString.toString()
+
+```ts
+queryString.toString(): string
+```
+
+Returns `window.location.search.substring(1)` — the current query string without the leading `?`. Empty string if there's no query.
+
+## queryString.toQueryString(params)
+
+```ts
+queryString.toQueryString(params: Record<string, any> | string): string
+```
+
+Serializes an object back into a query string.
+
+- An empty object returns `""`.
+- A string argument is returned unchanged (passthrough for callers that already hold one).
+- Arrays use the `key[]=value` form, one entry per element.
+- Objects recurse with `parent[child]=value`. Deep nesting is supported.
+- Primitive values are stringified via implicit `toString()`. Numbers become their decimal representation; booleans become `"true"` / `"false"`; `undefined` becomes the literal string `"undefined"`.
+- **`null` drops the key.** `typeof null === "object"` triggers the recursive branch and `{ ...null }` collapses to `{}`. Documented quirk.
+- **Values are NOT percent-encoded.** A value containing `&` or `=` produces ambiguous output that won't round-trip through `parse`. Pre-encode values that may contain reserved characters.
+
+Behavior table:
+
+| Input | Output |
+|---|---|
+| `{}` | `""` |
+| `{ foo: "bar" }` | `"foo=bar"` |
+| `{ a: 1, b: 2 }` | `"a=1&b=2"` |
+| `{ tags: [] }` | `""` |
+| `{ tags: ["a", "b"] }` | `"tags[]=a&tags[]=b"` |
+| `{ user: { name: "alice" } }` | `"user[name]=alice"` |
+| `{ a: { b: { c: 1 } } }` | `"a[b][c]=1"` |
+| `{ v: null }` | `""` (documented quirk) |
+| `{ v: undefined }` | `"v=undefined"` |
+| `{ on: true }` | `"on=true"` |
+| `"already=encoded"` | `"already=encoded"` (passthrough) |
+
+## queryString.update(params)
+
+```ts
+queryString.update(params: Record<string, any> | string): void
+```
+
+Calls `window.history.replaceState({}, "", url)` with `url = window.location.pathname + (queryStringText ? "?" + queryStringText : "")`. Keeps the pathname, replaces the query string.
+
+- Pass an object to serialize through `toQueryString`.
+- Pass a string to use it verbatim.
+- An empty object or empty string clears the query.
+- Does NOT push a new history entry, does NOT fire `popstate`, does NOT trigger a reload.
+
+For navigation that creates a history entry, use `history.pushState` directly with `queryString.toQueryString(params)`.
+
+```ts
+queryString.update({ tag: "books", page: 3 });
+// URL: /products?tag=books&page=3
+
+queryString.update("page=4");
+// URL: /products?page=4
+
+queryString.update({});
+// URL: /products
+```
+
+## Patterns
+
+### URL-driven filters
+
+```ts
+import queryString from "@mongez/query-string";
+
+type Filters = { tag?: string; sort?: string; page?: number };
+
+function readFilters(): Filters {
+  return queryString.all() as Filters;
+}
+
+function writeFilters(f: Filters) {
+  queryString.update(f as Record<string, any>);
+}
+```
+
+### Pagination
+
+```ts
+const page = (queryString.get("page", 1) as number);
+queryString.update({ ...queryString.all(), page: page + 1 });
+```
+
+### Safe round-trip
+
+```ts
+const obj  = { tag: "books", page: 2, ids: [1, 2, 3] };
+const text = queryString.toQueryString(obj);
+queryString.parse(text);   // structurally equal to obj (with numeric coercion applied)
+```
+
+For values that may contain `&` / `=` / `%`, pre-encode each value with `encodeURIComponent` BEFORE handing it to `toQueryString` — the serializer will not encode for you.
+
+## Internals
+
+The package ships two pure helpers as named exports — they're used by the default-export facade and exposed for callers that want to bypass it:
+
+```ts
+import {
+  toObjectParser,
+  toStringParser,
+} from "@mongez/query-string/src/query-string-parsers";
+
+toObjectParser("a=1&b=2");           // { a: 1, b: 2 }
+toStringParser({ a: 1, b: 2 });      // "a=1&b=2"
+toStringParser({ name: "alice" }, "user");
+// "user[name]=alice"   — second arg is the parent-key prefix used for recursion
+```
+
+These are NOT part of the stable surface — treat them as implementation details.
+
+## Documented quirks
+
+Each of these has a corresponding `.skip()` test under `src/__tests__/` so a future fix has a regression target. None of them changes behaviour in this release.
+
+1. **No percent-encoding on output** — `src/query-string-parsers.ts:55-60`. Values containing `&` or `=` produce ambiguous query strings. Round-trip fails.
+2. **`null` drops the key** — `src/query-string-parsers.ts:55`. `typeof null === "object"` routes `null` into the recursive branch.
+3. **Key without `=` parses to literal `"undefined"`** — `src/query-string-parsers.ts:14`. Caused by `decodeURIComponent(undefined)`.
+4. **`get(key, default)` returns default for falsy values** — `src/index.ts:38`. Implementation uses `||`. Documented as a behaviour contract, not a fix target.
+
+## What this package does NOT do
+
+- React-aware URL state hooks — pair with `@mongez/react-router`.
+- A general URL builder — pair with `@mongez/concat-route`.
+- A persistent client-side cache — see `@mongez/cache`.
+- Server-side query parsing — `parse` works without `window`, but the four browser-bound methods (`all`, `get`, `toString`, `update`) reference `window.location` / `window.history` and will throw on the server.

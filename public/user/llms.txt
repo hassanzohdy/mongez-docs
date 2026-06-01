@@ -1,0 +1,30 @@
+# @mongez/user
+
+> Framework-agnostic user/auth state manager — login, logout, access tokens, permissions, and pluggable persistence with an event bus.
+
+`@mongez/user` is the auth/session primitive of the Mongez family. It works on the browser and on Node, with no React or framework coupling. Subclass `User`, plug in a cache driver implementing `get` / `set` / `remove`, and you get a class-based surface for "is this user logged in", "what's their access token", and "can they do this".
+
+## Docs
+
+- [README](./README.md): Marketing-style overview, install, tour, all public API.
+- [Skills overview](./skills/overview.md): Mental model, scope boundaries, the class hierarchy.
+  - *Auto-trigger:* Load when a file first imports `User` from `@mongez/user` and the dev needs the lay of the land.
+- [User manager](./skills/user-manager.md): `User` base class, subclassing, boot, login/logout, update.
+  - *Auto-trigger:* Load when subclassing `User`, calling `boot`/`login`/`logout`/`update`/`get`/`set`, or setting protected fields like `cacheKey`.
+- [Cache drivers](./skills/cache-drivers.md): `UserCacheDriverInterface`, ready-made adapters, SSR/test patterns.
+  - *Auto-trigger:* Load when wiring `cacheDriver`, implementing `UserCacheDriverInterface`, or persisting user data in localStorage/cookies/memory.
+- [Events](./skills/events.md): `UserEventsListener`, when each event fires, how to subscribe.
+  - *Auto-trigger:* Load when enabling `enableEvents`, using `user.events.onLogin`/`onLogout`/`onChange`, or subscribing to `auth.*` topics.
+- [Permissions](./skills/permissions.md): `setPermissions` / `can`, dot-notation, common shapes.
+  - *Auto-trigger:* Load when calling `user.setPermissions(...)` or `user.can("...")`, or designing a permissions object shape.
+- [Current user](./skills/current-user.md): `setCurrentUser` / `getCurrentUser` global pointer.
+  - *Auto-trigger:* Load when importing `setCurrentUser`/`getCurrentUser` to share the user across modules or middleware.
+- [Recipes](./skills/recipes.md): End-to-end flows across cache, events, and permissions.
+  - *Auto-trigger:* Load when wiring a full auth flow end-to-end — login, token attachment, 401 refresh, SSR isolation, multiple user types.
+- [Changelog](./CHANGELOG.md): Versioned change log.
+
+## Related packages
+
+- [@mongez/atom](https://github.com/hassanzohdy/mongez-atom): Framework-agnostic state primitive.
+- [@mongez/events](https://github.com/hassanzohdy/events): The event bus used internally.
+- [@mongez/reinforcements](https://github.com/hassanzohdy/reinforcements): Provides the dot-notation `get` / `set` helpers used for nested user data.

@@ -1,0 +1,314 @@
+# @mongez/dom — full reference
+
+> Browser-side DOM utilities. This is the concatenated reference; load `llms.txt` for the structured index instead.
+
+## Install
+
+```sh
+yarn add @mongez/dom
+```
+
+No runtime dependencies. No subpath entry points — every export ships from `@mongez/dom`.
+
+## Environment
+
+This package targets the browser. Calling these functions on the server (Node, edge runtimes, workers without DOM) will throw — `document`, `window.matchMedia`, `FontFace`, `document.fonts`, and other globals don't exist there. If the same module loads on the server, guard the call site:
+
+```ts
+if (typeof window !== "undefined") {
+  setTitle("Hello");
+}
+```
+
+## Public exports
+
+```ts
+import {
+  // Page metadata (high-level)
+  setPageMeta,
+  setTitle,
+  setDescription,
+  setKeywords,
+  setImage,
+  setPageColor,
+  setFavIcon,
+  setCanonicalUrl,
+  getMetaData,
+
+  // Element attributes
+  setHTMLAttributes,
+  setElementAttributes,
+  getElementAttributes,
+
+  // Head element building (low-level)
+  createHeadElement,
+  createNewMeta,
+  meta,
+  itemprop,
+  metaLink,
+  twitter,
+  og,
+
+  // Stylesheets and fonts
+  styleSheet,
+  googleFont,
+  loadFont,
+
+  // CSS variables
+  cssVariable,         // default export of "./css-variable" — re-exported as named
+  setCssVariable,
+  getCssVariable,
+
+  // Viewport dimensions
+  getWindowWidth,
+  getWindowHeight,
+  getScreenWidth,
+  getScreenHeight,
+
+  // Keyboard
+  pressed,
+  TAB_KEY,
+  ESC_KEY,
+  ENTER_KEY,
+  CONTROL_KEY,
+
+  // Misc
+  scrollTo,
+  loadScript,
+  htmlToText,
+  userPrefersDarkMode,
+
+  // Types
+  type MetaData,
+  type OpenGraph,
+  type AttributesList,
+  type FontOptions,
+  type FontWeightSetup,
+} from "@mongez/dom";
+```
+
+## Page metadata — high level
+
+> **Auto-trigger:** code imports `setPageMeta`, `setTitle`, `setDescription`, `setKeywords`, `setImage`, `setPageColor`, `setFavIcon`, `setCanonicalUrl`, `getMetaData`, or the `MetaData` type from `@mongez/dom`; user asks "how do I set the page title", "how do I update Open Graph / Twitter Card tags", "how do I set the canonical URL", "how do I update the favicon", or "how do I read back page metadata"; `import { setPageMeta, setTitle, ... } from "@mongez/dom"`.
+> **Skip when:** user needs custom `og:*`, `article:*`, manifest links, or arbitrary `<meta>`/`<link>` tags the high-level setters don't cover — load `mongez-dom-head-elements` instead; React-idiomatic declarative head management belongs to `@mongez/react-helmet`, this package is framework-agnostic DOM; loading stylesheets/fonts/scripts → `mongez-dom-assets`.
+
+```ts
+setPageMeta(metaList: MetaData): void
+```
+
+```ts
+type MetaData = {
+  title?: string;
+  description?: string;
+  image?: string;
+  keywords?: string | string[];
+  url?: string;        // canonical
+  favIcon?: string;
+  color?: string;      // theme color
+  type?: "website" | "article" | "profile" | "book" | "music" | "video" | string;
+};
+```
+
+Applies any subset of fields. Each delegates to a per-field helper. Repeat calls update existing tags instead of duplicating.
+
+| Helper | Effect on `<head>` |
+|---|---|
+| `setTitle(t)` | `<title>`, `meta[property=og:title]`, `meta[property=og:image:alt]`, `meta[property=twitter:title]`, `meta[property=twitter:image:alt]`, `meta[itemprop=name]` |
+| `setDescription(d)` | `meta[name=description]`, `meta[itemprop=description]`, `meta[property=og:description]`, `meta[property=twitter:description]` |
+| `setKeywords(s\|s[])` | `meta[name=keywords]`. Arrays joined with `,`. |
+| `setImage(url)` | `meta[property=image]`, `meta[property=og:image]`, `meta[property=twitter:image]`, `meta[itemprop=image]` |
+| `setPageColor(c)` | `meta[property=theme-color]` *(see "Known bugs" — spec is `name=`)* |
+| `setFavIcon(url)` | `link[rel=icon]` |
+| `setCanonicalUrl(url)` | `link[rel=canonical]`, `meta[property=og:url]`, `meta[property=twitter:url]` |
+| `metaList.type` | `meta[property=og:type]` via the lower-level `meta()` |
+
+```ts
+getMetaData(name?: keyof MetaData): MetaData | string | undefined
+```
+
+Returns the internal `currentMetaData` singleton, or one field when called with a key. Reflects only fields that were updated via the high-level helpers — see "Known bugs".
+
+## Element attributes
+
+> **Auto-trigger:** code imports `createHeadElement`, `createNewMeta`, `meta`, `itemprop`, `metaLink`, `twitter`, `og`, `setHTMLAttributes`, `setElementAttributes`, `getElementAttributes`, or the `AttributesList` type from `@mongez/dom`; user asks "how do I add custom og:* / article:* meta tags", "how do I add a manifest link", "how do I set html[lang] / html[dir]", "how do I add a preconnect / alternate link", or "how do I read all attributes off an element"; `import { meta, metaLink, itemprop, setHTMLAttributes } from "@mongez/dom"`.
+> **Skip when:** user only needs the common `title` / `description` / `og:*` / `twitter:*` / favicon / canonical fields — load `mongez-dom-metadata` instead; `<link rel="stylesheet">` / Google Fonts injection lives in `mongez-dom-assets`; React declarative head — `@mongez/react-helmet`; this package is framework-agnostic DOM.
+
+```ts
+setElementAttributes(element: HTMLElement, attributes: AttributesList): void
+setHTMLAttributes(attributes: AttributesList): void             // = setElementAttributes(document.documentElement, ...)
+getElementAttributes(element: HTMLElement): AttributesList
+
+type AttributesList = { [attributeKey: string]: any };
+```
+
+Plain pass-through to `element.setAttribute(key, value)` per entry. `getElementAttributes` walks `element.attributes` and returns a `Record<string, string>`.
+
+## Head element building — low level
+
+```ts
+createHeadElement(tagName: string, props: object): HTMLElement
+createNewMeta(props: object): HTMLMetaElement       // = createHeadElement("meta", props)
+```
+
+Creates a tag, calls `setAttribute(key, value)` for each prop, appends to `<head>`, and returns the element.
+
+```ts
+meta(metaName: string, value: string): HTMLMetaElement
+itemprop(name: string, value: string): void
+```
+
+`meta()`: Selector is `meta[name="${n}"]` when `n` is `"keywords"` or `"description"`, otherwise `meta[property="${n}"]`. Reuses an existing tag if present, otherwise creates one. The content value is `.trim()`-ed.
+
+`itemprop()`: Selector is `meta[itemprop="${name}"]`. Same reuse semantics.
+
+```ts
+metaLink(rel: string, href: string, otherAttributes?: object): HTMLLinkElement
+```
+
+Reuses an existing `link[rel="${rel}"]` or creates one. Sets `href`. Patches any `otherAttributes` afterward via `setAttribute`.
+
+```ts
+styleSheet(href: string, id?: string | null): HTMLLinkElement
+```
+
+If `id` is given, reuses `document.getElementById(id)` when present; otherwise creates a `<link rel="stylesheet">` with that id. Without an `id`, generates `id="link-<random>"` (no reuse possible across calls without supplying the id).
+
+```ts
+twitter(type: string = "summary"): HTMLMetaElement       // -> meta[property=twitter:card]
+og(_: OpenGraph): void                                   // no-op stub (placeholder)
+```
+
+`og()` is currently a no-op — the function body is empty. Listed in the surface for forward compatibility; do not rely on it.
+
+## Stylesheets and fonts
+
+> **Auto-trigger:** code imports `styleSheet`, `googleFont`, `loadFont`, `loadScript`, `cssVariable`, `setCssVariable`, `getCssVariable`, or the `FontOptions` / `FontWeightSetup` types from `@mongez/dom`; user asks "how do I load a Google Font / custom font at runtime", "how do I inject a stylesheet from JS", "how do I swap themes", "how do I read or set a CSS variable from JS", or "how do I load a third-party script when consent is granted"; `import { googleFont, loadFont, styleSheet, cssVariable } from "@mongez/dom"`.
+> **Skip when:** user is updating `<head>` meta tags (title, og:*, canonical, …) — load `mongez-dom-metadata` instead; raw `<meta>` / `<link>` / element-attribute building — `mongez-dom-head-elements`; keyboard / scroll / viewport / dark-mode detection — `mongez-dom-interactions`; React-specific declarative head management — `@mongez/react-helmet`.
+
+```ts
+googleFont(href: string, id?: string | null): HTMLLinkElement
+```
+
+On first call: emits two `<link rel="preconnect">` tags pointing at `https://fonts.googleapis.com` and `https://fonts.gstatic.com` (the second with `crossorigin=""`). Subsequent calls skip the preconnect step. Then delegates to `styleSheet(href, id)`.
+
+```ts
+loadFont(fontSettings: FontOptions): Promise<FontFace | FontFace[]>
+
+type FontOptions = {
+  name: string;
+  src?: string;
+  descriptors?: FontFaceDescriptors;
+  weights?: FontWeightSetup[];
+};
+
+type FontWeightSetup = FontFaceDescriptors & {
+  src?: string;
+  woff?: string;
+  woff2?: string;
+  ttf?: string;
+  eot?: string;
+  svg?: string;
+  otf?: string;
+};
+```
+
+Two modes:
+
+1. **Single file (`src` at the top level).** Constructs `new FontFace(name, "url(${src})", descriptors)`, calls `.load()`, adds the loaded face to `document.fonts`, resolves with the face.
+2. **Multiple weights (`weights` array).** For each weight, joins all provided sources into the standard `url(...) format("...")` shape, constructs a `FontFace` (mapping `weight: "light"` to `"300"` since the FontFace API doesn't accept `"light"`), and calls `.load()`. Waits for `Promise.all`, adds each loaded face to `document.fonts`, resolves with the array.
+
+```ts
+loadFont({ name: "Inter", src: "/inter.woff2" });
+
+loadFont({
+  name: "Inter",
+  weights: [
+    { weight: "normal", woff2: "/inter-400.woff2" },
+    { weight: "bold",   woff2: "/inter-700.woff2" },
+  ],
+});
+```
+
+## CSS variables
+
+```ts
+cssVariable(name: string): string | void           // when value omitted -> read from :root
+cssVariable(name: string, value: string): void     // when value provided -> write to :root
+
+setCssVariable(name: string, value: string, element?: HTMLElement): void   // defaults :root
+getCssVariable(name: string, element?: HTMLElement): string                // defaults :root
+```
+
+`cssVariable` is dual-purpose: if `value` is omitted or falsy, it reads from `:root`; otherwise it writes to `:root`. `setCssVariable` / `getCssVariable` are explicit single-purpose siblings that also accept a target element. Reads return an empty string when the variable is unset.
+
+## Viewport dimensions
+
+> **Auto-trigger:** code imports `pressed`, `TAB_KEY`, `ESC_KEY`, `ENTER_KEY`, `CONTROL_KEY`, `scrollTo`, `userPrefersDarkMode`, `htmlToText`, `getWindowWidth`, `getWindowHeight`, `getScreenWidth`, or `getScreenHeight` from `@mongez/dom`; user asks "how do I detect Enter / Esc / Tab keys", "how do I smooth-scroll to an anchor", "how do I detect OS dark mode", "how do I strip HTML tags for a plain-text preview", or "how do I read window/screen width"; `import { pressed, ENTER_KEY, scrollTo } from "@mongez/dom"`.
+> **Skip when:** user is updating `<head>` meta tags / favicon / canonical — load `mongez-dom-metadata` instead; loading stylesheets, fonts, scripts, or setting CSS variables — `mongez-dom-assets`; raw `<meta>` / `<link>` / element-attribute building — `mongez-dom-head-elements`; React-specific declarative head management — `@mongez/react-helmet`; this package is framework-agnostic DOM.
+
+```ts
+getWindowWidth(): number    // window.outerWidth
+getWindowHeight(): number   // window.outerHeight
+getScreenWidth(): number    // window.screen.width
+getScreenHeight(): number   // window.screen.height
+```
+
+Thin one-liner getters. These read live globals; call them when you need the value, don't cache.
+
+## Keyboard
+
+```ts
+pressed(event: { keyCode?: number; charCode?: number }, key: number): boolean
+
+const TAB_KEY = 9;
+const ENTER_KEY = 13;
+const CONTROL_KEY = 17;
+const ESC_KEY = 27;
+```
+
+`pressed` compares `event.keyCode || event.charCode` to the supplied key. Use the named constants instead of magic numbers in your own code.
+
+## Misc
+
+```ts
+scrollTo(querySelector: string): void
+```
+
+Calls `element.scrollIntoView({ behavior: "smooth" })` for the first matching element. No-op if no element matches.
+
+```ts
+loadScript(src: string, onLoad: () => void): HTMLScriptElement
+```
+
+Creates `<script src=...>`, sets `script.onload = onLoad`, appends to `<body>`, returns the element so callers can patch additional attributes (`async`, `defer`, …).
+
+```ts
+htmlToText(text: string): string
+```
+
+Parses `text` as HTML into a throwaway `<div>` and returns `textContent || innerText || ""`. Strips all tags; decodes HTML entities; drops `<script>` and `<style>` content.
+
+```ts
+userPrefersDarkMode(): boolean
+```
+
+`Boolean(window.matchMedia("(prefers-color-scheme: dark)").matches)`.
+
+## Lifecycle / side effects
+
+- Functions that touch the DOM mutate `<head>` or the given element directly. There is no event bus and no subscription model — they are imperative.
+- `setPageMeta`-family functions short-circuit when called with a value equal to the one previously seen (cached in the module-level `currentMetaData` singleton).
+- `googleFont` keeps a module-level flag (`isGoogleFontInitialized`) so the preconnect tags emit exactly once per module lifetime.
+
+## Known bugs (documented in tests, not fixed)
+
+- `setFavIcon(favIcon)` writes `currentMetaData.color = favIcon` instead of `currentMetaData.favIcon = favIcon`. `getMetaData("favIcon")` won't reflect the value. (`metadata.ts:249`)
+- `setCanonicalUrl(url)` writes `currentMetaData.color = url` instead of `currentMetaData.url = url`. Same consequence for `getMetaData("url")`. (`metadata.ts:275`)
+- `setPageColor(color)` emits `meta[property="theme-color"]`; the spec is `meta[name="theme-color"]`. User agents won't honour the `property=` variant. (`metadata.ts:107`)
+- A `src/elments.ts` file (typo intended) declares a private `attributesList(domElement)` function that is not re-exported from `src/index.ts`. Dead code.
+
+## What this package does NOT do
+
+- React hooks / React helmet → see `@mongez/react-helmet`.
+- Persistent storage → see `@mongez/cache`.
+- SSR-safe metadata orchestration → none of these helpers work without `document`; guard at the call site or move the call to a client-only effect.

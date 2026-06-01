@@ -1,0 +1,36 @@
+# @mongez/concat-route
+
+> A tiny, dependency-free path joiner. Concatenates any number of path segments into a single normalized leading-slash path. Handles stray slashes, falsy segments, and embedded `//`. One default export.
+
+This package has a single public surface: the default export `concatRoute(...segments: string[]): string`. Nothing else ships from the entry point.
+
+## Docs
+
+- [Overview](https://raw.githubusercontent.com/hassanzohdy/mongez-concat-route/main/skills/overview.md): Pitch, install, mental model.
+  - *Auto-trigger:* Load on first `import concatRoute from "@mongez/concat-route"` or when the user asks what the package does, how to install it, or scope vs siblings.
+- [README](https://raw.githubusercontent.com/hassanzohdy/mongez-concat-route/main/README.md): Marketing-style index with full edge-case table.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/mongez-concat-route/main/CHANGELOG.md): Release notes.
+
+## Reference
+
+- [concat-route](https://raw.githubusercontent.com/hassanzohdy/mongez-concat-route/main/skills/concat-route.md): The full function reference — signature, normalization rules, behavior table, edge cases, return contract.
+  - *Auto-trigger:* Load when calling `concatRoute` in non-trivial code or debugging its normalization, slash-collapse, or unexpected output for edge inputs.
+
+## Recipes
+
+- [Recipes](https://raw.githubusercontent.com/hassanzohdy/mongez-concat-route/main/skills/recipes.md): Building API URLs, locale prefixes, base paths, paginated routes, sub-resources.
+  - *Auto-trigger:* Load when building API URL helpers, locale-prefixed routes, base-path normalizers, query-string composition, or spreading breadcrumb arrays via `concatRoute`.
+
+## Quick rules
+
+1. The function takes any number of string segments and returns one normalized path.
+2. The result always begins with exactly one `/`. The only time it ends with `/` is the empty result `"/"`.
+3. Falsy segments (`""`, `null`, `undefined`, `0`, `false`) are dropped silently.
+4. Leading and trailing slashes on each segment are stripped before joining.
+5. Runs of `/` anywhere in the joined result collapse to a single `/`.
+6. The function is segment-only — it does NOT handle absolute URLs, query strings, or hash fragments specially. Pass a `?query` and it will be prefixed with a `/`. For full URLs, use the platform `URL` object.
+
+## Optional
+
+- [Full single-file reference (llms-full.txt)](https://raw.githubusercontent.com/hassanzohdy/mongez-concat-route/main/llms-full.txt): All reference content concatenated.
+- [GitHub repository](https://github.com/hassanzohdy/mongez-concat-route): Source code, issues, releases.

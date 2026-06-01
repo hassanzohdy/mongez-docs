@@ -1,0 +1,220 @@
+# @mongez/react-localization — full reference
+
+> React adapter for `@mongez/localization`. The entire public API surface is two exports: `jsxConverter` (a placeholder converter that produces React fragments) and `transX` (a `trans` variant pre-bound to that converter).
+
+## Install
+
+```sh
+yarn add @mongez/react-localization
+# peer: @mongez/localization, react >= 18
+```
+
+## Public exports
+
+```ts
+import {
+  jsxConverter,
+  transX,
+} from "@mongez/react-localization";
+```
+
+That's the entire surface. Everything else — `extend`, `trans`, `transFrom`, `setCurrentLocaleCode`, `getCurrentLocaleCode`, `setFallbackLocaleCode`, `groupedTranslations`, `transObject`, `localizationEvents`, count rules, range rules — is imported from `@mongez/localization` and works unchanged with this adapter.
+
+## `jsxConverter(translation, placeholders, placeholderPattern)`
+
+> **Auto-trigger:** code imports `jsxConverter` from `@mongez/react-localization`; code calls `setLocalizationConfigurations({ converter: jsxConverter })`; user asks "how do I render JSX inside trans()", "why does trans() return an array", "how do placeholders work with React elements", or "why does jsxConverter crash on null"; `import { jsxConverter } from "@mongez/react-localization"`.
+> **Skip when:** `mongez-react-localization-trans-x` (per-call JSX without flipping global converter), `mongez-react-localization-overview` (package-level intro), `mongez-react-localization-recipes` (usage patterns); `@mongez/localization` is the framework-agnostic core that defines `trans`, `plainConverter`, and the placeholder pattern — this skill is the React-specific converter layer; react-i18next, react-intl, or other i18n libraries.
+
+```ts
+function jsxConverter(
+  translation: string,
+  placeholders: any,
+  placeholderPattern: RegExp,
+): string | React.ReactNode[];
+```
+
+The converter that swaps placeholder tokens in a translation string for React children. Wire it once via `setLocalizationConfigurations({ converter: jsxConverter })` and every `trans(...)` call gains JSX support.
+
+### Behaviour
+
+1. **Non-object placeholders are a no-op.** When `placeholders` is a primitive (e.g. `10`, `"x"`) or an empty object, the translation is returned as a plain string. This is the guard that lets `trans("hello")` and `trans("hello", 10)` still return strings.
+2. **Splits on the supplied pattern.** The function calls `translation.split(placeholderPattern)`. The pattern must be a global RegExp with a single capturing group around the placeholder name. The default in `@mongez/localization` is `/:([a-zA-Z0-9_-]+)/g`.
+3. **Odd-indexed parts are placeholder keys.** `String.prototype.split` with a capturing group interleaves literals and captures. Even indices are literal text; odd indices are placeholder names.
+4. **Missing keys fall back to the bare key.** If `placeholders[key]` is `undefined` (or `null`), the rendered text is the key name itself — e.g. `Create new :item` with `placeholders = { wrong: "x" }` renders as `Create new item`. The leading `:` is gone because the splitter stripped it.
+5. **Returns an array.** When at least one placeholder is found, the result is `Array<React.ReactNode>` of `React.Fragment`s with deterministic numeric keys. Render via `{trans(...)}` inside any JSX expression slot.
+
+### Caller contract
+
+- `translation`: the already-localized string from `@mongez/localization`'s lookup.
+- `placeholders`: the bag passed by the caller. May be any value.
+- `placeholderPattern`: a global RegExp with one capturing group. Sourced from `getPlaceholderPattern()` in the core package.
+
+### Known bug
+
+`src/converters.tsx:18`. The guard reads `typeof placeholders !== "object" || Object.keys(placeholders).length === 0`. Because `typeof null === "object"`, passing `null` falls through to the second clause and `Object.keys(null)` throws `Cannot convert undefined or null to object`.
+
+In practice this doesn't bite — `trans` only calls the converter when `placeholders` is truthy. But if you wire `jsxConverter` directly into a custom translate pipeline, never pass `null`/`undefined`.
+
+A skipped test in `src/__tests__/converters.test.tsx` pins this.
+
+## `transX(keyword, placeholders?)`
+
+> **Auto-trigger:** code imports `transX` from `@mongez/react-localization`; code calls `transX(keyword, placeholders)` at a JSX call site; user asks "how is transX different from trans", "how do I use JSX placeholders without changing the global converter", or "how do I mix plain and JSX trans calls"; `import { transX } from "@mongez/react-localization"`.
+> **Skip when:** `mongez-react-localization-jsx-converter` (converter mechanics and the null bug), `mongez-react-localization-overview` (package-level intro and the two paths), `mongez-react-localization-recipes` (real-world locale-switching and `Translate` patterns); `@mongez/localization` exposes the underlying `trans`, `transFrom`, `plainTrans` — this skill is the React-bound variant; react-i18next, react-intl.
+
+```ts
+function transX(keyword: string, placeholders?: any): string | React.ReactNode[];
+```
+
+Equivalent to:
+
+```ts
+import { getTranslationLocaleCode, transFrom } from "@mongez/localization";
+import { jsxConverter } from "@mongez/react-localization";
+
+transFrom(getTranslationLocaleCode(), keyword, placeholders, jsxConverter);
+```
+
+`transX` is `trans` with the converter argument hard-coded to `jsxConverter`. It bypasses whatever converter is configured in `setLocalizationConfigurations({ converter })`. Useful when most of your translations are plain strings (and you want `trans` to stay typed as `string`) but a few call sites need JSX placeholder support.
+
+### When to reach for it
+
+- **You configured `plainConverter` globally** (or left it as the default) AND
+- **A specific call site needs JSX** (icon, link, formatted number).
+
+If `jsxConverter` is your global converter, `trans` and `transX` produce identical output — prefer `trans` for consistency.
+
+### What it does NOT do
+
+- It does not subscribe to locale changes. Calling `setCurrentLocaleCode("ar")` after a component has rendered will NOT re-render that component. See the "Limitations" section.
+
+## Limitations
+
+### No locale-change subscription
+
+This package does NOT expose a `useLocale()` hook, a `useTranslate()` hook, a `<Translate>` component, or a context provider. `transX(...)` is a plain function that reads the current locale at call time and returns.
+
+A component that renders `<p>{transX("hello")}</p>` will retain the original translation in the DOM even after `setCurrentLocaleCode("ar")` runs — until something else triggers a re-render of that component.
+
+Common ways to drive a re-render:
+
+```ts
+// 1. State in a parent component.
+function App() {
+  const [locale, setLocale] = useState("en");
+  useEffect(() => setCurrentLocaleCode(locale), [locale]);
+  return <Page key={locale} />;
+}
+
+// 2. An atom (from @mongez/react-atom).
+const localeAtom = atom({ key: "ui.locale", default: "en" });
+localeAtom.onChange((next) => setCurrentLocaleCode(next));
+
+function Title() {
+  localeAtom.useValue(); // subscribes; drives re-render
+  return <h1>{transX("title")}</h1>;
+}
+
+// 3. A custom hook over the event bus.
+import { localizationEvents } from "@mongez/localization";
+
+function useLocale() {
+  return useSyncExternalStore(
+    (cb) => {
+      const sub = localizationEvents.onChange("localeCode", cb);
+      return () => sub.unsubscribe();
+    },
+    () => getCurrentLocaleCode(),
+    () => getCurrentLocaleCode(),
+  );
+}
+```
+
+If you build option 3 inside this package as a first-class export, **use `useSyncExternalStore`**. The `useState + useEffect(localizationEvents.onChange(...))` pattern has the same React 18 concurrent-rendering tearing risk that bit `@mongez/react-atom` — a sibling-component disagreement window between the synchronous render snapshot and the effect-time subscription.
+
+### Return type is conditional
+
+`trans` / `transX` return `string` OR `string | React.ReactNode[]` depending on whether placeholders were resolved. Consumers that pass the result to non-React APIs (e.g. setting `document.title`) must handle the array case. The simplest rule: if you might pass JSX as a placeholder, the return is an array.
+
+## Patterns
+
+> **Auto-trigger:** code uses `transX`, `jsxConverter`, `setCurrentLocaleCode`, `localizationEvents`, or `useSyncExternalStore` for locale switching; user asks "how do I render a link inside a translated sentence", "how do I re-render on locale change", "how do I build a useLocale hook", "how do I make a Translate component", or "how do I do pluralization with JSX"; `import { transX } from "@mongez/react-localization"` alongside `extend`/`setCurrentLocaleCode` from `@mongez/localization`.
+> **Skip when:** `mongez-react-localization-jsx-converter` (converter internals), `mongez-react-localization-trans-x` (the bare function reference), `mongez-react-localization-overview` (install/intro); `@mongez/localization` is the framework-agnostic core for registry and count rules; `@mongez/react-atom` for atom-driven state — referenced here but its own skill set covers atom internals; react-i18next, react-intl.
+
+### Drop JSX into a translated sentence
+
+```tsx
+extend("en", {
+  agreeToTerms:
+    "By clicking Continue, you agree to our :tos and :privacy.",
+});
+
+function ToS() {
+  return (
+    <p>
+      {transX("agreeToTerms", {
+        tos: <a href="/terms">Terms of Service</a>,
+        privacy: <a href="/privacy">Privacy Policy</a>,
+      })}
+    </p>
+  );
+}
+```
+
+### Pluralization (delegated)
+
+`@mongez/localization` handles count rules per-locale. `transX` flows the count placeholder through unchanged.
+
+```ts
+extend("en", {
+  products_zero: "No products",
+  products_one: "1 product",
+  products_many: ":count products",
+});
+
+transX("products", { count: 0 });   // → "No products"
+transX("products", { count: 1 });   // → "1 product"
+transX("products", { count: 42 });  // → "42 products"
+```
+
+Note that when `count` is present in placeholders, the converter runs even on the `_one` template (which has no `:count` token), so the return value is still a fragment array. Use `<>{...}</>` or render into an element.
+
+### Switching converters per call
+
+```tsx
+import { plainTrans, trans } from "@mongez/localization";
+import { transX } from "@mongez/react-localization";
+
+trans("greeting");            // honors global converter
+plainTrans("greeting");       // always plain string
+transX("greeting");           // always JSX-able
+```
+
+## Internal mechanics
+
+```
++-------------------+        +-----------------------+        +-----------------+
+|  setLocalization  |        |       transX()        |        |   jsxConverter  |
+|  Configurations() |        |                       |        |                 |
+|  { converter }    |        |  transFrom(           |  -->   |  splits on      |
+|                   |        |    currentLocale,     |        |  pattern,       |
+|                   |        |    keyword,           |        |  builds React   |
+|                   |        |    placeholders,      |        |  fragments      |
+|                   |        |    jsxConverter,      |        |                 |
++-------------------+        |  )                    |        +-----------------+
+                             +-----------------------+
+```
+
+`transX` ignores the configured converter; it hard-codes `jsxConverter` as the fourth argument to `transFrom`.
+
+## React version
+
+React 18+ for the peer dependency. The package itself only uses `React.Fragment`, so technically it would work on 16.8+, but the `@mongez/*` family standardized on 18 for `useSyncExternalStore` and tear-free state in adjacent packages, and this one tracks that floor.
+
+## What this package does NOT do
+
+- Locale-change subscriptions / hooks → would need to use `useSyncExternalStore` over `localizationEvents.onChange`. Not provided.
+- `<Translate>` component → trivial to write on top: `({ k, p }) => <>{transX(k, p)}</>`. Not provided.
+- Translation registry / locale switching / count rules → all in `@mongez/localization`.
+- State management → `@mongez/atom` + `@mongez/react-atom`.
+- Event bus → `@mongez/events`.

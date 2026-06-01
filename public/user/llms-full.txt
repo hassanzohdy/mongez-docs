@@ -1,0 +1,245 @@
+# @mongez/user — Full Reference
+
+Framework-agnostic user/auth state manager. Class-based, no framework coupling, designed to plug into any storage adapter via a three-method `UserCacheDriverInterface`.
+
+## Install
+
+```sh
+yarn add @mongez/user
+# peer: @mongez/events, @mongez/reinforcements
+```
+
+## Imports
+
+```ts
+import {
+  User,
+  UserEventsListener,
+  setCurrentUser,
+  getCurrentUser,
+  type UserInterface,
+  type UserInfo,
+  type UserCacheDriverInterface,
+  type UserEvents,
+  type UserEventName,
+  type WithDataCallback,
+  type Role,
+  type PermissionGroup,
+} from "@mongez/user";
+```
+
+## Mental model
+
+| Concept | Type | Mental model |
+|---|---|---|
+| User instance | `User` (subclass) | A typed user payload plus methods bound to it. |
+| Cache driver | `UserCacheDriverInterface` | Three methods (`get`/`set`/`remove`) that persist user data anywhere. |
+| Event listener | `UserEventsListener` | Per-instance pub/sub for `boot`/`login`/`logout`/`change`/`keyChange`. |
+| Current user | module-level pointer | A single global slot, set/read via `setCurrentUser`/`getCurrentUser`. |
+
+## The base class
+
+> **Auto-trigger:** code extends `User` (`class AppUser extends BaseUser`) or calls `user.boot()`, `user.login(...)`, `user.logout()`, `user.update(...)`, `user.get(...)`, `user.set(...)`, `user.all()`, `user.isLoggedIn()`, `user.isNotLoggedIn()`, `user.getAccessToken()`, `user.setAccessToken(...)`, `user.refreshToken(...)`, `user.getCacheKey()`, `user.getAccessTokenKey()`, or `user.setAccessTokenKey(...)`; sets `protected cacheDriver`, `cacheKey`, `accessTokenKey`, `enableEvents`, or `eventsBaseName` on a subclass; user asks "how do I subclass User / log in a user / read user fields / change the token key / preserve token on update"; `import { User } from "@mongez/user"`.
+> **Skip when:** cache driver implementation details (use `mongez-user-cache-drivers`); event subscriptions (use `mongez-user-events`); permission checks (use `mongez-user-permissions`); module-level current user (use `mongez-user-current-user`).
+
+The pattern is: subclass, declare a `cacheDriver` field, optionally override `accessTokenKey`, `cacheKey`, `enableEvents`, `eventsBaseName`. Then `new` it and call `boot()`.
+
+```ts
+import { User as BaseUser, UserCacheDriverInterface } from "@mongez/user";
+
+class AppUser extends BaseUser {
+  protected cacheDriver: UserCacheDriverInterface = myDriver;
+  protected accessTokenKey: string = "token";    // default "accessToken"
+  protected cacheKey: string = "current-user";   // default "user"
+  protected enableEvents: boolean = true;        // default false
+  protected eventsBaseName: string = "auth";     // default = cacheKey
+}
+
+const user = new AppUser();
+user.boot();
+```
+
+`boot()` does three things:
+
+1. Reads `cacheDriver.get(cacheKey)` to hydrate `userData`.
+2. If `enableEvents`, instantiates `UserEventsListener` on `this.events` with `eventsBaseName || cacheKey`.
+3. If events are enabled, fires the `boot` event.
+
+## Method surface
+
+### Identity
+
+```ts
+user.isLoggedIn();          // boolean — true if access token has length > 0
+user.isNotLoggedIn();       // boolean — inverse
+user.id;                    // shorthand for user.get("id")
+```
+
+### Session
+
+```ts
+user.login(userData);       // store, cache, fire login event
+user.logout();              // clear, remove from cache, fire logout event
+user.update(userData);      // replace whole payload; preserves existing token if not in userData
+```
+
+### Token
+
+```ts
+user.getAccessToken();      // string ("" when not logged in)
+user.setAccessToken(token); // set the token key in userData; fires keyChange
+user.refreshToken(token);   // alias for setAccessToken
+```
+
+### Reads — dot-notation supported via `@mongez/reinforcements`
+
+```ts
+user.get("email");
+user.get("profile.address.country");
+user.get("optional", "fallback");
+user.all();                 // entire userData object
+```
+
+### Writes — dot-notation supported
+
+```ts
+user.set("profile.address.country", "Egypt");
+```
+
+`set` is a no-op if the new value equals the current value (referential equality).
+
+### Permissions
+
+```ts
+user.setPermissions({ posts: { create: true, delete: false } });
+user.can("posts.create");   // true
+user.can("posts.delete");   // false
+user.can("missing");        // false
+```
+
+`can(path)` returns `true` only when the value at the dot-notation path is truthy.
+
+### Cache key access
+
+```ts
+user.getCacheKey();              // returns the configured cacheKey
+user.getAccessTokenKey();        // returns the configured accessTokenKey
+user.setAccessTokenKey("jwt");   // change it at runtime
+```
+
+## Cache drivers
+
+> **Auto-trigger:** code references `UserCacheDriverInterface`, `cacheDriver`, or assigns to `protected cacheDriver` on a `User` subclass; user asks "how do I persist the user / store auth in localStorage / use cookies for auth / write a cache driver for @mongez/user"; file imports `UserCacheDriverInterface` from `@mongez/user` or wires a `get`/`set`/`remove` driver to a `User` class.
+> **Skip when:** @mongez/cache for general-purpose caching unrelated to user/session state; storage primitives unrelated to `@mongez/user` (e.g. plain `localStorage.setItem` calls with no `User` subclass); SSR session middleware that doesn't use the `User` class.
+
+```ts
+type UserCacheDriverInterface = {
+  get(key: string, defaultValue?: any): any;
+  set(key: string, value: any): void;
+  remove(key: string): void;
+  [id: string]: any;
+};
+```
+
+### localStorage
+
+```ts
+const localStorageDriver: UserCacheDriverInterface = {
+  get: (key) => {
+    if (typeof localStorage === "undefined") return null;
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  },
+  set: (key, value) => localStorage.setItem(key, JSON.stringify(value)),
+  remove: (key) => localStorage.removeItem(key),
+};
+```
+
+### `@mongez/cache`
+
+```ts
+import cache from "@mongez/cache";
+class AppUser extends BaseUser { protected cacheDriver = cache; }
+```
+
+### In-memory (tests, SSR per-request)
+
+```ts
+function memoryDriver(): UserCacheDriverInterface {
+  const store = new Map<string, any>();
+  return {
+    get: (key) => store.get(key) ?? null,
+    set: (key, value) => { store.set(key, value); },
+    remove: (key) => { store.delete(key); },
+  };
+}
+```
+
+## Events
+
+> **Auto-trigger:** code sets `enableEvents = true` or `eventsBaseName` on a `User` subclass; calls `user.events.onLogin`, `onLogout`, `onChange`, `onKeyChange`, `onBoot`, or uses `UserEventsListener`; user asks "how do I react to login / fire side effects on logout / subscribe to auth events / invalidate caches on logout"; subscribes to `events.subscribe("auth.login", ...)` topics from `@mongez/events`.
+> **Skip when:** @mongez/events for generic app-wide pub/sub unrelated to auth lifecycle; DOM `addEventListener`; framework state-change hooks (e.g. React effect deps); pure component re-render concerns.
+
+Off by default. Set `protected enableEvents = true` on your subclass.
+
+```ts
+class AppUser extends BaseUser {
+  protected cacheDriver = myDriver;
+  protected enableEvents = true;
+  protected eventsBaseName = "auth";
+}
+const user = new AppUser();
+user.boot();
+
+const sub = user.events!.onLogin((userData, u) => { /* … */ });
+sub.unsubscribe();
+```
+
+### Available listeners
+
+| Method | Signature | Fired by |
+|---|---|---|
+| `onBoot(cb)` | `(initData, user) => void` | `boot()` |
+| `onLogin(cb)` | `(userData, user) => void` | `login()` |
+| `onLogout(cb)` | `(user) => void` | `logout()` |
+| `onChange(cb)` | `(newData, oldData, user) => void` | `update()` |
+| `onKeyChange(cb)` | `(key, newValue, oldValue, user) => void` | `set()` and per-key inside `update()` |
+
+All return `EventSubscription` from `@mongez/events`. Call `.unsubscribe()` to remove.
+
+### Event bus topics
+
+Events are dispatched on the `@mongez/events` bus under `${eventsBaseName}.${eventType}`. You can subscribe directly with `events.subscribe("auth.login", cb)` from anywhere.
+
+## Current user pointer
+
+> **Auto-trigger:** code imports `setCurrentUser` or `getCurrentUser` from `@mongez/user`; user asks "how do I access the current user from anywhere / get the logged-in user in middleware / share user across modules"; file calls `getCurrentUser()?.getAccessToken()` or sets the global slot after `boot()`; `import { setCurrentUser, getCurrentUser } from "@mongez/user"`.
+> **Skip when:** @mongez/atom for app-wide reactive state beyond a single global slot; React Context / Redux-style stores; per-request SSR user threading (use request context instead — see `mongez-user-recipes`).
+
+```ts
+import { setCurrentUser, getCurrentUser } from "@mongez/user";
+
+setCurrentUser(user);
+getCurrentUser();    // returns the same instance, or undefined
+```
+
+A single module-level slot. Use it sparingly — in tests it persists between cases unless you reset it.
+
+## TypeScript
+
+- `UserInfo` is `{ accessToken?: string; [key: string]: any }`. Extend it for your domain shape.
+- `UserInterface` is the contract every method conforms to. Declare `implements UserInterface` on your subclass for compile-time checking.
+- `UserEvents` is the listener contract `UserEventsListener` satisfies.
+- `Role` / `PermissionGroup` types are exported for callers wiring permission UI, but `setPermissions` accepts any object — the type is not enforced internally.
+
+## SSR notes
+
+- The `currentUser` slot is module-level → shared per Node process. For per-request SSR, do NOT use `setCurrentUser`; pass the `user` instance explicitly through your render tree.
+- The default `cacheDriver` is `undefined` — you must provide one. For SSR, use a per-request in-memory driver, or skip the driver entirely (no persistence, just session-state).
+
+## Gotchas
+
+- `boot()` is required. The constructor does NOT hydrate from the cache driver.
+- `update(newData)` replaces the whole `userData`. Pass the token in the payload, or it's preserved from the previous value.
+- `set(key, value)` does a referential-equality check — passing the same object reference is a no-op even if you mutated its contents.
+- `setPermissions` REPLACES the permissions object, it doesn't merge.

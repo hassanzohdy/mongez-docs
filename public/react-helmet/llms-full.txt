@@ -1,0 +1,154 @@
+# @mongez/react-helmet — full reference
+
+> React adapter for `@mongez/dom`'s metadata module. A single `<Helmet>` component sets the document title (with optional app-name suffix), description, keywords, Open Graph / Twitter meta, canonical URL, favicon, and `<html>` attributes — declarative, with cleanup on unmount.
+
+## Install
+
+```sh
+yarn add @mongez/react-helmet
+# peer: react >= 18, @mongez/dom >= 1.1.2
+```
+
+## Public exports
+
+```ts
+import Helmet, {
+  setHelmetConfigurations,
+  getHelmetConfigurations,
+  getHelmetConfig,
+  type HelmetProps,
+  type HelmetConfigurations,
+} from "@mongez/react-helmet";
+```
+
+## The Helmet component
+
+> **Auto-trigger:** code imports `Helmet` (default) or `HelmetProps` from `@mongez/react-helmet`; JSX renders `<Helmet title=... />` with props like `title`, `appName`, `appendAppName`, `appNameSeparator`, `translatable`, `description`, `keywords`, `image`, `url`, `htmlAttributes`, `pageId`, or `className`; user asks "how do I set the page title / description / og:image in React", "why doesn't Helmet revert on unmount", or "how do I use Helmet inside Suspense / a route component".
+> **Skip when:** app-wide config setup (`setHelmetConfigurations`) — use `mongez-react-helmet-configuration`; the framework-agnostic head writers in `@mongez/dom` (`setTitle`, `setDescription`, `setImage`) when you're outside React; the upstream `react-helmet` / `react-helmet-async` libraries; Next.js `<Head>` and App Router `export const metadata`.
+
+```ts
+type HelmetProps = {
+  title: string;                        // required
+
+  // App-name suffix; falls back to config when undefined.
+  appName?: string;
+  appendAppName?: boolean;              // default: true
+  appNameSeparator?: string;            // default: " | "
+
+  // i18n
+  translatable?: boolean;               // default: true
+
+  // Page meta
+  description?: string;
+  keywords?: string | string[];
+  image?: string;
+  url?: boolean | string;               // true → window.location.href; default: true
+
+  // <html> tag controls
+  htmlAttributes?: Record<string, any>;
+  pageId?: string;
+  className?: string;
+};
+
+declare function Helmet(props: HelmetProps): null;
+export default Helmet;
+```
+
+### Effects produced (per prop)
+
+| Prop | Tags written to `document.head` (via `@mongez/dom`) |
+|---|---|
+| `title` | `<title>` (via `document.title`), `meta[property="og:title"]`, `meta[property="og:image:alt"]`, `meta[property="twitter:title"]`, `meta[property="twitter:image:alt"]`, `meta[itemprop="name"]` |
+| `description` | `meta[name="description"]`, `meta[itemprop="description"]`, `meta[property="og:description"]`, `meta[property="twitter:description"]` |
+| `keywords` | `meta[name="keywords"]` (array is `.join(",")`'d) |
+| `image` | `meta[property="image"]`, `meta[property="og:image"]`, `meta[property="twitter:image"]`, `meta[itemprop="image"]` |
+| `url` | `link[rel="canonical"]`, `meta[property="og:url"]`, `meta[property="twitter:url"]` |
+| `htmlAttributes` | each entry `.setAttribute`'d on `<html>` |
+| `pageId` | `<html>.id` |
+| `className` | each space-separated token `classList.add`'d on `<html>` |
+
+### Lifecycle
+
+- Mount: snapshot the current `<html>` attribute set, id, and className; then run one effect per prop concern.
+- Re-render: each effect's deps array is its corresponding prop, so changing `title` re-runs the title effect, changing `description` re-runs the description effect, etc.
+- Unmount: each effect's cleanup attempts to restore the snapshot for its concern. `pageId` and `className` reliably restore. `title` / `description` / `keywords` / `image` / `url` cleanup is observably broken because the snapshot is a live reference to `@mongez/dom`'s mutable singleton (documented in CHANGELOG / `src/__tests__/helmet.test.tsx` skipped tests).
+
+### Return value
+
+`<Helmet>` always returns `null`. It is a side-effect component, not a render component.
+
+## Configuration
+
+> **Auto-trigger:** code imports `setHelmetConfigurations`, `getHelmetConfigurations`, `getHelmetConfig`, or `HelmetConfigurations` from `@mongez/react-helmet`; user asks "how do I set up app-wide Helmet defaults", "how do I configure appName / appNameSeparator", or "how do I wire @mongez/localization into Helmet titles"; file is a config bootstrap module (e.g. `src/config/helmet.ts`) calling `setHelmetConfigurations({...})`.
+> **Skip when:** per-page `<Helmet>` prop usage — use `mongez-react-helmet-helmet` instead; the lower-level `@mongez/dom` metadata functions (`setTitle`, `setDescription`, etc.) that have no React or config layer; unrelated React Helmet libraries (e.g. `react-helmet`, `react-helmet-async`) or Next.js `export const metadata`.
+
+```ts
+type HelmetConfigurations = {
+  appName?: string;
+  appendAppName?: boolean;              // default: true
+  appNameSeparator?: string;            // default: " | "
+  url?: boolean;                        // default: true (whether to canonicalize automatically)
+  htmlAttributes?: Record<string, any>;
+  className?: string;
+  translatable?: boolean;               // default: true
+  translateAppName?: boolean;           // default: true
+  translationFunction?: (key: string) => string;
+};
+
+function setHelmetConfigurations(partial: HelmetConfigurations): void;
+function getHelmetConfigurations(): HelmetConfigurations;
+function getHelmetConfig(key?: keyof HelmetConfigurations, defaultValue?: any): any;
+```
+
+- `setHelmetConfigurations` shallow-merges with the existing config.
+- `getHelmetConfigurations` returns the entire config object.
+- `getHelmetConfig()` (no args) returns the entire config; `getHelmetConfig(key)` returns one key with an optional fallback default. Note: internally uses `||`, so any falsy value (including `false`, `""`, `0`) falls through to the default — pass an unambiguous default if you depend on it.
+
+### Translation
+
+When `translatable` is true and `translationFunction` is set, the title (and `appName`, if `translateAppName` is also true) is passed through `translationFunction` before being written.
+
+```ts
+setHelmetConfigurations({
+  appName: "appName",                  // a translation key
+  translatable: true,
+  translateAppName: true,
+  translationFunction: (key) => i18n.t(key),
+});
+```
+
+Per-call `translatable={false}` opts a single `<Helmet>` out.
+
+## Title resolution
+
+```
+final = translate?(title) + appNameSeparator + translate?(appName)
+```
+
+Concretely:
+
+1. `title` = `translatable && translate ? translate(props.title) : props.title`.
+2. If `appendAppName && appName`: append `appNameSeparator` then either `translate(appName)` (when `translateAppName` is on) or `appName`.
+3. The result is passed to `setTitle`, which also writes the `og:title` / `twitter:title` / `itemprop=name` mirror tags.
+
+## `<html>` attributes / id / className
+
+- `htmlAttributes` — written via `setAttribute` on `document.documentElement`. The captured snapshot's `lang` and `dir` are intentionally **not** restored on unmount (so localization layers that mutate `lang`/`dir` outside `<Helmet>` keep their value).
+- `pageId` — sets `document.documentElement.id`. Restored on unmount to the value at mount.
+- `className` — split on whitespace; each token `classList.add`'d on `<html>`. Restored on unmount to the className string at mount.
+
+## Browser-only
+
+`src/components/Helmet.tsx` accesses `document.documentElement` at module-evaluation time. To use in a Next.js App Router project, place the component (or its importing page) under a `"use client"` boundary. In Pages Router or Remix, use a `dynamic(..., { ssr: false })` import.
+
+## What this package does NOT do
+
+- A virtual `<head>` registry / dedupe layer. Writes are direct; if two `<Helmet>`s set the same field, the later commit wins.
+- A server-render string for SSR head injection. The body's effects run in the browser; on the server the page ships with whatever the static `<head>` already contains.
+- Per-instance scoped configuration. `setHelmetConfigurations` is a module-level singleton; there is no React context provider for it.
+
+## Related packages
+
+- [`@mongez/dom`](https://github.com/hassanzohdy/dom) — the framework-agnostic DOM utilities under the hood.
+- [`@mongez/react-atom`](https://github.com/hassanzohdy/mongez-react-atom) — sibling React adapter for atom-based state.
+- [`@mongez/localization`](https://github.com/hassanzohdy/mongez-localization) — the `trans()` function commonly wired into `translationFunction`.

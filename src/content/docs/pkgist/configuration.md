@@ -3,23 +3,24 @@ title: "Configuration"
 
 name: mongez-pkgist-configuration
 description: |
-  pkgist config file shape: `pkgist.config.ts` (or `builder.ts`) with `defineConfig({ settings, standalone, families })`. Auto-discovered from cwd; runtime-loaded via dynamic import so it can use ESM `import` syntax freely. Settings block covers concurrency, buildDir, sourcesDir.
+  pkgist config file shape: a single `pkgist.config.ts` (or `.js`) with `defineConfig({ settings, standalone, families })`. Scaffold it with `pkgist init`. Auto-discovered from cwd; runtime-loaded via dynamic import so it can use ESM `import` syntax freely. Settings block covers concurrency, buildDir, sourcesDir.
 sidebar:
-  order: 50
+  order: 17
 ---
 
 # Configuration
 
-pkgist auto-discovers a config file in the current working directory. Filenames are tried in this order:
+pkgist auto-discovers its config in the current working directory, trying **`pkgist.config.ts`** then **`pkgist.config.js`** — first match wins. One config name, no legacy aliases. Run `pkgist init` to scaffold one, or pass `--config <path>` for a custom location.
 
-1. `pkgist.config.ts` (preferred)
-2. `pkgist.config.js`
-3. `builder.ts` (legacy alias, still supported)
-4. `builder.js`
-5. `mongez.ts` (legacy alias, still supported)
-6. `mongez.js`
+TypeScript configs are loaded via `tsx` so you can use ESM `import` syntax freely without a separate transpile step — `tsx` is registered automatically when a `.ts` config is detected (and silently skipped if not installed, in which case use a `.js` config).
 
-The first match wins. TypeScript configs are loaded via `tsx` so you can use ESM `import` syntax freely without a separate transpile step — `tsx` is registered automatically when a `.ts` config is detected (and silently skipped if not installed, in which case stick to a `.js` config).
+## Scaffolding with `pkgist init`
+
+```sh
+pkgist init
+```
+
+Writes a starter `pkgist.config.ts` (with `buildDir: "./builds"` and `sourcesDir: "./sources"`) into the current directory. It never clobbers an existing config — pass `--force` to overwrite. From there, edit the `standalone[]` / `families[]` entries to point at your packages and run `pkgist validate`.
 
 ## The `defineConfig` shape
 
@@ -126,4 +127,4 @@ Update one constant → applies everywhere. The config is just TypeScript.
 
 ## Gitignoring local configs
 
-If your `pkgist.config.ts` / `builder.ts` carries operational secrets (commit conventions, internal version strategies, package layouts that don't belong in the published tool's repo), add it to `.gitignore` and ship a `pkgist.config.example.ts` template instead. Each consumer writes their own local copy.
+If your `pkgist.config.ts` carries operational secrets (commit conventions, internal version strategies, package layouts that don't belong in the published tool's repo), add it to `.gitignore` and ship a `pkgist.config.example.ts` template instead. Each consumer writes their own local copy (or runs `pkgist init`).

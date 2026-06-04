@@ -3,16 +3,27 @@ title: "CLI"
 
 name: mongez-pkgist-cli
 description: |
-  pkgist CLI commands and flags: `build [pkg...]` (one or more standalone), `build:family <name>` (one synchronized family), `build:all` (every standalone + every family), `list` (show registered packages with current versions), `validate` (check config + paths). Common flags: `--dry-run`, `--no-publish`, `--no-git`, `--concurrency <n>`, `--config <path>`, `--verbose`.
+  pkgist CLI commands and flags: `init` (scaffold pkgist.config.ts), `build [pkg...]` (one or more standalone), `build:family <name>` (one synchronized family), `build:all` (every standalone + every family), `list` (show registered packages with current versions), `validate` (check config + paths). Common flags: `--dry-run`, `--no-publish`, `--no-git`, `--concurrency <n>`, `--config <path>`, `--verbose`.
 sidebar:
   order: 50
 ---
 
 # CLI reference
 
-The `pkgist` binary auto-discovers a config file in the current working directory unless `--config` is passed. It tries `pkgist.config.ts`, `pkgist.config.js`, `builder.ts`, `builder.js`, `mongez.ts`, `mongez.js` in that order — see the `configuration` skill for the full discovery rule.
+The `pkgist` binary auto-discovers **`pkgist.config.ts`** (then `pkgist.config.js`) in the current working directory unless `--config` is passed. Run `pkgist init` to scaffold one — see the `configuration` skill for the discovery rule.
 
 ## Commands
+
+### `init`
+
+Scaffold a `pkgist.config.ts` in the current directory.
+
+```sh
+pkgist init
+pkgist init --force        # overwrite an existing config
+```
+
+Writes a starter config (`buildDir: "./builds"`, `sourcesDir: "./sources"`, one example standalone package). If a `pkgist.config.ts` / `pkgist.config.js` already exists it does nothing and exits `0` — unless `--force` is passed. This is the fastest way to go from `npm install` to a working config.
 
 ### `build [pkg...]`
 

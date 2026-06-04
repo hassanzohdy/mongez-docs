@@ -117,6 +117,9 @@ Add convenience scripts:
 ## Quick peek
 
 ```sh
+# Scaffold a pkgist.config.ts in the current directory
+npx pkgist init
+
 # Inspect every step without touching disk / git / npm
 npx pkgist build:all --dry-run
 
@@ -134,7 +137,7 @@ Once a `pkgist.config.ts` exists, the release flow is two commands — dry-run f
 
 ## Minimum viable config
 
-Create `pkgist.config.ts` (or `builder.ts`) at the project root:
+Run `pkgist init`, or create `pkgist.config.ts` by hand at the project root:
 
 ```ts
 import { defineConfig } from "@mongez/pkgist";

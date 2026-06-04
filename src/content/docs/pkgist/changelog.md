@@ -20,6 +20,11 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 - **Single config file.** Config discovery now recognises only `pkgist.config.ts` (then `pkgist.config.js`). The `builder.ts` / `builder.js` / `mongez.ts` / `mongez.js` legacy aliases are gone — one obvious config name, no guessing. Pass `--config <path>` for a custom location. *Migration: rename `builder.ts` → `pkgist.config.ts`.*
 - The shipped example template is renamed `builder.example.ts` → `pkgist.config.example.ts`.
+- **pkgist now publishes ESM-only** (`mainType: "esm"`, `formats: ["esm"]`). It targets Node 18+.
+
+### Fixed
+
+- **The published `pkgist` CLI binary runs.** Earlier releases shipped a CommonJS binary (`cjs/cli.cjs`) that crashed on the first log line — `chalk` v5 is ESM-only and can't be `require`d from CommonJS. Publishing ESM-only (`bin` → `esm/cli.mjs`) means `npx pkgist`, `pkgist init`, and every other command actually work for installed consumers. (Internal monorepo releases were unaffected because they run the ESM engine, not the published binary.)
 
 ### Docs
 

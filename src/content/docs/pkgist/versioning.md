@@ -3,7 +3,7 @@ title: "Versioning"
 
 name: mongez-pkgist-versioning
 description: |
-  Version-bump strategies for pkgist packages: `"auto"` / `"patch"` (default, bumps patch digit), `"minor"`, `"major"`, or any literal semver string. Standalone packages bump from their own current version. Families take the highest current version across all members and bump that, landing all members on the same new version.
+  Version-bump strategies for pkgist packages: `"auto"` / `"patch"` (default, bumps patch digit), `"minor"`, `"major"`, or any literal semver string. Standalone packages bump from their own current version. Families take the highest current version across all members and bump that, landing all members on the same new version. In a family build, intra-family dependencies (sibling deps written as `"*"` in source) are pinned to the exact shared release version in the published package.json.
 sidebar:
   order: 50
 ---
@@ -73,6 +73,31 @@ families: [
   },
 ]
 ```
+
+### Intra-family dependency pinning
+
+In a monorepo, sibling packages reference each other with `"*"` so the workspace links them to the local copy:
+
+```jsonc
+// @scope/react-atom — SOURCE package.json
+"dependencies": { "@scope/atom": "*" }
+```
+
+`"*"` must never reach npm — it lets a consumer resolve the sibling to *any* published version, which breaks the "whole family on one exact version" contract and risks pulling an incompatible release. So during a **family build**, pkgist rewrites every `dependencies` / `peerDependencies` entry whose name is **another family member** to the **exact shared release version** in the *published* `package.json`. The source file is never mutated — it keeps `"*"` for workspace linking (a fresh object is written for the build).
+
+```jsonc
+// @scope/react-atom — PUBLISHED package.json, family released at 5.1.4
+"dependencies": { "@scope/atom": "5.1.4" }   // not "*", not "^5.1.4" — exact
+```
+
+Rules:
+
+- **Family builds only.** Standalone builds (`build` / the standalone half of `build:all`) never pin — their deps publish verbatim.
+- Applies to **`dependencies` and `peerDependencies`**. (`devDependencies` are dropped from the build entirely; `optionalDependencies` are not carried into the published `package.json`.)
+- Only **family-member names** are rewritten. Every non-member dependency keeps its original range exactly as written.
+- The pin is the **exact** shared version string (e.g. `5.1.4`) with no `^` / `~` — so an installed family resolves to one coherent, same-version set.
+
+This is what makes the family version a true compatibility contract: members share it, *and* their cross-references resolve to it.
 
 ## Picking the right strategy
 

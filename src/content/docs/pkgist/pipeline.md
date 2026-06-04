@@ -24,7 +24,7 @@ What pkgist does for each package, in order. Steps 4 and 9 are conditional; the 
 6. Clone extra files/directories listed in `clone`
 7. Write clean package.json for the build (no devDeps, no scripts)
 8. Update source package.json version in-place
-9. Git: add . → commit → push → tag v<version> → push tags
+9. Git: add -A → commit → push → tag v<version> → push tags
    (only if commit resolves to a non-empty string)
 10. npm publish --access <public|restricted> from build directory
     (only if publish !== false)
@@ -152,6 +152,10 @@ pkgist generates a clean `package.json` for the build — it does NOT copy yours
 - **Dropped**: everything else (`devDependencies`, `scripts`, `private`, `workspaces`, `optionalDependencies`, `peerDependenciesMeta`, `files`, `publishConfig`, etc.)
 
 This is intentional — the published package should not carry your build-time tooling or scripts.
+
+### Intra-family dependency pinning (family builds only)
+
+When a package is built as part of a **family**, any `dependencies` / `peerDependencies` entry that names another family member is rewritten from its source spec (typically `"*"`, the workspace-linking convention) to the **exact** shared release version in the published `package.json`. Standalone builds skip this — their deps publish verbatim. The source `package.json` keeps `"*"`; only the build copy is pinned. See the `versioning` skill for the full rule.
 
 ### `bin` normalization
 

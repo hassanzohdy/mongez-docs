@@ -3,7 +3,7 @@ title: "Git Workflow"
 
 name: mongez-pkgist-git-workflow
 description: |
-  pkgist git automation: `commit` field accepts `string` (explicit message), `true` (auto-generates `Released <new-version>`, added in 1.1.0), `false` (explicit skip), or omitted (skip, back-compat default). When git runs, pipeline is `git add . → git commit → git push → git tag v<version> → git push tags`. Family-level `commit` overrides per-package commit. Optional `branch` field overrides the push target.
+  pkgist git automation: `commit` field accepts `string` (explicit message), `true` (auto-generates `Released <new-version>`, added in 1.1.0), `false` (explicit skip), or omitted (skip, back-compat default). When git runs, pipeline is `git add -A → git commit → git push → git tag v<version> → git push origin --tags`. Family-level `commit` overrides per-package commit. Optional `branch` field overrides the push target.
 sidebar:
   order: 50
 ---
@@ -42,16 +42,16 @@ pkgist optionally commits, tags, and pushes after each successful build. Whether
 When `commit` resolves to a non-empty message, pkgist runs this sequence in the package's `root` directory:
 
 ```
-1. git add .
+1. git add -A
 2. git commit -m "<message>"
 3. git push origin <branch>
 4. git tag v<new-version>
-5. git push origin v<new-version>
+5. git push origin --tags
 ```
 
-The branch comes from `pkg.branch` if set, otherwise from `git rev-parse --abbrev-ref HEAD` in the package root.
+The branch comes from `pkg.branch` if set, otherwise from `git rev-parse --abbrev-ref HEAD` in the package root. Step 5 pushes **all** local tags (`--tags`), which includes the `v<new-version>` just created.
 
-**The `git add .` adds everything currently dirty in the working tree** — not just the version-bumped `package.json`. If your working tree has unrelated work-in-progress, that gets bundled into the release commit. Clean the tree (or stash unrelated changes) before the build to keep release commits focused.
+**The `git add -A` stages everything currently dirty in the working tree** — not just the version-bumped `package.json`. If your working tree has unrelated work-in-progress, that gets bundled into the release commit. Clean the tree (or stash unrelated changes) before the build to keep release commits focused.
 
 ## Family-level commit override
 

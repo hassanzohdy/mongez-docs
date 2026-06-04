@@ -315,6 +315,52 @@ function rewriteSiblingLinks(content: string): string {
 }
 
 /**
+ * Pull the ISO date out of a changelog version heading and render it on its
+ * own dimmed, smaller line below the heading (styled via `.changelog-date` in
+ * global.css).
+ *
+ * The source `CHANGELOG.md` keeps the date inline in the heading
+ * (`## [1.1.0] — 2026-06-04`) so it reads cleanly on GitHub / npm where there
+ * is no CSS; only the docs site restyles it — same "source stays clean, docs
+ * site rewrites for UX" model as the install-tabs and sibling-link rewrites.
+ *
+ * Handles a trailing label too: `## [1.0.19] — 2026-05-29 — Docs overhaul`
+ * becomes `## [1.0.19] — Docs overhaul` with the date below. Headings without
+ * an ISO date (e.g. `## [1.0.x] — Earlier releases`) are left untouched, and
+ * fenced code blocks are skipped.
+ */
+function formatChangelogDates(body: string): string {
+  const lines = body.split("\n");
+  const out: string[] = [];
+  let inCodeFence = false;
+
+  for (const line of lines) {
+    if (/^\s*(```|~~~)/.test(line)) {
+      inCodeFence = !inCodeFence;
+      out.push(line);
+      continue;
+    }
+
+    const heading = inCodeFence ? null : line.match(/^(##\s+\[[^\]]+\])(.*)$/);
+    const date = heading ? heading[2].match(/\d{4}-\d{2}-\d{2}/) : null;
+    if (heading && date) {
+      // Drop the " — <date>" separator segment from the heading, keep any
+      // remaining label (e.g. "— Docs overhaul").
+      const rest = heading[2].replace(/\s*[—-]\s*\d{4}-\d{2}-\d{2}/, "");
+      out.push(`${heading[1]}${rest}`);
+      out.push("");
+      out.push(
+        `<p class="changelog-date"><time datetime="${date[0]}">${date[0]}</time></p>`,
+      );
+    } else {
+      out.push(line);
+    }
+  }
+
+  return out.join("\n");
+}
+
+/**
  * Replace the install code block(s) under `## Install` / `## Installation`
  * with a Starlight `<Tabs>` block exposing npm / yarn / pnpm.
  *
@@ -626,7 +672,7 @@ async function syncPackage(pkg: string, dir: string): Promise<number> {
   if (existsSync(changelogSrc)) {
     const raw = await readFile(changelogSrc, "utf8");
     const output = ensureFrontmatter(
-      rewriteSiblingLinks(stripLeadingH1(raw)),
+      formatChangelogDates(rewriteSiblingLinks(stripLeadingH1(raw))),
       "Changelog",
       900,
       "Changelog",

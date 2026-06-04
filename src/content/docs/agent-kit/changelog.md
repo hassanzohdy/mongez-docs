@@ -9,7 +9,9 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 ---
 
-## [1.1.0] — 2026-06-04
+## [1.1.0]
+
+<p class="changelog-date"><time datetime="2026-06-04">2026-06-04</time></p>
 
 ### Added
 
@@ -26,7 +28,9 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 ---
 
-## [1.0.23] — 2026-05-29
+## [1.0.23]
+
+<p class="changelog-date"><time datetime="2026-05-29">2026-05-29</time></p>
 
 ### Fixed
 
@@ -34,7 +38,9 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 ---
 
-## [1.0.22] — 2026-05-29
+## [1.0.22]
+
+<p class="changelog-date"><time datetime="2026-05-29">2026-05-29</time></p>
 
 ### Changed
 
@@ -42,7 +48,9 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 ---
 
-## [1.0.21] — 2026-05-29
+## [1.0.21]
+
+<p class="changelog-date"><time datetime="2026-05-29">2026-05-29</time></p>
 
 ### Fixed
 
@@ -50,7 +58,9 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 ---
 
-## [1.0.20] — 2026-05-29
+## [1.0.20]
+
+<p class="changelog-date"><time datetime="2026-05-29">2026-05-29</time></p>
 
 ### Fixed
 
@@ -62,7 +72,9 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 ---
 
-## [1.0.19] — 2026-05-29 — Docs overhaul
+## [1.0.19] — Docs overhaul
+
+<p class="changelog-date"><time datetime="2026-05-29">2026-05-29</time></p>
 
 ### Added
 

@@ -13,13 +13,13 @@ Every section follows the same three-step pattern — what differs is **which fi
 
 ## The shared baseline
 
-Before any per-IDE step, every project does the same bootstrap:
+Before any per-IDE step, every project does the same bootstrap — no install needed:
 
 ```sh
-npx agent-kit init
+npx @mongez/agent-kit@latest init
 ```
 
-That writes a starter `AGENTS.md` at the project root (only if one doesn't already exist) and derives `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, and `CONVENTIONS.md` from it. From here, the per-agent sections below differ only in which `--target` you pass to `sync` and which directory the skills land in.
+That runs the latest published agent-kit on the fly (use the **scoped** name with `npx`; `npx agent-kit …` unscoped resolves a different package) and writes a starter `AGENTS.md` at the project root (only if one doesn't already exist), then derives `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, and `CONVENTIONS.md` from it. (`init` is one-time, so always-latest `npx` is ideal; the recurring `sync` belongs as a pinned dev dependency.) From here, the per-agent sections below differ only in which `--target` you pass to `sync` and which directory the skills land in.
 
 Once you've picked your target(s), wire `sync` into `postinstall` so every future `yarn install` / `npm install` keeps everything current:
 

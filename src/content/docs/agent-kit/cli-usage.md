@@ -14,12 +14,19 @@ Three commands. All are idempotent — running them twice in a row is a no-op th
 Scaffold a starter `AGENTS.md` (only if it does not exist) and derive the per-tool files from it.
 
 ```bash
-npx agent-kit init
+npx @mongez/agent-kit@latest init   # no install — runs the latest published version
 ```
+
+> **Scoped name with `npx`.** Use `npx @mongez/agent-kit …` (scoped) when running without a local install — `npx agent-kit …` (unscoped) resolves a *different* package. The bare `agent-kit` binary only works once it's installed locally.
 
 Flags:
 
 - `--cwd <path>` — start from a different working directory (defaults to `process.cwd()`).
+
+### `init` vs `sync` — different delivery
+
+- **`init`** is a one-time scaffold → `npx @mongez/agent-kit@latest init` is ideal (zero install, always latest).
+- **`sync`** runs on every install and in CI → install agent-kit as a **pinned dev dependency** and call it from `postinstall`. Don't route the recurring sync through always-latest `npx` — a new agent-kit version could silently change generated output, breaking build reproducibility. Ad-hoc manual `npx @mongez/agent-kit@latest sync` is fine.
 
 Behavior:
 

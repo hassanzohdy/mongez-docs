@@ -19,12 +19,12 @@ npm install -D @mongez/agent-kit   # or yarn add -D @mongez/agent-kit, or pnpm a
 ## Quick start
 
 ```bash
-npx agent-kit init                         # Scaffold AGENTS.md + derive (idempotent)
-npx agent-kit sync                         # Derive + sync skills
-npx agent-kit watch                        # Re-sync on change (dev loop)
+npx @mongez/agent-kit@latest init          # Scaffold AGENTS.md + derive — no install, runs latest
+agent-kit sync                             # Derive + sync skills (once installed as a dep)
+agent-kit watch                            # Re-sync on change (dev loop)
 ```
 
-Wire into postinstall:
+Use the SCOPED name with npx when there's no local install — `npx agent-kit` (unscoped) resolves a different package; the bare `agent-kit` binary only works once installed. `init` is a one-time scaffold (always-latest npx is ideal); `sync` runs on every install + in CI, so pin it as a dev dependency and call it from postinstall — never always-latest, or a new version could silently change output.
 
 ```json
 { "scripts": { "postinstall": "agent-kit sync" } }

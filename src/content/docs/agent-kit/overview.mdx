@@ -86,11 +86,13 @@ The package is `@mongez/agent-kit`; the CLI binary is just `agent-kit`. Install 
 
 ## Sixty-second walkthrough
 
-Bootstrap a fresh project. A starter `AGENTS.md` lands at the project root (only if missing), then every per-tool file is derived from it:
+Bootstrap a fresh project — no install needed. A starter `AGENTS.md` lands at the project root (only if missing), then every per-tool file is derived from it:
 
 ```sh
-npx agent-kit init
+npx @mongez/agent-kit@latest init
 ```
+
+> Use the **scoped** name with `npx` when there's no local install — `npx agent-kit …` (unscoped) resolves a different package. `init` is a one-time scaffold, so always-latest `npx` is ideal; the recurring `sync` belongs as a pinned dev dependency (below).
 
 Wire `sync` into `postinstall` so every future `yarn install` / `npm install` re-derives the per-tool files **and** mirrors skills from installed packages:
 

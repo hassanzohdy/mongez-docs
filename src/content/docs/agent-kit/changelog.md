@@ -10,6 +10,20 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[1.1.1]</span> <span class="cl-date">2026-06-04</span> <span class="cl-counts">Added 1 · Changed 1</span></summary>
+
+### Added
+
+- **`## Skills` section in the scaffolded `AGENTS.md`.** `agent-kit init` now writes an agent-neutral instruction telling the AI agent to check available skills *before* searching the codebase or reverse-engineering a package's API from its source — closing the gap where agents ignored installed skills. Worded for any agent (Claude Code, Cursor, Codex, Copilot, Gemini, …), not just one.
+
+### Changed
+
+- **Docs lead with the no-install bootstrap.** `npx @mongez/agent-kit@latest init` (scoped, always-latest, zero install) is now the documented entry point, with the `init` vs `sync` delivery model spelled out: `init` is a one-time scaffold (always-latest npx is ideal); `sync` runs on every install + in CI and belongs as a **pinned dev dependency** (never always-latest, which could silently change generated output). Clarifies that the **scoped** name is required with `npx` — `npx agent-kit` (unscoped) resolves a different package.
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[1.1.0]</span> <span class="cl-date">2026-06-04</span> <span class="cl-counts">Added 6 · Fixed 2 · Removed 1</span></summary>
 
 ### Added

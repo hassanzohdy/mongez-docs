@@ -450,8 +450,11 @@ nav.sidebar::after,
  * (formatChangelogDates) and rendered as a dimmed, smaller line tucked just
  * below the heading's gradient underline. */
 .sl-markdown-content .changelog-date {
-  margin-top: -0.5rem;
-  margin-bottom: 1.75rem;
+  /* Positive top margin keeps the date clear of the h2::after gradient
+   * underline (a 48px bar at the heading's bottom) — a negative margin pulled
+   * it up into the bar and looked like a strikethrough. */
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
   font-size: 0.8125rem;
   line-height: 1.2;
   color: var(--sl-color-gray-3);

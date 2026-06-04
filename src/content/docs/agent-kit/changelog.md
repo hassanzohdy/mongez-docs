@@ -15,16 +15,21 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 ### Added
 
-- **Monorepo skill aggregation (`--projects` / `agentKit.monorepo.projects`).** Run `agent-kit sync` once at a full-stack repo root and pull skills up from sibling projects (`backend`, `frontend`, …) into the single root skills directory that agents actually read. Each declared project is scanned **as its own project**: its `node_modules/` dependency skills (filtered by **that project's own** `agentKit.pick`/`omit`) plus its authored `skills/` folder, exported with the **project directory name** as the slug prefix (`backend/skills/code-standards` → `backend-code-standards`) so two projects can ship a same-named skill without colliding. Shared dependencies dedupe to one copy (the union of what each project kept); the root's own `omit` applies as a global veto. Accepts literal dirs and one-level globs (`apps/*`). New `--projects` flag on `sync` and `watch`, `agentKit.monorepo.projects` config, and exported `resolveMonorepoProjects` / `scanProject` / `scanProjects` (with `ResolvedProject` / `ProjectScanResult` types). `syncSkills` gains a `projects` option and a `projects` field on its result.
+- **Monorepo skill aggregation** via `--projects` and `agentKit.monorepo.projects` — run `agent-kit sync` once at a repo root to pull skills from sibling projects (`backend`, `frontend`, …) into the single root skills dir agents read.
+- Each project is scanned **as its own project**: its `node_modules/` deps (filtered by *that project's own* `pick`/`omit`) plus its authored `skills/`.
+- Authored skills are prefixed with the **project directory name** (`backend/skills/code-standards` → `backend-code-standards`) so same-named skills across projects don't collide.
+- Shared dependencies dedupe to one copy (union of kept skills); the root's `omit` applies as a global veto.
+- Project patterns accept literal dirs and one-level globs (`apps/*`).
+- New `--projects` flag on `sync` and `watch`; new exports `resolveMonorepoProjects` / `scanProject` / `scanProjects` (+ `ResolvedProject` / `ProjectScanResult` types); `syncSkills` gains a `projects` option and result field.
 
 ### Fixed
 
-- **`agent-kit watch` now actually re-syncs on skill edits.** chokidar v4+ removed glob support, so the previous `skills/**/SKILL.md` watch patterns were treated as literal paths and silently matched nothing — only `AGENTS.md` edits triggered a re-sync. Watch now resolves the real skill-source **directories** (root `skills/`, each `--path` package's `skills/`, each `--projects` project's `skills/` + `package.json`) and watches those. `node_modules/` dependency skills are intentionally not watched — they change only on (re)install, which fires `postinstall` → `sync`.
-- **`agent-kit --version` reports the real version.** It was hardcoded to `0.1.0`; it now reads the installed `package.json` at runtime.
+- **`agent-kit watch` re-syncs on skill edits again** — chokidar v4+ dropped glob support, so the old `skills/**/SKILL.md` watch patterns matched nothing (only `AGENTS.md` fired). Watch now watches the real skill-source directories.
+- **`agent-kit --version`** reports the real version (was hardcoded to `0.1.0`; now read from `package.json` at runtime).
 
 ### Removed
 
-- **Stale `SyncResult` public type.** It never matched any function's actual return shape (`syncSkills` returns `SkillsSyncResult`, `deriveAll` returns `DeriveResult[]`) and was unused. Dropped from the type exports.
+- **Stale `SyncResult` type** — it never matched any function's return shape and was unused. Dropped from the exports.
 
 ---
 

@@ -77,6 +77,8 @@ export default defineConfig({
             { slug: "agent-kit/overview" },
             { slug: "agent-kit/agent-integrations" },
             { slug: "agent-kit/cli-usage" },
+            { slug: "agent-kit/configuration" },
+            { slug: "agent-kit/monorepos" },
             { slug: "agent-kit/recipes" },
             { slug: "agent-kit/authoring-skills" },
             { slug: "agent-kit/changelog" },

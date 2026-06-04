@@ -13,8 +13,16 @@ The AI coding agent landscape fragmented into a dozen tool-specific config files
 
 - [Overview](https://github.com/hassanzohdy/agent-kit/blob/main/skills/overview/SKILL.md): What agent-kit is, mental model, key principles, when to use vs not use
   - *Auto-trigger:* Project has `AGENTS.md`/`CLAUDE.md` or `.claude/skills/<pkg>-*` folders, or user asks what agent-kit is or how skill distribution works.
-- [CLI usage](https://github.com/hassanzohdy/agent-kit/blob/main/skills/cli-usage/SKILL.md): Exact commands and flags for `init` / `sync` / `watch` (including `--path`, `--override`, `--target`), plus the programmatic API
+- [Agent integrations](https://github.com/hassanzohdy/agent-kit/blob/main/skills/agent-integrations/SKILL.md): Per-IDE setup walkthroughs (Claude Code, Cursor, Codex, Kiro, Gemini CLI, GitHub Copilot, Aider, Antigravity) — the `--target` flag, files created, and reload quirk for each
+  - *Auto-trigger:* User asks how to set up agent-kit with a specific agent/IDE, which `--target` to use, or why their agent isn't picking up skills/instructions.
+- [CLI usage](https://github.com/hassanzohdy/agent-kit/blob/main/skills/cli-usage/SKILL.md): Exact commands and flags for `init` / `sync` / `watch` (including `--path`, `--projects`, `--override`, `--target`), plus the programmatic API
   - *Auto-trigger:* User invokes `agent-kit init`/`sync`/`watch`, wires `postinstall`, hits a flag, or imports `deriveAll`/`syncSkills` from `@mongez/agent-kit`.
+- [Configuration](https://github.com/hassanzohdy/agent-kit/blob/main/skills/configuration/SKILL.md): The `agentKit` block in `package.json` — `targets`, `pick` (allowlist), `omit` (denylist), `monorepo.projects`, and how they resolve/compose
+  - *Auto-trigger:* User edits or asks about the `agentKit` config block, filtering noisy dependency skills, or pinning default targets.
+- [Monorepos](https://github.com/hassanzohdy/agent-kit/blob/main/skills/monorepos/SKILL.md): Aggregating sibling projects (backend, frontend, …) into one root skills dir via `--projects` / `agentKit.monorepo.projects`; per-project `node_modules` + config, project-dir-prefixed authored skills, shared-dep dedupe, root `omit` veto, vs `--path`
+  - *Auto-trigger:* User works in a monorepo / full-stack repo, asks why a sub-project's skills aren't visible at the root, or mentions `--projects` / `monorepo.projects` / workspaces.
+- [Recipes](https://github.com/hassanzohdy/agent-kit/blob/main/skills/recipes/SKILL.md): Cross-cutting patterns — per-workspace `AGENTS.md`, `pick`/`omit` filtering, a CI drift guardrail, the programmatic API, and watch mode
+  - *Auto-trigger:* User wires CI to catch derived-file drift, composes more than one tool/package/environment, or asks for a multi-step setup recipe.
 - [Authoring skills](https://github.com/hassanzohdy/agent-kit/blob/main/skills/authoring-skills/SKILL.md): How to lay out skills — both your project's own skills in a single nested `skills/` folder at the project root (flattened into `.claude/skills/` on sync), and reusable skills shipped from an npm package. Covers nested category organization, auto-discovery, flat destination naming, and the front-door convention.
   - *Auto-trigger:* User is organizing their project's own `skills/` folder (nested category subfolders) or editing a `skills/**/SKILL.md` inside a publishable package, or asks how to structure/ship skills.
 

@@ -49,13 +49,16 @@ agent-kit sync                              # Derive + sync skills
 agent-kit sync --derive-only                # Skip skills export
 agent-kit sync --skills-only                # Skip derivation
 agent-kit sync --target claude,cursor       # Pick skill targets
-agent-kit sync --path @warlock.js           # Add extra scan dirs (monorepo / dev-server)
+agent-kit sync --path @warlock.js           # Add scan dirs (children = packages)
+agent-kit sync --projects backend,frontend  # Aggregate monorepo projects
 agent-kit sync --override                   # Replace user-authored dest folders
 agent-kit watch                             # Re-sync on changes
-agent-kit watch --path @warlock.js          # Watch extra dirs too
+agent-kit watch --projects backend,frontend # Watch + aggregate projects too
 ```
 
 Skill targets: `claude`, `copilot`, `cursor`, `codex`, `opencode`, `amp`, `goose`, `kiro`, `antigravity` (claude by default — or `agentKit.targets` from `package.json` if set).
+
+`--projects` is distinct from `--path`: a `--path` dir is treated like a `node_modules/` (its children are packages); a `--projects` dir is treated as one project (its own `skills/` + its own `node_modules/`, filtered by that project's `agentKit` config). See the Monorepos skill.
 
 ## Programmatic API
 
@@ -66,6 +69,7 @@ import {
   findProjectRoot,
   scanForSkillPackages,
   deriveSlugForSkill,
+  resolveMonorepoProjects,
 } from "@mongez/agent-kit";
 
 const root = await findProjectRoot();
@@ -73,7 +77,8 @@ await deriveAll({ root });
 await syncSkills({
   root,
   targets: ["claude", "cursor"],
-  scanPaths: ["@warlock.js"],
+  scanPaths: ["@warlock.js"],     // children = packages
+  projects: ["backend", "frontend"], // monorepo projects to aggregate
   override: false,
 });
 ```
@@ -129,7 +134,8 @@ Flags:
 - `--target <names>` — comma-separated skill targets. Defaults to `claude` (or whatever is set in `agentKit.targets`).
 - `--derive-only` — skip skills export.
 - `--skills-only` — skip derivation.
-- `--path <dirs>` / `-p` — comma-separated extra dirs to scan, each treated like a `node_modules/`. Use for monorepos and local dev setups. Packages found in scan paths override same-named entries in `node_modules/`.
+- `--path <dirs>` / `-p` — comma-separated extra dirs to scan, each treated like a `node_modules/` (its children are packages). For folders of linked packages. Scan-path packages override same-named entries in `node_modules/`.
+- `--projects <dirs>` — comma-separated monorepo project dirs (or one-level globs like `apps/*`). Each is treated as one project: its own `skills/` (prefixed with the project dir name) + its `node_modules/` deps filtered by that project's `agentKit` config. Defaults to `agentKit.monorepo.projects`.
 - `--override` — replace user-authored destination folders (skipped by default).
 
 This is the command to wire into your project's `postinstall`.
@@ -148,6 +154,9 @@ Configure defaults and filters from the project root's `package.json`:
     },
     "omit": {
       "@warlock.js/core": ["add-connector"]
+    },
+    "monorepo": {
+      "projects": ["backend", "frontend"]
     }
   }
 }
@@ -162,17 +171,84 @@ Configure defaults and filters from the project root's `package.json`:
   - `omit[pkg] = true` → skip the entire package's skills.
   - `omit[pkg] = ["skill-name"]` → skip specific skills from that package (matched against the source folder name, not the flat slug).
   - Entries for packages not installed are silently ignored.
+- **`monorepo.projects`** — sibling project dirs (or one-level globs) to aggregate into this root's skill dirs. Each is scanned as its own project; its deps are filtered by *its own* `pick`/`omit`; its authored `skills/` are prefixed with the project dir name. Root `omit` applies as a global veto over the aggregate. See the Monorepos skill.
 - Common pattern: `pick` an allowlist of packages, then `omit` a noisy skill from one of them.
 
 ## `agent-kit watch`
 
-Watch `AGENTS.md`, the project's local `skills/**/SKILL.md`, `node_modules/**/skills/**/SKILL.md`, and any `--path` skill globs; re-derive and re-sync on change. Debounced 150ms.
+Watch `AGENTS.md` and the real skill-source directories (root `skills/`, each `--path` package's `skills/`, each `--projects` project's `skills/` + `package.json`); re-derive and re-sync on change. Debounced 150ms. Concrete dirs are watched (not globs) — chokidar v4+ dropped glob support. `node_modules/` deps aren't watched (they change on install → `postinstall`).
 
 Flags:
 
 - `--cwd <path>` — working directory override.
-- `--path <dirs>` / `-p` — extra dirs whose `**/skills/**/SKILL.md` should also be watched.
+- `--path <dirs>` / `-p` — extra package dirs whose `skills/` should also be watched.
+- `--projects <dirs>` — monorepo project dirs (or one-level globs) to aggregate + watch. Defaults to `agentKit.monorepo.projects`.
 - `--override` — replace user-authored destination folders on each re-sync.
+
+---
+
+# Skill: agent-integrations
+
+> **Auto-trigger:** user asks how to set up agent-kit with a specific IDE/agent (Claude Code, Cursor, Codex, Kiro, Gemini CLI, GitHub Copilot, Aider, Antigravity), which `--target` to use, or why their agent isn't picking up skills/instructions.
+
+Every project bootstraps the same way (`npx agent-kit init` → writes `AGENTS.md` + derives `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md`), then differs only by which `--target` you pass and where skills land:
+
+| Agent | `--target` | Derived file | Skills folder | Reload |
+| --- | --- | --- | --- | --- |
+| Claude Code | `claude` | `CLAUDE.md` | `.claude/skills/` | live (next prompt) |
+| Cursor | `cursor` | — (reads `AGENTS.md`) | `.cursor/skills/` | window reload |
+| Codex | `codex` | — | `.codex/skills/` | next session |
+| Kiro | `kiro` | — | `.kiro/skills/` | window reload |
+| GitHub Copilot | `copilot` | `.github/copilot-instructions.md` | `.github/skills/` | window reload |
+| Antigravity | `antigravity` | — | `.agent/skills/` (singular) | window reload |
+| Gemini CLI | _derive-only_ | `.gemini/GEMINI.md` | _none_ | every invocation |
+| Aider | _derive-only_ | `CONVENTIONS.md` | _none_ | every session |
+
+Multiple agents at once: `agent-kit sync --target claude,cursor,codex` (or `agentKit.targets`). The derive step always emits all four derived files regardless of skill targets. Reload quirk: if a skills dir didn't exist when the IDE session started, reload the window once after the first sync (Claude Code is the exception — live).
+
+# Skill: configuration
+
+> **Auto-trigger:** user edits or asks about the `agentKit` config block in `package.json` — `targets`, `pick`, `omit`, `monorepo.projects` — or about filtering noisy dependency skills / pinning default targets.
+
+The `agentKit` block in the project root `package.json` sets defaults for every `agent-kit sync` (CLI flags still override). Malformed sub-fields are silently dropped.
+
+- **`targets`** — default skill-sync agents. Resolution: `--target` → `agentKit.targets` → `["claude"]`. Empty `[]` honored + warns. Gates the skills export only; derived files always emit.
+- **`pick`** (allowlist) — when set, ONLY listed packages sync. `true` = whole package; `string[]` = named skills by source folder name. Empty `{}` = nothing (+warn).
+- **`omit`** (denylist) — `true` = whole package; `string[]` = named skills. Runs AFTER `pick`. Pattern: `pick` a package, `omit` its noisy skill.
+- **`monorepo.projects`** — sibling project dirs / one-level globs to aggregate (see Monorepos skill). Each scanned as its own project, deps filtered by *its own* `pick`/`omit`, authored skills prefixed with the project dir name; root `omit` is a global veto. A project's own `targets`/`monorepo` are ignored; aggregation doesn't recurse.
+
+# Skill: monorepos
+
+> **Auto-trigger:** user works in a monorepo / full-stack repo, asks why a sub-project's skills aren't visible at the root, or mentions `--projects`, `agentKit.monorepo.projects`, or workspaces.
+
+Agents discover skills only from the **session-root** skills dir — they don't recurse into subdirectories. So in a repo opened at the root, `backend/skills/` is invisible. `agent-kit` aggregates each declared project up into the root.
+
+```sh
+npx agent-kit sync --projects backend,frontend
+# or: { "agentKit": { "monorepo": { "projects": ["backend", "frontend"] } } }
+```
+
+Mental model: **each declared project is scanned as if `agent-kit sync` ran inside it** — its `node_modules/` deps (filtered by *that project's* `agentKit` config) + its authored `skills/` — merged up into the root.
+
+- **Authored skills are prefixed with the project dir name**: `backend/skills/code-standards` → `backend-code-standards`. Two projects can ship a same-named skill without colliding.
+- **Dependency skills keep their package-name slug** (`warlock-js-core-use-cache`) and **dedupe across projects to one copy** (union of kept skills).
+- **Per-project config**: each project's deps filtered by *its* `pick`/`omit`. A project's own authored skills are always included (`pick` never drops them).
+- **Root `omit` is a global veto** over the whole aggregate.
+- **`--projects` vs `--path`**: `--path X` treats X as a node_modules (children are packages); `--projects X` treats X as one project (its own `skills/` + `node_modules/`). They compose.
+- **One-level globs** only: `apps/*`, `packages/*`, bare `*`. Multi-level/mid-path globs unsupported.
+- **Per-workspace `AGENTS.md`**: aggregation is skills-only; for per-project `CLAUDE.md`, run `agent-kit sync --cwd backend` in each workspace.
+- **Watch**: `agent-kit watch --projects backend,frontend` watches each project's `skills/` + `package.json` (not `node_modules/`).
+- Built for a handful of full-stack projects, not hundreds of workspaces.
+
+# Skill: recipes
+
+> **Auto-trigger:** user wires CI to catch derived-file drift, composes more than one tool/package/environment, or wants a multi-step setup recipe (filtering, programmatic API, watch mode).
+
+- **Per-workspace `AGENTS.md`**: run `agent-kit sync --cwd packages/api` per workspace (workspace-aware script) so each gets its own derived `CLAUDE.md`. (For aggregating skills across projects, see Monorepos.)
+- **Filter a noisy dependency**: `omit` (drop) or `pick` (allowlist) in `agentKit` — `true` for whole package, `string[]` for specific skills by source folder name.
+- **CI drift guardrail**: run `npx agent-kit sync` in CI then `git diff --exit-code` — fails if someone edited `AGENTS.md` but didn't commit the re-derived files.
+- **Programmatic API**: import `deriveAll` / `syncSkills` and call directly inside a longer Node pipeline (API takes `scanPaths`/`projects` arrays; CLI flags are comma-separated strings).
+- **Watch while iterating**: `agent-kit watch` re-runs sync on each change (150ms debounce); pair with `--target`/`--projects` to scope it.
 
 ---
 

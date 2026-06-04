@@ -4,7 +4,7 @@ name: mongez-agent-kit-authoring-skills
 description: |
   How to author and lay out skills for agent-kit — both your project's own skills in a single nested `skills/` folder at the project root, and reusable skills shipped from an npm package. Covers folder layout, nested category organization, `SKILL.md` frontmatter (`description`, `name`), the `files` field, flat destination naming, and the front-door / subskill convention.
 sidebar:
-  order: 18
+  order: 19
 ---
 
 There are two reasons to write skills, and they share the exact same folder layout:

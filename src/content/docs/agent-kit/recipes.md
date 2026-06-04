@@ -11,6 +11,8 @@ Configurations that come up when more than one tool, more than one package, or m
 
 ## Per-workspace `AGENTS.md` in a monorepo
 
+> Aggregating **skills** from sibling projects into one root session has its own dedicated page — see **[Monorepos](../monorepos/)** for `--projects` / `agentKit.monorepo.projects`. This recipe is specifically about per-workspace **instruction files** (`CLAUDE.md`).
+
 A monorepo where each package has its own conventions. `agent-kit` operates on the directory you point it at via `--cwd`, deriving one set of per-tool files per project root. To get per-workspace `CLAUDE.md` files, run sync inside each workspace.
 
 ```

@@ -10,7 +10,7 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 
 <details class="changelog-version" open>
-<summary><span class="cl-version">[1.1.1]</span> <span class="cl-date">2026-06-04</span> <span class="cl-counts">Added 1 · Changed 1</span></summary>
+<summary><span class="cl-version">[1.1.1]</span> <span class="cl-date">2026-06-04</span> <span class="cl-counts">Added (1) · Changed (1)</span></summary>
 
 ### Added
 
@@ -24,7 +24,7 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[1.1.0]</span> <span class="cl-date">2026-06-04</span> <span class="cl-counts">Added 6 · Fixed 2 · Removed 1</span></summary>
+<summary><span class="cl-version">[1.1.0]</span> <span class="cl-date">2026-06-04</span> <span class="cl-counts">Added (6) · Fixed (2) · Removed (1)</span></summary>
 
 ### Added
 
@@ -48,7 +48,7 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[1.0.23]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Fixed 1</span></summary>
+<summary><span class="cl-version">[1.0.23]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Fixed (1)</span></summary>
 
 ### Fixed
 
@@ -58,7 +58,7 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[1.0.22]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Changed 1</span></summary>
+<summary><span class="cl-version">[1.0.22]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Changed (1)</span></summary>
 
 ### Changed
 
@@ -68,7 +68,7 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[1.0.21]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Fixed 1</span></summary>
+<summary><span class="cl-version">[1.0.21]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Fixed (1)</span></summary>
 
 ### Fixed
 
@@ -78,7 +78,7 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[1.0.20]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Fixed 1 · Added 1</span></summary>
+<summary><span class="cl-version">[1.0.20]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Fixed (1) · Added (1)</span></summary>
 
 ### Fixed
 
@@ -92,7 +92,7 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[1.0.19]</span> <span class="cl-date">2026-05-29</span> <span class="cl-label">Docs overhaul</span> <span class="cl-counts">Added 2 · Changed 2 · Removed 1</span></summary>
+<summary><span class="cl-version">[1.0.19]</span> <span class="cl-date">2026-05-29</span> <span class="cl-label">Docs overhaul</span> <span class="cl-counts">Added (2) · Changed (2) · Removed (1)</span></summary>
 
 ### Added
 

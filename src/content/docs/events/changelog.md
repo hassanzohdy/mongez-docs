@@ -10,7 +10,7 @@ All notable changes to `@mongez/events` are documented here. The format follows 
 
 
 <details class="changelog-version" open>
-<summary><span class="cl-version">[2.2.6]</span> <span class="cl-counts">Added 1</span></summary>
+<summary><span class="cl-version">[2.2.6]</span> <span class="cl-counts">Added (1)</span></summary>
 
 ### Added
 

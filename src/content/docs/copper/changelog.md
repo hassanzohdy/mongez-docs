@@ -10,7 +10,7 @@ All notable changes to `@mongez/copper` are documented here. The format follows 
 
 
 <details class="changelog-version" open>
-<summary><span class="cl-version">[2.1.2]</span> <span class="cl-label">Docs lead with chaining</span> <span class="cl-counts">Changed 2</span></summary>
+<summary><span class="cl-version">[2.1.2]</span> <span class="cl-label">Docs lead with chaining</span> <span class="cl-counts">Changed (2)</span></summary>
 
 ### Changed
 
@@ -21,7 +21,7 @@ All notable changes to `@mongez/copper` are documented here. The format follows 
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[2.1.1]</span> <span class="cl-label">CI matrix fix</span> <span class="cl-counts">Changed 1</span></summary>
+<summary><span class="cl-version">[2.1.1]</span> <span class="cl-label">CI matrix fix</span> <span class="cl-counts">Changed (1)</span></summary>
 
 ### Changed
 
@@ -31,7 +31,7 @@ All notable changes to `@mongez/copper` are documented here. The format follows 
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[2.1.0]</span> <span class="cl-label">Chainable colors</span> <span class="cl-counts">Added 4 · Changed 2 · Fixed 1</span></summary>
+<summary><span class="cl-version">[2.1.0]</span> <span class="cl-label">Chainable colors</span> <span class="cl-counts">Added (4) · Changed (2) · Fixed (1)</span></summary>
 
 ### Added
 
@@ -53,7 +53,7 @@ All notable changes to `@mongez/copper` are documented here. The format follows 
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[2.0.0]</span> <span class="cl-label">Major rewrite</span> <span class="cl-counts">Breaking changes 6 · Added 12 · Changed 2</span></summary>
+<summary><span class="cl-version">[2.0.0]</span> <span class="cl-label">Major rewrite</span> <span class="cl-counts">Breaking changes (6) · Added (12) · Changed (2)</span></summary>
 
 ### Breaking changes
 

@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 <details class="changelog-version" open>
-<summary><span class="cl-version">[Unreleased]</span> <span class="cl-counts">Added 7 · Fixed 4 · Changed (type-only break, runtime unchanged) 1 · Notes 2</span></summary>
+<summary><span class="cl-version">[Unreleased]</span> <span class="cl-counts">Added (7) · Fixed (4) · Changed (type-only break, runtime unchanged) (1) · Notes (2)</span></summary>
 
 ### Added
 

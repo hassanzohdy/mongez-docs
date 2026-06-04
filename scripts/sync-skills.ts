@@ -378,7 +378,7 @@ function renderVersionBlock(block: string[], isOpen: boolean): string[] {
   }
   const chips = counts
     .filter((c) => c.n > 0)
-    .map((c) => `${c.name} ${c.n}`)
+    .map((c) => `${c.name} (${c.n})`)
     .join(" · ");
 
   const summary = [`<span class="cl-version">${version}</span>`];

@@ -511,12 +511,30 @@ nav.sidebar::after,
 
 /* Horizontal padding for the rendered markdown body inside each version. */
 .sl-markdown-content details.changelog-version > :not(summary) {
-  padding-left: 0.85rem;
-  padding-right: 0.85rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 .sl-markdown-content details.changelog-version > :last-child {
   padding-bottom: 0.6rem;
+}
+
+/* Lists inside the accordion: keep the disc bullet markers (they were getting
+ * clipped by the card's overflow + the body padding above). Extra left padding
+ * gives the `outside`-positioned markers room to sit inside the card. */
+.sl-markdown-content details.changelog-version ul {
+  list-style: disc outside;
+  padding-left: 2.4rem;
+  margin: 0.4rem 0;
+}
+
+.sl-markdown-content details.changelog-version ul li {
+  margin: 0.3rem 0;
+  padding-left: 0.15rem;
+}
+
+.sl-markdown-content details.changelog-version ul li::marker {
+  color: var(--sl-color-gray-3);
 }
 
 /* ═════════════════════════════════════════════════════════════════════

@@ -10,7 +10,7 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 
 <details class="changelog-version" open>
-<summary><span class="cl-version">[1.3.0] - 2026-06-04</span> <span class="cl-counts">Added 1 · Changed 2 · Docs 2</span></summary>
+<summary><span class="cl-version">[1.3.0] - 2026-06-04</span> <span class="cl-counts">Added (1) · Changed (2) · Docs (2)</span></summary>
 
 ### Added
 
@@ -30,7 +30,7 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[1.2.0] - 2026-06-04</span> <span class="cl-counts">Added 2 · Fixed 3 · Docs 3</span></summary>
+<summary><span class="cl-version">[1.2.0] - 2026-06-04</span> <span class="cl-counts">Added (2) · Fixed (3) · Docs (3)</span></summary>
 
 ### Added
 
@@ -53,7 +53,7 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[1.1.3] - 2026-06-03</span> <span class="cl-counts">Added 1 · Fixed 1</span></summary>
+<summary><span class="cl-version">[1.1.3] - 2026-06-03</span> <span class="cl-counts">Added (1) · Fixed (1)</span></summary>
 
 ### Added
 
@@ -67,7 +67,7 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[1.1.2] - 2026-05-29</span> <span class="cl-counts">Added 1</span></summary>
+<summary><span class="cl-version">[1.1.2] - 2026-05-29</span> <span class="cl-counts">Added (1)</span></summary>
 
 ### Added
 
@@ -79,7 +79,7 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[1.1.0] - 2026-05-27</span> <span class="cl-counts">Added 1</span></summary>
+<summary><span class="cl-version">[1.1.0] - 2026-05-27</span> <span class="cl-counts">Added (1)</span></summary>
 
 ### Added
 

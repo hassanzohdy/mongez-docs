@@ -10,7 +10,7 @@ All notable changes to `@mongez/http` are documented here. The format follows [K
 
 
 <details class="changelog-version" open>
-<summary><span class="cl-version">[3.3.8]</span> <span class="cl-date">2026-06-04</span> <span class="cl-counts">Changed 2</span></summary>
+<summary><span class="cl-version">[3.3.8]</span> <span class="cl-date">2026-06-04</span> <span class="cl-counts">Changed (2)</span></summary>
 
 ### Changed
 
@@ -21,7 +21,7 @@ All notable changes to `@mongez/http` are documented here. The format follows [K
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[3.3.7]</span> <span class="cl-counts">Changed 1</span></summary>
+<summary><span class="cl-version">[3.3.7]</span> <span class="cl-counts">Changed (1)</span></summary>
 
 ### Changed
 
@@ -31,7 +31,7 @@ All notable changes to `@mongez/http` are documented here. The format follows [K
 
 
 <details class="changelog-version">
-<summary><span class="cl-version">[3.3.6]</span> <span class="cl-counts">Added 1</span></summary>
+<summary><span class="cl-version">[3.3.6]</span> <span class="cl-counts">Added (1)</span></summary>
 
 ### Added
 

@@ -7,14 +7,35 @@ sidebar:
 
 All notable changes to `@mongez/pkgist` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
----
 
-## [1.2.0]
+
+<details class="changelog-version" open>
+<summary><span class="cl-version">[1.3.0] - 2026-06-04</span> <span class="cl-counts">Added 1 · Changed 2 · Docs 2</span></summary>
+
+### Added
+
+- **`pkgist init` command.** Scaffolds a `pkgist.config.ts` in the current directory (`buildDir: "./builds"`, `sourcesDir: "./sources"`, one example package). Skips an existing config unless `--force` is passed — the fastest path from `npm install` to a working config.
+
+### Changed
+
+- **Single config file.** Config discovery now recognises only `pkgist.config.ts` (then `pkgist.config.js`). The `builder.ts` / `builder.js` / `mongez.ts` / `mongez.js` legacy aliases are gone — one obvious config name, no guessing. Pass `--config <path>` for a custom location. *Migration: rename `builder.ts` → `pkgist.config.ts`.*
+- The shipped example template is renamed `builder.example.ts` → `pkgist.config.example.ts`.
+
+### Docs
+
+- Rewrote the README into a professional, beginner→advanced reference (badges, "Why pkgist?", feature table, quick start, then config → package options → versioning → git → CLI → pipeline → recipes).
+- Every changelog entry is now dated — here, in the docs Change Logs page, and in the `changelog` skill.
+
+</details>
+
+
+<details class="changelog-version">
+<summary><span class="cl-version">[1.2.0] - 2026-06-04</span> <span class="cl-counts">Added 2 · Fixed 3 · Docs 3</span></summary>
 
 ### Added
 
 - **Intra-family dependency pinning.** In a family build, any `dependencies` / `peerDependencies` entry that names another family member is now pinned to the **exact** shared release version in the published `package.json` (the source keeps `"*"` for workspace linking). Standalone builds are unaffected. This stops `"*"` from leaking to consumers and keeps a released family installable as one coherent, same-version set.
-- **`changelog` skill** (`skills/changelog/`) mirroring this page — so version history auto-loads for AI agents and is tracked on every release.
+- **`changelog` skill** (`skills/changelog/`) mirroring this file, plus a Change Logs page in the docs site — so version history auto-loads for AI agents and is tracked on every release.
 
 ### Fixed
 
@@ -24,11 +45,15 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 ### Docs
 
-- Documented intra-family dependency pinning across the `versioning` + `pipeline` skills, README, this docs site, and `llms-full.txt`.
+- Documented intra-family dependency pinning across the `versioning` + `pipeline` skills, README, the docs site, and `llms-full.txt`.
 - Corrected long-standing drift in `llms-full.txt`: the "kept fields" list (dropped the fields that pkgist actually strips), the source-snapshot exclusion list (added `.turbo`, `.cache`), and the config auto-discovery note (six filenames, not two).
 - Aligned the documented git pipeline to the real commands: `git add -A` and `git push origin --tags`.
 
-## [1.1.3]
+</details>
+
+
+<details class="changelog-version">
+<summary><span class="cl-version">[1.1.3] - 2026-06-03</span> <span class="cl-counts">Added 1 · Fixed 1</span></summary>
 
 ### Added
 
@@ -38,7 +63,11 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 - Reconciled several documentation drift items against source during a skills polish pass.
 
-## [1.1.2]
+</details>
+
+
+<details class="changelog-version">
+<summary><span class="cl-version">[1.1.2] - 2026-05-29</span> <span class="cl-counts">Added 1</span></summary>
 
 ### Added
 
@@ -46,8 +75,14 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 > Version history prior to 1.1.0 is available via the git tags and GitHub releases on [hassanzohdy/pkgist](https://github.com/hassanzohdy/pkgist).
 
-## [1.1.0]
+</details>
+
+
+<details class="changelog-version">
+<summary><span class="cl-version">[1.1.0] - 2026-05-27</span> <span class="cl-counts">Added 1</span></summary>
 
 ### Added
 
 - **`commit` field accepts `true` / `false`** in addition to a string. `true` auto-generates a `Released <version>` message (set-and-forget); `false` explicitly skips git; a string is used verbatim; omitting it skips git (back-compat).
+
+</details>

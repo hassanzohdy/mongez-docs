@@ -315,49 +315,88 @@ function rewriteSiblingLinks(content: string): string {
 }
 
 /**
- * Pull the ISO date out of a changelog version heading and render it on its
- * own dimmed, smaller line below the heading (styled via `.changelog-date` in
- * global.css).
+ * Render the changelog as one collapsible `<details>` per version: the latest
+ * version is open, older versions collapsed. Each `<summary>` shows the version,
+ * its date, and per-category counts (Added 6 · Fixed 2) so you see the shape of
+ * a release without expanding it. Zero-count categories are omitted.
  *
- * The source `CHANGELOG.md` keeps the date inline in the heading
- * (`## [1.1.0] — 2026-06-04`) so it reads cleanly on GitHub / npm where there
- * is no CSS; only the docs site restyles it — same "source stays clean, docs
- * site rewrites for UX" model as the install-tabs and sibling-link rewrites.
+ * The source `CHANGELOG.md` stays plain markdown (`## [1.1.0] — 2026-06-04`)
+ * so it reads cleanly on GitHub / npm where there is no CSS; only the docs site
+ * restyles it — same "source stays clean, docs site rewrites for UX" model as
+ * the install-tabs and sibling-link rewrites. Markdown inside each `<details>`
+ * still renders because a blank line after `<summary>` ends the raw-HTML block.
  *
- * Handles a trailing label too: `## [1.0.19] — 2026-05-29 — Docs overhaul`
- * becomes `## [1.0.19] — Docs overhaul` with the date below. Headings without
- * an ISO date (e.g. `## [1.0.x] — Earlier releases`) are left untouched, and
- * fenced code blocks are skipped.
+ * Falls back to the input untouched when there is no `## [version]` heading
+ * (so non-standard changelogs are never mangled).
  */
-function formatChangelogDates(body: string): string {
+function accordionizeChangelog(body: string): string {
   const lines = body.split("\n");
-  const out: string[] = [];
-  let inCodeFence = false;
+  const firstIdx = lines.findIndex((l) => /^##\s+\[/.test(l));
+  if (firstIdx === -1) return body;
 
-  for (const line of lines) {
-    if (/^\s*(```|~~~)/.test(line)) {
-      inCodeFence = !inCodeFence;
-      out.push(line);
-      continue;
-    }
-
-    const heading = inCodeFence ? null : line.match(/^(##\s+\[[^\]]+\])(.*)$/);
-    const date = heading ? heading[2].match(/\d{4}-\d{2}-\d{2}/) : null;
-    if (heading && date) {
-      // Drop the " — <date>" separator segment from the heading, keep any
-      // remaining label (e.g. "— Docs overhaul").
-      const rest = heading[2].replace(/\s*[—-]\s*\d{4}-\d{2}-\d{2}/, "");
-      out.push(`${heading[1]}${rest}`);
-      out.push("");
-      out.push(
-        `<p class="changelog-date"><time datetime="${date[0]}">${date[0]}</time></p>`,
-      );
-    } else {
-      out.push(line);
+  // Split the post-intro remainder into blocks, each starting at a `## [`.
+  const blocks: string[][] = [];
+  let current: string[] | null = null;
+  for (const line of lines.slice(firstIdx)) {
+    if (/^##\s+\[/.test(line)) {
+      if (current) blocks.push(current);
+      current = [line];
+    } else if (current) {
+      current.push(line);
     }
   }
+  if (current) blocks.push(current);
+
+  // Intro = everything before the first version, minus horizontal rules.
+  const out: string[] = lines
+    .slice(0, firstIdx)
+    .filter((l) => l.trim() !== "---");
+
+  blocks.forEach((block, i) => {
+    out.push("", ...renderVersionBlock(block, i === 0), "");
+  });
 
   return out.join("\n");
+}
+
+/** Render a single `## [version]` block as a `<details>` accordion. */
+function renderVersionBlock(block: string[], isOpen: boolean): string[] {
+  const m = block[0].match(/^##\s+(\[[^\]]+\])(.*)$/);
+  const version = m ? m[1] : block[0].replace(/^##\s+/, "");
+  let rest = m ? m[2] : "";
+  const date = rest.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+  if (date) rest = rest.replace(/\s*[—-]\s*\d{4}-\d{2}-\d{2}/, "");
+  const label = rest.replace(/^\s*[—-]\s*/, "").trim();
+
+  // Body lines (minus horizontal rules), and per-category bullet counts.
+  const bodyLines = block.slice(1).filter((l) => l.trim() !== "---");
+  const counts: Array<{ name: string; n: number }> = [];
+  for (const l of bodyLines) {
+    const h = l.match(/^###\s+(.+?)\s*$/);
+    if (h) counts.push({ name: h[1], n: 0 });
+    else if (counts.length && /^\s*-\s+/.test(l)) counts[counts.length - 1].n++;
+  }
+  const chips = counts
+    .filter((c) => c.n > 0)
+    .map((c) => `${c.name} ${c.n}`)
+    .join(" · ");
+
+  const summary = [`<span class="cl-version">${version}</span>`];
+  if (date) summary.push(`<span class="cl-date">${date}</span>`);
+  if (label) summary.push(`<span class="cl-label">${label}</span>`);
+  if (chips) summary.push(`<span class="cl-counts">${chips}</span>`);
+
+  while (bodyLines.length && bodyLines[0].trim() === "") bodyLines.shift();
+  while (bodyLines.length && bodyLines.at(-1)?.trim() === "") bodyLines.pop();
+
+  return [
+    `<details class="changelog-version"${isOpen ? " open" : ""}>`,
+    `<summary>${summary.join(" ")}</summary>`,
+    "",
+    ...bodyLines,
+    "",
+    "</details>",
+  ];
 }
 
 /**
@@ -672,7 +711,7 @@ async function syncPackage(pkg: string, dir: string): Promise<number> {
   if (existsSync(changelogSrc)) {
     const raw = await readFile(changelogSrc, "utf8");
     const output = ensureFrontmatter(
-      formatChangelogDates(rewriteSiblingLinks(stripLeadingH1(raw))),
+      accordionizeChangelog(rewriteSiblingLinks(stripLeadingH1(raw))),
       "Changelog",
       900,
       "Changelog",

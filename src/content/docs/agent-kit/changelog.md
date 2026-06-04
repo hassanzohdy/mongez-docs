@@ -7,11 +7,10 @@ sidebar:
 
 All notable changes to `@mongez/agent-kit` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
----
 
-## [1.1.0]
 
-<p class="changelog-date"><time datetime="2026-06-04">2026-06-04</time></p>
+<details class="changelog-version" open>
+<summary><span class="cl-version">[1.1.0]</span> <span class="cl-date">2026-06-04</span> <span class="cl-counts">Added 6 · Fixed 2 · Removed 1</span></summary>
 
 ### Added
 
@@ -31,41 +30,41 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 - **Stale `SyncResult` type** — it never matched any function's return shape and was unused. Dropped from the exports.
 
----
+</details>
 
-## [1.0.23]
 
-<p class="changelog-date"><time datetime="2026-05-29">2026-05-29</time></p>
+<details class="changelog-version">
+<summary><span class="cl-version">[1.0.23]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Fixed 1</span></summary>
 
 ### Fixed
 
 - **Correct repository ownership in links.** `agent-kit` lives at [`hassanzohdy/agent-kit`](https://github.com/hassanzohdy/agent-kit), not `warlockjs/agent-kit`. Fixed the stale repo URLs in `llms.txt` and, more importantly, in the starter `AGENTS.md` that `agent-kit init` scaffolds (it was baking the wrong link into every consumer's file). Replaced the internal `warlockjs/warlock` design-spec link with the public docs site.
 
----
+</details>
 
-## [1.0.22]
 
-<p class="changelog-date"><time datetime="2026-05-29">2026-05-29</time></p>
+<details class="changelog-version">
+<summary><span class="cl-version">[1.0.22]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Changed 1</span></summary>
 
 ### Changed
 
 - **Docs now foreground organizing your *own* project's skills.** The README, bundled skills (`overview`, `authoring-skills`), and `llms`/`llms-full` files now lead with the everyday case: keep a single nested `skills/` folder at your project root (`skills/backend/auth/SKILL.md`) and `agent-kit sync` flattens it into the top-level `.claude/skills/` layout Claude Code requires. Shipping skills from an npm package is now framed as the same mechanism applied to `node_modules/`. No code/API changes.
 
----
+</details>
 
-## [1.0.21]
 
-<p class="changelog-date"><time datetime="2026-05-29">2026-05-29</time></p>
+<details class="changelog-version">
+<summary><span class="cl-version">[1.0.21]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Fixed 1</span></summary>
 
 ### Fixed
 
 - **Linux skill discovery crash when a scan path's root holds a `package.json` file** — `readTextFile` now treats `ENOTDIR` and `EISDIR` as "no file here" (returning `null`), the same as `ENOENT`. Previously, probing a manifest path whose parent is a file (e.g. `package.json/package.json`, which happens when a scan path points at a project root) threw `ENOTDIR` on Linux but `ENOENT` on Windows — so discovery crashed on Linux only. Both platforms now behave identically.
 
----
+</details>
 
-## [1.0.20]
 
-<p class="changelog-date"><time datetime="2026-05-29">2026-05-29</time></p>
+<details class="changelog-version">
+<summary><span class="cl-version">[1.0.20]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Fixed 1 · Added 1</span></summary>
 
 ### Fixed
 
@@ -75,11 +74,11 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 - **CI test workflow** — `.github/workflows/test.yml` runs the suite on Node 20/22 (ubuntu) plus Node 20 (windows) for path/CRLF coverage. Node 18 is excluded because a transitive test dependency (`chokidar@5`) requires Node >=20.19; the CLI itself still runs on Node 18+ at runtime.
 
----
+</details>
 
-## [1.0.19] — Docs overhaul
 
-<p class="changelog-date"><time datetime="2026-05-29">2026-05-29</time></p>
+<details class="changelog-version">
+<summary><span class="cl-version">[1.0.19]</span> <span class="cl-date">2026-05-29</span> <span class="cl-label">Docs overhaul</span> <span class="cl-counts">Added 2 · Changed 2 · Removed 1</span></summary>
 
 ### Added
 
@@ -97,8 +96,12 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 > No code/API changes — `deriveAll`, `syncSkills`, the CLI, and the exports map are unchanged. Documentation and bundled-skill content only.
 
----
+</details>
 
-## [1.0.x] — Earlier releases
+
+<details class="changelog-version">
+<summary><span class="cl-version">[1.0.x]</span> <span class="cl-label">Earlier releases</span></summary>
 
 Version history prior to this changelog is available via the git tags and GitHub releases on [hassanzohdy/agent-kit](https://github.com/hassanzohdy/agent-kit).
+
+</details>

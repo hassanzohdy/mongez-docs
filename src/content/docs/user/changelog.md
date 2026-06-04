@@ -9,7 +9,9 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+
+<details class="changelog-version" open>
+<summary><span class="cl-version">[Unreleased]</span> <span class="cl-counts">Added 7 · Fixed 4 · Changed (type-only break, runtime unchanged) 1 · Notes 2</span></summary>
 
 ### Added
 
@@ -36,3 +38,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Public method signatures on `UserManager` are unchanged. Public function signatures of `onBoot` / `onKeyChange` / etc. are unchanged. The only signature change is the return type of `getCurrentUser`, documented above.
 - No runtime dependencies were added.
+
+</details>

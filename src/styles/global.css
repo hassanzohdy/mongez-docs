@@ -446,20 +446,77 @@ nav.sidebar::after,
   border-radius: 1px;
 }
 
-/* Changelog version date — pulled out of the heading by the docs sync script
- * (formatChangelogDates) and rendered as a dimmed, smaller line tucked just
- * below the heading's gradient underline. */
-.sl-markdown-content .changelog-date {
-  /* Positive top margin keeps the date clear of the h2::after gradient
-   * underline (a 48px bar at the heading's bottom) — a negative margin pulled
-   * it up into the bar and looked like a strikethrough. */
-  margin-top: 0.5rem;
-  margin-bottom: 1.5rem;
+/* Changelog — one collapsible <details> per version (built by the docs sync
+ * script's accordionizeChangelog). Latest version open, older ones collapsed;
+ * the summary carries the version, date, and per-category counts. */
+.sl-markdown-content details.changelog-version {
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.5rem;
+  margin: 0.6rem 0;
+  overflow: hidden;
+}
+
+.sl-markdown-content details.changelog-version > summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.7rem;
+  padding: 0.55rem 0.85rem;
+  list-style: none;
+  font-family: var(--sl-font-mono);
+}
+
+.sl-markdown-content details.changelog-version > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sl-markdown-content details.changelog-version > summary::before {
+  content: "▸";
+  color: var(--sl-color-gray-3);
+  font-size: 0.8em;
+  transition: transform 0.15s ease;
+}
+
+.sl-markdown-content details.changelog-version[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.sl-markdown-content details.changelog-version[open] > summary {
+  border-bottom: 1px solid var(--sl-color-gray-5);
+  margin-bottom: 0.5rem;
+}
+
+.cl-version {
+  font-weight: 700;
+}
+
+.cl-date {
   font-size: 0.8125rem;
-  line-height: 1.2;
   color: var(--sl-color-gray-3);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
+}
+
+.cl-label {
+  font-size: 0.8125rem;
+  color: var(--sl-color-gray-2);
+}
+
+.cl-counts {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--sl-color-gray-3);
+  font-family: var(--sl-font);
+}
+
+/* Horizontal padding for the rendered markdown body inside each version. */
+.sl-markdown-content details.changelog-version > :not(summary) {
+  padding-left: 0.85rem;
+  padding-right: 0.85rem;
+}
+
+.sl-markdown-content details.changelog-version > :last-child {
+  padding-bottom: 0.6rem;
 }
 
 /* ═════════════════════════════════════════════════════════════════════

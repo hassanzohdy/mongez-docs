@@ -7,26 +7,31 @@ sidebar:
 
 All notable changes to `@mongez/copper` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
----
 
-## [2.1.2] — Docs lead with chaining
+
+<details class="changelog-version" open>
+<summary><span class="cl-version">[2.1.2]</span> <span class="cl-label">Docs lead with chaining</span> <span class="cl-counts">Changed 2</span></summary>
 
 ### Changed
 
 - Reframed README, colors SKILL.md, recipes SKILL.md, utilities SKILL.md, and llms-full.txt so chaining (`colors.red.bold(x)`) is the primary call style in every example. Composition (`colors.red(colors.bold(x))`) is documented as an alternative with one explicit use case — runtime-decided color names via `colors[name](x)` typed by `ColorName`.
 - No code changes; chains and composition still produce identical ANSI output.
 
----
+</details>
 
-## [2.1.1] — CI matrix fix
+
+<details class="changelog-version">
+<summary><span class="cl-version">[2.1.1]</span> <span class="cl-label">CI matrix fix</span> <span class="cl-counts">Changed 1</span></summary>
 
 ### Changed
 
 - Dropped Node 18 from the CI matrix (Node 18 reached EOL on April 30, 2025, and `vitest@3` transitive dependencies fail to install cleanly there). Matrix is now Node 20 + Node 22 on Ubuntu, plus Node 20 on Windows.
 
----
+</details>
 
-## [2.1.0] — Chainable colors
+
+<details class="changelog-version">
+<summary><span class="cl-version">[2.1.0]</span> <span class="cl-label">Chainable colors</span> <span class="cl-counts">Added 4 · Changed 2 · Fixed 1</span></summary>
 
 ### Added
 
@@ -44,9 +49,11 @@ All notable changes to `@mongez/copper` are documented here. The format follows 
 
 - `bgIndigoBright` close sequence was `\x1b[39m` (fg reset) instead of `\x1b[49m` (bg reset). Background reset now correctly emits CSI 49.
 
----
+</details>
 
-## [2.0.0] — Major rewrite
+
+<details class="changelog-version">
+<summary><span class="cl-version">[2.0.0]</span> <span class="cl-label">Major rewrite</span> <span class="cl-counts">Breaking changes 6 · Added 12 · Changed 2</span></summary>
 
 ### Breaking changes
 
@@ -77,11 +84,15 @@ All notable changes to `@mongez/copper` are documented here. The format follows 
 - `createColors(enabled)` now returns a type-recoverable object exported as `Colors`. The factory is re-exposed on every instance (`colors.createColors(false)`).
 - Color-support detection has a new priority order documented in the overview skill and README.
 
----
+</details>
 
-## [1.0.1] — Initial release
+
+<details class="changelog-version">
+<summary><span class="cl-version">[1.0.1]</span> <span class="cl-label">Initial release</span></summary>
 
 - `colors` object with the 20+ palette (under v1 names — `brown2*`, `limeGreen*`).
 - `createColors(enabled)` factory.
 - `isColorSupported` flag.
 - `displayLoadingBar` and `displayThreeDotsAnimation` legacy animations.
+
+</details>

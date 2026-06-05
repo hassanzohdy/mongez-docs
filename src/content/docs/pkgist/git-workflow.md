@@ -115,6 +115,28 @@ Three equivalent ways to disable git for a single package:
 
 Or skip git for the whole run regardless of config: `pkgist build:all --no-git`.
 
+## Overriding the commit per run (`--commit`)
+
+You can override the configured `commit` for a single invocation with the `--commit` flag — no edit to `pkgist.config.ts` required:
+
+```sh
+pkgist build @scope/utils --commit "fix: guard against overflow"   # explicit message
+pkgist build:family atom  --commit                                  # bare → auto "Released <version>"
+pkgist build:all          --commit "chore: monthly release"         # one message for the whole fleet
+```
+
+`--commit [message]` mirrors the config `commit` shapes:
+
+| Invocation | Resolves to |
+|---|---|
+| `--commit "some message"` | that exact message |
+| `--commit` (bare, no value) | auto-generated `Released <new-version>` (same as `commit: true`) |
+| *flag omitted* | the package/family configured `commit` (unchanged) |
+
+**Precedence:** `--commit` (CLI) overrides a family-level `commit`, which overrides a per-package `commit`. To **skip** git for the run, use `--no-git` — it always wins over any resolved message, CLI or config.
+
+This pairs with `--bump` (see the `versioning` and `cli` skills): together they move the two per-release values — the version and the message — onto the command line, so the config file stays static and parallel release runs never clobber each other's edits.
+
 ## When `commit` resolves but `--no-git` is passed
 
 `--no-git` always wins. The `commit` field is ignored for that invocation. Use this to do a "release everything to npm but don't touch git" pass — rare, but useful for hotfixes on packages where you can't push to git for some reason.

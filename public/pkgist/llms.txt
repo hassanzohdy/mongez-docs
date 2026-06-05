@@ -13,18 +13,20 @@ Every export and CLI option ships from the package root: `import { defineConfig 
 
 ## Reference (by topic)
 
-- [Configuration](https://raw.githubusercontent.com/hassanzohdy/pkgist/main/skills/configuration/SKILL.md): `pkgist.config.ts` / `builder.ts` shape, `defineConfig`, `settings`, `standalone[]`, `families[]`.
-  - *Auto-trigger:* When editing the pkgist config file or asking how to set up pkgist.
+- [Configuration](https://raw.githubusercontent.com/hassanzohdy/pkgist/main/skills/configuration/SKILL.md): single `pkgist.config.ts` (or `.js`) shape, `pkgist init` scaffolding, `defineConfig`, `settings`, `standalone[]`, `families[]`.
+  - *Auto-trigger:* When editing the pkgist config file, running `pkgist init`, or asking how to set up pkgist.
 - [Package options](https://raw.githubusercontent.com/hassanzohdy/pkgist/main/skills/package-options/SKILL.md): Every per-package field (`name`, `root`, `type`, `formats`, `mainType`, `entries`, `srcDir`, `dts`, `sourcemap`, `minify`, `preserveModules`, `clone`, `publish`, `access`, `branch`).
   - *Auto-trigger:* When configuring a package entry or asking about specific fields.
-- [Versioning](https://raw.githubusercontent.com/hassanzohdy/pkgist/main/skills/versioning/SKILL.md): `"auto"` / `"patch"` / `"minor"` / `"major"` / literal-string strategies, family bump rules (highest current + 1).
-  - *Auto-trigger:* When asking about version bumps, semver strategies, or family synchronization.
-- [Git workflow](https://raw.githubusercontent.com/hassanzohdy/pkgist/main/skills/git-workflow/SKILL.md): `commit: string | true | false`, the add→commit→push→tag→push-tags pipeline, `branch` override, family-level commit override.
-  - *Auto-trigger:* When asking about commit messages, auto-tagging, skipping git, or the new `commit: true` shorthand.
-- [CLI](https://raw.githubusercontent.com/hassanzohdy/pkgist/main/skills/cli/SKILL.md): Commands (`build`, `build:family`, `build:all`, `list`, `validate`) and common flags (`--dry-run`, `--no-publish`, `--no-git`, `--concurrency`, `--config`, `--verbose`).
-  - *Auto-trigger:* When running pkgist commands or asking about CLI flags.
-- [Build pipeline](https://raw.githubusercontent.com/hassanzohdy/pkgist/main/skills/pipeline/SKILL.md): The 10-step per-package pipeline, dual ESM+CJS output structure, generated `package.json` shape, source snapshots, `bin` normalization.
+- [Versioning](https://raw.githubusercontent.com/hassanzohdy/pkgist/main/skills/versioning/SKILL.md): `"auto"` / `"patch"` / `"minor"` / `"major"` / literal-string strategies, the per-run `--bump <strategy>` CLI override, family bump rules (highest current + 1), and intra-family dependency pinning (sibling `"*"` → exact shared version in the published package.json).
+  - *Auto-trigger:* When asking about version bumps, semver strategies, the `--bump` flag, family synchronization, or how sibling/family dependency versions are written on publish.
+- [Git workflow](https://raw.githubusercontent.com/hassanzohdy/pkgist/main/skills/git-workflow/SKILL.md): `commit: string | true | false`, the per-run `--commit [message]` CLI override, the add→commit→push→tag→push-tags pipeline, `branch` override, family-level commit override.
+  - *Auto-trigger:* When asking about commit messages, the `--commit` flag, auto-tagging, skipping git, or the `commit: true` shorthand.
+- [CLI](https://raw.githubusercontent.com/hassanzohdy/pkgist/main/skills/cli/SKILL.md): Commands (`init`, `build`, `build:family`, `build:all`, `list`, `validate`) and common flags (`--dry-run`, `--no-publish`, `--no-git`, `--bump <strategy>`, `--commit [message]`, `--concurrency`, `--config`, `--verbose`), including the per-run `--bump` / `--commit` config overrides.
+  - *Auto-trigger:* When running pkgist commands, scaffolding a config with `init`, or asking about CLI flags.
+- [Build pipeline](https://raw.githubusercontent.com/hassanzohdy/pkgist/main/skills/pipeline/SKILL.md): The 10-step per-package pipeline, dual ESM+CJS output structure, generated `package.json` shape (kept/replaced/dropped fields, intra-family dep pinning), source snapshots, `bin` normalization.
   - *Auto-trigger:* When asking what pkgist does step-by-step or how the build output is structured.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/pkgist/main/skills/changelog/SKILL.md): Release history per version (Keep a Changelog + SemVer). Mirrors `CHANGELOG.md`.
+  - *Auto-trigger:* When asking what's new, what changed between versions, or which version introduced/fixed a behavior.
 
 ## Recipes
 

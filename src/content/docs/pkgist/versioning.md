@@ -26,6 +26,20 @@ Pre-release versions follow the same rules (semver-internal):
 - `"patch"` on `2.1.0-beta.1` → `2.1.0` (drops pre-release)
 - An explicit `"2.1.0-beta.2"` is also valid
 
+## Overriding per run from the CLI
+
+The same five strategies are available as a **per-run CLI override** via `--bump`, so you don't have to edit the `version` field in `pkgist.config.ts` for every release:
+
+```sh
+pkgist build @scope/utils --bump minor        # ignore config version, minor-bump this run
+pkgist build:family atom  --bump 6.1.0         # set the family's shared version explicitly
+pkgist build:all          --bump patch         # patch-bump every package this run
+```
+
+`--bump <strategy>` takes the identical values to the config `version` field (`auto` / `patch` / `minor` / `major` / a literal semver) and **overrides it for that invocation only** — the config file is never mutated. For a standalone build it applies to every targeted package; for a family build it replaces the family's single shared version (the highest-current-member rule still applies when the strategy is a bump keyword). When `--bump` is omitted, the config `version` (or its `"auto"` default) is used.
+
+> Named `--bump`, not `--version`, because commander reserves `--version` for `pkgist --version`. See the `cli` skill's *Per-run overrides* section, and `git-workflow` for the paired `--commit` flag.
+
 ## Standalone packages
 
 ```ts

@@ -3,7 +3,7 @@ title: "CLI"
 
 name: mongez-pkgist-cli
 description: |
-  pkgist CLI commands and flags: `init` (scaffold pkgist.config.ts), `build [pkg...]` (one or more standalone), `build:family <name>` (one synchronized family), `build:all` (every standalone + every family), `list` (show registered packages with current versions), `validate` (check config + paths). Common flags: `--dry-run`, `--no-publish`, `--no-git`, `--concurrency <n>`, `--config <path>`, `--verbose`.
+  pkgist CLI commands and flags: `init` (scaffold pkgist.config.ts), `build [pkg...]` (one or more standalone), `build:family <name>` (one synchronized family), `build:all` (every standalone + every family), `list` (show registered packages with current versions), `validate` (check config + paths). Common flags: `--dry-run`, `--no-publish`, `--no-git`, `--bump <strategy>` (per-run version override), `--commit [message]` (per-run commit-message override), `--concurrency <n>`, `--config <path>`, `--verbose`.
 sidebar:
   order: 50
 ---
@@ -101,9 +101,32 @@ Available on every `build*` command:
 | `--dry-run` | Print every step (snapshot, compile, clone, git, npm publish) without writing to disk, git, or npm. **Always run this before a real release** to verify versions, commit messages, and clone lists |
 | `--no-publish` | Run everything except `npm publish`. Useful when you want to build + commit locally but defer publish |
 | `--no-git` | Skip git add/commit/push/tag entirely, regardless of per-package `commit` |
+| `--bump <strategy>` | Override the configured `version` for this run only: `patch` / `minor` / `major` / `auto` / an explicit `x.y.z`. Never edits the config file. See [Per-run overrides](#per-run-overrides) |
+| `--commit [message]` | Override the configured `commit` for this run only: a message string, or a bare `--commit` to auto-generate `Released <version>`. See [Per-run overrides](#per-run-overrides) |
 | `--concurrency <n>` | Override `settings.concurrency`. Drop to 1 to serialize builds for debugging |
 | `--config <path>` | Use a specific config file instead of auto-discovery. Path is relative to cwd |
 | `--verbose` | Print debug-level log lines (every step, including ones normally silent on success) |
+
+## Per-run overrides
+
+`--bump` and `--commit` override the per-package (or family) **`version`** and **`commit`** config fields for a single invocation — **without editing `pkgist.config.ts`**. Everything else (roots, clone lists, formats, types) stays in the config; the two values that change every release move to the command line.
+
+```sh
+# Patch-bump @scope/utils with an explicit message — config untouched
+pkgist build @scope/utils --bump patch --commit "fix: guard against empty input"
+
+# Minor-bump a whole family with an auto "Released <version>" message
+pkgist build:family atom --bump minor --commit
+
+# Fleet release at an explicit version, custom message, for every package
+pkgist build:all --bump 3.0.0 --commit "chore: bump all to 3.0.0"
+```
+
+- **`--bump <strategy>`** takes the same five values as the config `version` field (`auto` / `patch` / `minor` / `major` / an explicit semver) — see the `versioning` skill. It applies to **every** targeted package, and for a family it overrides the single shared version.
+- **`--commit [message]`** maps onto the `commit` field's shapes: a string is used verbatim; a **bare `--commit`** auto-generates `Released <new-version>`. To **skip** git instead, use `--no-git` (which always wins). See the `git-workflow` skill.
+- **Precedence:** the CLI flag beats the config value; when a flag is omitted, the config value (or its default) is used unchanged.
+- **Why this exists:** the config file holds only the static package registry, so running several releases in parallel never means two processes editing — and clobbering — the same `version` / `commit` lines.
+- **Naming:** the version flag is `--bump`, not `--version`, because commander reserves `--version` for the root `pkgist --version` printer.
 
 ## Typical invocations
 
@@ -114,7 +137,9 @@ Available on every `build*` command:
 | Preview a release | `pkgist build:all --dry-run` |
 | Real release of everything | `pkgist build:all` |
 | Hot-fix one package | `pkgist build @scope/the-pkg` |
+| Hot-fix with version + message from the CLI (no config edit) | `pkgist build @scope/the-pkg --bump patch --commit "fix: ..."` |
 | Release a synchronized group | `pkgist build:family atom` |
+| Release a family at an explicit version, auto message | `pkgist build:family atom --bump 6.1.0 --commit` |
 | Build to verify, but don't ship | `pkgist build:all --no-publish --no-git` |
 | Debug a failing build | `pkgist build @scope/the-pkg --verbose --concurrency 1` |
 

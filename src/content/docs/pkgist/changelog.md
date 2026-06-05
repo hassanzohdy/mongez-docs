@@ -10,7 +10,17 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 
 <details class="changelog-version" open>
-<summary><span class="cl-version">[1.3.0] - 2026-06-04</span> <span class="cl-counts">Added (1) · Changed (2) · Docs (2)</span></summary>
+<summary><span class="cl-version">[1.4.0] - 2026-06-06</span> <span class="cl-counts">Added (1)</span></summary>
+
+### Added
+
+- **Per-run `--bump` and `--commit` CLI overrides** on `build`, `build:family`, and `build:all`. `--bump <strategy>` overrides the configured `version` for that invocation (`patch` / `minor` / `major` / `auto` / an explicit `x.y.z`); `--commit [message]` overrides the configured `commit` (a message string, or a bare `--commit` to auto-generate `Released <version>`). Both apply to the single run only and **never mutate `pkgist.config.ts`** — so the config file stays a static package registry and concurrent release sessions no longer clobber each other's `version` / `commit` edits. Precedence: CLI flag > family-level `commit` > per-package config; `--no-git` still overrides any resolved commit message. The version flag is named `--bump` (not `--version`) because commander reserves `--version` for the root `pkgist --version` printer.
+
+</details>
+
+
+<details class="changelog-version">
+<summary><span class="cl-version">[1.3.0] - 2026-06-04</span> <span class="cl-counts">Added (1) · Changed (3) · Fixed (1) · Docs (2)</span></summary>
 
 ### Added
 

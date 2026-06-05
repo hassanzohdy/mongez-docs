@@ -2,7 +2,7 @@
 
 > Complete API + workflow reference for `@mongez/pkgist`. Concatenation of every per-topic skill, intended for single-fetch loading by AI agents.
 
-> **Auto-trigger when loading this full reference:** code or config imports `defineConfig` from `@mongez/pkgist`; user runs `pkgist build`, `pkgist build:family`, `pkgist build:all`, `pkgist list`, `pkgist validate`; user edits `pkgist.config.ts` or `builder.ts`; user asks "how do I release my packages with pkgist", "how do I configure pkgist for X", "what does pkgist do step by step", "how do family versions work", "how do I auto-generate commit messages", "what's `commit: true`", "what files end up in the published package"; user is debugging a pkgist build or pipeline step.
+> **Auto-trigger when loading this full reference:** code or config imports `defineConfig` from `@mongez/pkgist`; user runs `pkgist init`, `pkgist build`, `pkgist build:family`, `pkgist build:all`, `pkgist list`, `pkgist validate`; user edits `pkgist.config.ts`; user asks "how do I release my packages with pkgist", "how do I configure pkgist for X", "what does pkgist do step by step", "how do family versions work", "how do I auto-generate commit messages", "what's `commit: true`", "what files end up in the published package"; user is debugging a pkgist build or pipeline step.
 >
 > **Skip when:** questions about other release tools (lerna, changesets, semantic-release, release-please); questions about the underlying bundler `tsdown` specifically (use tsdown docs); operational playbook for releasing a specific monorepo (use that project's own RELEASING.md or `.claude/skills/`); generic semver/npm/git questions not tied to pkgist.
 
@@ -65,14 +65,14 @@ export default defineConfig({
 
 # Configuration
 
-> **Auto-trigger:** user creating or editing `pkgist.config.ts` or `builder.ts`; user asks "how do I set up pkgist", "what goes in the config", "where do I configure pkgist"; user imports `defineConfig`; questions about `settings.concurrency`, `settings.buildDir`, `settings.sourcesDir`, or how `standalone[]` differs from `families[]`.
+> **Auto-trigger:** user creating or editing `pkgist.config.ts`; user runs `pkgist init`; user asks "how do I set up pkgist", "what goes in the config", "where do I configure pkgist"; user imports `defineConfig`; questions about `settings.concurrency`, `settings.buildDir`, `settings.sourcesDir`, or how `standalone[]` differs from `families[]`.
 > **Skip when:** per-package field details (use Package options); CLI invocation (use CLI); semver rules (use Versioning); git behavior (use Git workflow).
 
-pkgist auto-discovers a config file in cwd. Two filenames are recognised:
-- `pkgist.config.ts` (preferred)
-- `builder.ts` (legacy alias)
+pkgist auto-discovers a single config name in cwd: **`pkgist.config.ts`** then **`pkgist.config.js`** (first match wins). No legacy aliases. Run `pkgist init` to scaffold one, or pass `--config <path>`.
 
-Loaded at runtime via dynamic `import()`. Use ESM `import` syntax freely.
+Loaded at runtime via dynamic `import()`; `.ts` configs are loaded through `tsx`. Use ESM `import` syntax freely.
+
+`pkgist init` writes a starter `pkgist.config.ts` (`buildDir: "./builds"`, `sourcesDir: "./sources"`, one example package) and never overwrites an existing config unless `--force` is passed.
 
 ## defineConfig shape
 
@@ -264,6 +264,18 @@ Not allowed on family-member entries — families declare one shared version.
 | `"major"` | Bump major, reset minor + patch. `2.1.0` → `3.0.0` |
 | Literal semver string | Use exactly this version. `"3.0.0"` → `3.0.0` |
 
+## Per-run `--bump` override
+
+`--bump <strategy>` overrides the config `version` for a single invocation — same five values, no edit to `pkgist.config.ts`. Applies to every targeted package; for a family it replaces the shared version.
+
+```sh
+pkgist build @scope/utils --bump minor      # ignore config version, minor-bump this run
+pkgist build:family atom  --bump 6.1.0       # explicit shared family version
+pkgist build:all          --bump patch       # patch-bump every package this run
+```
+
+Named `--bump` (not `--version`) because commander reserves `--version` for `pkgist --version`. Pairs with `--commit` (Git workflow). Omit it and the config `version` / `"auto"` default applies.
+
 ## Standalone packages
 
 ```ts
@@ -288,6 +300,19 @@ family version: "patch"  →  all three become 5.1.4
 Adding a low-versioned package to a family means it jumps to match the family on first build. The family version is the compatibility contract.
 
 `version` is family-level only — members don't declare their own.
+
+### Intra-family dependency pinning
+
+Sibling packages reference each other with `"*"` in source so the workspace links them locally. `"*"` must never reach npm — a consumer could resolve a sibling to any published version. So in a **family build**, pkgist rewrites every `dependencies` / `peerDependencies` entry whose name is another **family member** to the **exact** shared release version in the *published* `package.json` (source keeps `"*"`):
+
+```jsonc
+// SOURCE (workspace linking, unchanged)   →   PUBLISHED at family version 5.1.4
+"dependencies": { "@scope/atom": "*" }     →   "dependencies": { "@scope/atom": "5.1.4" }
+```
+
+- Family builds only — standalone builds publish deps verbatim.
+- `dependencies` + `peerDependencies` only; non-member deps keep their original range.
+- Exact version, no `^` / `~`, so a family installs as one coherent same-version set.
 
 ## Picking the right strategy
 
@@ -336,16 +361,16 @@ For families: pick based on the most significant change in any member.
 When `commit` resolves to a non-empty message, in the package's `root`:
 
 ```
-1. git add .
+1. git add -A
 2. git commit -m "<message>"
 3. git push origin <branch>
 4. git tag v<new-version>
-5. git push origin v<new-version>
+5. git push origin --tags
 ```
 
-Branch from `pkg.branch` or `git rev-parse --abbrev-ref HEAD`.
+Branch from `pkg.branch` or `git rev-parse --abbrev-ref HEAD`. Step 5 pushes all local tags, including the new `v<new-version>`.
 
-**`git add .` adds everything dirty**, not just the version bump. Clean the tree before release to keep commits focused.
+**`git add -A` stages everything dirty**, not just the version bump. Clean the tree before release to keep commits focused.
 
 ## Family-level commit override
 
@@ -361,6 +386,23 @@ Family `commit` overrides per-package `commit`. Same shape (`string | true | fal
 ```
 
 Per-package `commit` on a family member is ignored when the family has `commit` set.
+
+## Per-run `--commit` override
+
+`--commit [message]` overrides the configured `commit` for one invocation — no config edit:
+
+| Invocation | Resolves to |
+|---|---|
+| `--commit "some message"` | that exact message |
+| `--commit` (bare) | auto `Released <new-version>` (same as `commit: true`) |
+| omitted | the package/family configured `commit` |
+
+Precedence: `--commit` (CLI) > family `commit` > per-package `commit`. To skip git, use `--no-git` (always wins). Pairs with `--bump` (Versioning) so the version + message both move onto the CLI and the config stays static for parallel release runs.
+
+```sh
+pkgist build @scope/utils --commit "fix: guard overflow"   # explicit
+pkgist build:family atom  --commit                          # bare → auto message
+```
 
 ## Tagging
 
@@ -396,10 +438,21 @@ Or `pkgist build:all --no-git` to skip git for the whole run, overriding any `co
 
 # CLI
 
-> **Auto-trigger:** user runs or asks about `pkgist build`, `pkgist build:family`, `pkgist build:all`, `pkgist list`, `pkgist validate`; user asks about `--dry-run`, `--no-publish`, `--no-git`, `--concurrency`, `--config`, `--verbose`; "how do I release just one package", "how do I dry-run", "what does pkgist list show".
+> **Auto-trigger:** user runs or asks about `pkgist init`, `pkgist build`, `pkgist build:family`, `pkgist build:all`, `pkgist list`, `pkgist validate`; user asks about `--dry-run`, `--no-publish`, `--no-git`, `--bump`, `--commit`, `--concurrency`, `--config`, `--verbose`; "how do I scaffold a config", "how do I release just one package", "how do I override the version/message from the CLI", "how do I dry-run", "what does pkgist list show".
 > **Skip when:** per-package config (Package options); pipeline internals (Pipeline); git/publish in depth (Git workflow).
 
 ## Commands
+
+### `init`
+
+Scaffold a `pkgist.config.ts` in the current directory (`buildDir: "./builds"`, `sourcesDir: "./sources"`, one example package).
+
+```sh
+pkgist init
+pkgist init --force        # overwrite an existing config
+```
+
+Does nothing (exit `0`) if a `pkgist.config.ts` / `pkgist.config.js` already exists, unless `--force`.
 
 ### `build [pkg...]`
 
@@ -470,6 +523,8 @@ Catches typos, missing dirs, malformed config. Cheap as a pre-commit / CI step.
 | `--dry-run` | Print every step without writing to disk, git, or npm. Always run before real release |
 | `--no-publish` | Skip `npm publish`. Build + commit + tag still run |
 | `--no-git` | Skip git entirely, overriding per-package `commit` |
+| `--bump <strategy>` | Per-run override of the config `version` (`patch` / `minor` / `major` / `auto` / explicit `x.y.z`); never edits the config |
+| `--commit [message]` | Per-run override of the config `commit`: a message string, or bare `--commit` for auto `Released <version>` |
 | `--concurrency <n>` | Override `settings.concurrency`. Use `1` to serialize for debugging |
 | `--config <path>` | Use specific config file. Path relative to cwd |
 | `--verbose` | Debug-level log lines |
@@ -483,6 +538,7 @@ Catches typos, missing dirs, malformed config. Cheap as a pre-commit / CI step.
 | Preview release | `pkgist build:all --dry-run` |
 | Real release everything | `pkgist build:all` |
 | Hot-fix one package | `pkgist build @scope/the-pkg` |
+| Hot-fix, version + message from CLI (no config edit) | `pkgist build @scope/the-pkg --bump patch --commit "fix: ..."` |
 | Release synchronized group | `pkgist build:family atom` |
 | Verify build but don't ship | `pkgist build:all --no-publish --no-git` |
 | Debug a failing build | `pkgist build @scope/the-pkg --verbose --concurrency 1` |
@@ -507,13 +563,13 @@ Builds run in parallel; one failure doesn't stop others.
 1. Load source package.json → read current version
 2. Resolve new version (auto-bump or explicit)
 3. Create build output directory (buildDir/<name>/<new-version>/)
-4. Snapshot source to sourcesDir/<name>/ — full copy excluding .git, node_modules, dist
+4. Snapshot source to sourcesDir/<name>/ — full copy excluding .git, node_modules, dist, .turbo, .cache
    (only if settings.sourcesDir is set)
 5. Compile with tsdown → esm/ and cjs/ subdirectories
 6. Clone extra files/directories listed in `clone`
 7. Write clean package.json for the build (no devDeps, no scripts)
 8. Update source package.json version in-place
-9. Git: add . → commit → push → tag v<version> → push tags
+9. Git: add -A → commit → push → tag v<version> → push origin --tags
    (only if commit resolves to a non-empty string)
 10. npm publish --access <public|restricted> from build directory
     (only if publish !== false)
@@ -606,9 +662,13 @@ When `mainType: "esm"` or `formats: ["esm"]`:
 
 Clean generation — NOT a verbatim copy:
 
-- **Kept**: `name`, `description`, `version`, `author`, `license`, `repository`, `homepage`, `bugs`, `keywords`, `dependencies`, `peerDependencies`, `optionalDependencies`, `peerDependenciesMeta`, `engines`, `sideEffects`, `bin`, `os`, `cpu`, `funding`, `files`, `publishConfig`
-- **Replaced**: `main`, `module`, `types`, `exports`, `type`
-- **Dropped**: `devDependencies`, `scripts`, `private`, `workspaces`, everything else
+- **Kept**: `name`, `description`, `keywords`, `author`, `license`, `repository`, `homepage`, `bugs`, `dependencies`, `peerDependencies`, `sideEffects`, `bin`, `engines`
+- **Replaced / set**: `name`, `version`, `main`, `module`, `types`, `exports`, `type` (set to `"module"` for ESM-only builds)
+- **Dropped**: everything else — `devDependencies`, `scripts`, `private`, `workspaces`, `optionalDependencies`, `peerDependenciesMeta`, `files`, `publishConfig`, etc.
+
+### Intra-family dependency pinning (family builds only)
+
+In a family build, kept `dependencies` / `peerDependencies` entries that name another family member are rewritten to the exact shared release version (source `"*"` → e.g. `"5.1.4"`). Standalone builds publish deps verbatim. See the Versioning section.
 
 ### bin normalization
 
@@ -616,7 +676,7 @@ Leading `./` stripped from `bin` values. `{"my-cli": "./dist/cli.js"}` → `{"my
 
 ## Source snapshots (optional)
 
-If `settings.sourcesDir` is set, pkgist archives source per build (minus `.git`, `node_modules`, `dist`) into `<sourcesDir>/<name>/`. Useful for:
+If `settings.sourcesDir` is set, pkgist archives source per build (minus `.git`, `node_modules`, `dist`, `.turbo`, `.cache`) into `<sourcesDir>/<name>/`. Useful for:
 - Reconstructing what shipped at any time
 - Diffing published versions without checking out tags
 - Recovering from edits between build and publish
@@ -791,3 +851,43 @@ pkgist build:all --no-git
 ```
 
 Or per-package `commit: false`.
+
+---
+
+# Changelog
+
+> **Auto-trigger:** user asks what's new in pkgist, what changed between versions, or which version introduced/fixed a behavior. Mirrors `CHANGELOG.md` (Keep a Changelog + SemVer). Newest first.
+
+## [1.4.0] - 2026-06-06
+
+- **Added — per-run `--bump` and `--commit` overrides** on `build`, `build:family`, `build:all`. `--bump <strategy>` overrides the config `version` (`patch` / `minor` / `major` / `auto` / explicit `x.y.z`); `--commit [message]` overrides the config `commit` (a string, or bare `--commit` for auto `Released <version>`). Both apply for that invocation only and never edit `pkgist.config.ts`, so the config stays a static registry and parallel release runs don't clobber each other's `version` / `commit` edits. Precedence: CLI flag > family `commit` > per-package config. The version flag is `--bump` (not `--version`) because commander reserves `--version` for the root version printer.
+
+## [1.3.0] - 2026-06-04
+
+- **Added — `pkgist init`** scaffolds a `pkgist.config.ts` (`./builds`, `./sources`, one example package); skips an existing config unless `--force`.
+- **Changed — single config name.** Discovery recognises only `pkgist.config.ts` then `pkgist.config.js`; the `builder.ts` / `mongez.ts` aliases are removed. Migration: rename `builder.ts` → `pkgist.config.ts`. The example template is renamed `pkgist.config.example.ts`.
+- **Changed — pkgist publishes ESM-only** (`mainType: "esm"`, `formats: ["esm"]`); targets Node 18+.
+- **Fixed — the published `pkgist` binary runs.** It shipped as CommonJS (`cjs/cli.cjs`) but `chalk` v5 is ESM-only and crashes when `require`d; the ESM-only binary (`esm/cli.mjs`) fixes `npx pkgist` / `pkgist init` for installed consumers.
+- **Docs** — professional, beginner→advanced README rewrite; every changelog entry is now dated.
+
+## [1.2.0] - 2026-06-04
+
+- **Added — intra-family dependency pinning.** Family builds now pin `dependencies` / `peerDependencies` that name another family member to the exact shared release version in the published `package.json` (source keeps `"*"`). Standalone builds unaffected.
+- **Added — `changelog` skill** + a Change Logs docs page.
+- **Fixed — `--no-git` is now honoured** (was silently ignored: the flag is stored as `git=false`, but the commands read `opts.noGit`). Affects `build`, `build:family`, `build:all`.
+- **Fixed — `src/build/` tracked by git again** (a bare `build` `.gitignore` rule matched at any depth and untracked the build-pipeline source; rules anchored to `/dist`, `/build`).
+- **Fixed — published `pkgist` CLI binary** (`bin` pointed at `dist/cli.js`, absent from the engine build; now `cjs/cli.cjs`).
+- **Docs** — documented dep pinning everywhere; corrected `llms-full.txt` drift (kept-fields list, snapshot exclusions, config filename count); aligned git wording to `git add -A` / `git push origin --tags`.
+
+## [1.1.3] - 2026-06-03
+
+- **Added** — per-topic skills + `llms.txt` / `llms-full.txt`, expanded install (npm/yarn/pnpm) with a CLI quick example, CI build smoke-test workflow (Node 20/22).
+- **Fixed** — reconciled documentation drift against source.
+
+## [1.1.2] - 2026-05-29
+
+- **Added** — the changelog. No code changes.
+
+## [1.1.0] - 2026-05-27
+
+- **Added** — `commit` accepts `true` (auto `Released <version>`) / `false` (explicit skip) in addition to a string.

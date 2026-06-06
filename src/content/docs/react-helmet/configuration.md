@@ -4,7 +4,7 @@ name: mongez-react-helmet-configuration
 description: |
   Reference for `setHelmetConfigurations`, `getHelmetConfigurations`, and `getHelmetConfig` — the app-wide config API including translation integration and prop resolution order.
 sidebar:
-  order: 50
+  order: 17
 ---
 
 ```ts

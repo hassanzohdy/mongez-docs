@@ -81,6 +81,7 @@ export default defineConfig({
             { slug: "agent-kit/monorepos" },
             { slug: "agent-kit/recipes" },
             { slug: "agent-kit/authoring-skills" },
+            { slug: "agent-kit/troubleshooting" },
             { slug: "agent-kit/changelog" },
           ],
         },

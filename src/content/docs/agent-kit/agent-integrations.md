@@ -19,9 +19,9 @@ Before any per-IDE step, every project does the same bootstrap — no install ne
 npx @mongez/agent-kit@latest init
 ```
 
-That runs the latest published agent-kit on the fly (use the **scoped** name with `npx`; `npx agent-kit …` unscoped resolves a different package) and writes a starter `AGENTS.md` at the project root (only if one doesn't already exist), then derives `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, and `CONVENTIONS.md` from it. (`init` is one-time, so always-latest `npx` is ideal; the recurring `sync` belongs as a pinned dev dependency.) From here, the per-agent sections below differ only in which `--target` you pass to `sync` and which directory the skills land in.
+That runs the latest published agent-kit on the fly (use the **scoped** name with `npx`; `npx agent-kit …` unscoped resolves a different package) and writes a starter `AGENTS.md` at the project root (only if one doesn't already exist), then derives `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, and `CONVENTIONS.md` from it. It also **seeds `agentKit.targets` in `package.json`** — `["claude"]` by default, or pass `--target claude,cursor,…` to choose — so the otherwise-implicit default is visible and editable. (`init` is one-time, so always-latest `npx` is ideal; the recurring `sync` belongs as a pinned dev dependency.) From here, the per-agent sections below differ only in which `--target` you pass and which directory the skills land in.
 
-Once you've picked your target(s), wire `sync` into `postinstall` so every future `yarn install` / `npm install` keeps everything current:
+Then wire `sync` into `postinstall` so every future `yarn install` / `npm install` keeps everything current:
 
 ```json
 {
@@ -30,6 +30,28 @@ Once you've picked your target(s), wire `sync` into `postinstall` so every futur
   }
 }
 ```
+
+> **`init` can wire this for you.** When `@mongez/agent-kit` is already a `dependency`/`devDependency` and no `postinstall` exists yet, `init` writes the script above automatically. The zero-install `npx @mongez/agent-kit@latest init` bootstrap can't (nothing is in `node_modules` to run it), so add it by hand after installing agent-kit — `init` prints a reminder.
+
+## At-a-glance: every supported agent
+
+A one-table lookup before you scroll into the per-agent sections. Two things to watch for in the **Skills folder** column — the singular/plural variants are real and easy to mis-type:
+
+| Agent | `--target` | Derived file | Skills folder | Reload |
+|---|---|---|---|---|
+| Claude Code | `claude` | `CLAUDE.md` | `.claude/skills/` | live — next prompt |
+| Cursor | `cursor` | — (reads `AGENTS.md`) | `.cursor/skills/` | window reload |
+| Codex | `codex` | — | `.codex/skills/` | next session |
+| Kiro | `kiro` | — | `.kiro/skills/` | window reload |
+| GitHub Copilot | `copilot` | `.github/copilot-instructions.md` | `.github/skills/` | window reload |
+| Antigravity | `antigravity` | — | **`.agent/skills/`** (singular "agent") | window reload |
+| OpenCode | `opencode` | — | **`.opencode/skill/`** (singular "skill") | next session |
+| Amp | `amp` | — | **`.agents/skills/`** (plural "agents") | window reload |
+| Goose | `goose` | — | `.goose/skills/` | next session |
+| Gemini CLI | _derive-only_ | `.gemini/GEMINI.md` | _not supported_ | re-read every invocation |
+| Aider | _derive-only_ | `CONVENTIONS.md` | _not supported_ | re-read every session |
+
+> **Three lookalikes, three different paths.** `.agent/skills/` (Antigravity, singular agent) ≠ `.agents/skills/` (Amp, plural agents) ≠ `.opencode/skill/` (OpenCode, singular skill). These are the upstream conventions — agent-kit just writes what each tool actually reads. The `--target` name is always unambiguous; trust the flag.
 
 ## Using agent-kit with Claude Code
 
@@ -190,6 +212,63 @@ npx agent-kit sync --target antigravity
 agent-kit creates: `.agent/skills/<pkg-slug>-<skill-name>/SKILL.md`. No derived file.
 
 **Reload quirk:** Reload the Antigravity workspace after the first sync.
+
+## Using agent-kit with OpenCode
+
+**OpenCode** is an open-source AI coding agent. Reads root `AGENTS.md` natively and **`.opencode/skill/`** for skills — note the **singular** "skill" in the path (this is OpenCode's own convention, distinct from every other agent's plural `skills/`).
+
+```sh
+npx agent-kit sync --target opencode
+```
+
+```json
+{
+  "scripts": { "postinstall": "agent-kit sync" },
+  "agentKit": { "targets": ["opencode"] }
+}
+```
+
+agent-kit creates: `.opencode/skill/<pkg-slug>-<skill-name>/SKILL.md`. No derived file.
+
+**Reload quirk:** OpenCode rescans on session start; reload after the first sync so the new directory is picked up.
+
+## Using agent-kit with Amp
+
+**Amp** (Sourcegraph) is a CLI + IDE coding agent. Reads root `AGENTS.md` natively and **`.agents/skills/`** for skills — note the **plural** "agents" in the path (distinct from Antigravity's singular `.agent/`).
+
+```sh
+npx agent-kit sync --target amp
+```
+
+```json
+{
+  "scripts": { "postinstall": "agent-kit sync" },
+  "agentKit": { "targets": ["amp"] }
+}
+```
+
+agent-kit creates: `.agents/skills/<pkg-slug>-<skill-name>/SKILL.md`. No derived file.
+
+**Reload quirk:** Window reload on first sync so Amp picks up the new directory.
+
+## Using agent-kit with Goose
+
+**Goose** (Block / Square) is an extensible AI coding agent. Reads root `AGENTS.md` natively and `.goose/skills/` for skills.
+
+```sh
+npx agent-kit sync --target goose
+```
+
+```json
+{
+  "scripts": { "postinstall": "agent-kit sync" },
+  "agentKit": { "targets": ["goose"] }
+}
+```
+
+agent-kit creates: `.goose/skills/<pkg-slug>-<skill-name>/SKILL.md`. No derived file.
+
+**Reload quirk:** Goose re-reads on the next session.
 
 ## Using more than one agent at once
 

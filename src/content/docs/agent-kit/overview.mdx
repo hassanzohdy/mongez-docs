@@ -86,13 +86,21 @@ The package is `@mongez/agent-kit`; the CLI binary is just `agent-kit`. Install 
 
 ## Sixty-second walkthrough
 
-Bootstrap a fresh project — no install needed. A starter `AGENTS.md` lands at the project root (only if missing), then every per-tool file is derived from it:
+Bootstrap a fresh project — no install needed. A starter `AGENTS.md` lands at the project root (only if missing), every per-tool file is derived from it, and `agentKit.targets` is seeded in `package.json` (defaulting to `["claude"]`, or `--target claude,cursor` to pick your own):
 
 ```sh
 npx @mongez/agent-kit@latest init
 ```
 
 > Use the **scoped** name with `npx` when there's no local install — `npx agent-kit …` (unscoped) resolves a different package. `init` is a one-time scaffold, so always-latest `npx` is ideal; the recurring `sync` belongs as a pinned dev dependency (below).
+
+Now install agent-kit **locally** as a dev dependency. Every step from here on (the `postinstall` script you're about to wire, ad-hoc `npx agent-kit sync`, CI) relies on the `agent-kit` binary being present in `node_modules/.bin`:
+
+```sh
+npm install -D @mongez/agent-kit
+# or: yarn add -D @mongez/agent-kit
+# or: pnpm add -D @mongez/agent-kit
+```
 
 Wire `sync` into `postinstall` so every future `yarn install` / `npm install` re-derives the per-tool files **and** mirrors skills from installed packages:
 
@@ -104,7 +112,9 @@ Wire `sync` into `postinstall` so every future `yarn install` / `npm install` re
 }
 ```
 
-From here, the workflow is: edit `AGENTS.md` once, run `npx agent-kit sync`, and every supported agent picks up the change.
+> **`init` may have already wired this for you.** When `@mongez/agent-kit` is a declared `dependency`/`devDependency` and no `postinstall` exists, `init` writes the script above automatically and logs that it did. The zero-install `npx @mongez/agent-kit@latest init` bootstrap above can't (nothing in `node_modules` to run it), so re-run `init` *after* installing agent-kit locally — or add the script by hand.
+
+From here, the workflow is: edit `AGENTS.md` once, run `npx agent-kit sync` (now safe — npx prefers the local binary), and every supported agent picks up the change.
 
 ### Organize your project's own skills in one nested folder
 

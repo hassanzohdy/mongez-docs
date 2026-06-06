@@ -4,7 +4,7 @@ name: mongez-encryption-configuration
 description: |
   How to configure `@mongez/encryption` module-level defaults using `setEncryptionConfigurations` and `getEncryptionConfig`.
 sidebar:
-  order: 50
+  order: 17
 ---
 
 `encrypt` and `decrypt` each take an optional `key` and `driver`. To avoid threading them through every call site, set them once on the module.

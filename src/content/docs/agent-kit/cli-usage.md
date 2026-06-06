@@ -11,10 +11,11 @@ Three commands. All are idempotent — running them twice in a row is a no-op th
 
 ## `agent-kit init`
 
-Scaffold a starter `AGENTS.md` (only if it does not exist) and derive the per-tool files from it.
+Scaffold a starter `AGENTS.md` (only if it does not exist), derive the per-tool files from it, and seed `agentKit.targets` in `package.json`.
 
 ```bash
-npx @mongez/agent-kit@latest init   # no install — runs the latest published version
+npx @mongez/agent-kit@latest init                 # no install — runs the latest published version
+npx @mongez/agent-kit@latest init --target claude,cursor
 ```
 
 > **Scoped name with `npx`.** Use `npx @mongez/agent-kit …` (scoped) when running without a local install — `npx agent-kit …` (unscoped) resolves a *different* package. The bare `agent-kit` binary only works once it's installed locally.
@@ -22,6 +23,7 @@ npx @mongez/agent-kit@latest init   # no install — runs the latest published v
 Flags:
 
 - `--cwd <path>` — start from a different working directory (defaults to `process.cwd()`).
+- `--target <names>` — comma-separated skill targets to write into `package.json`'s `agentKit.targets` (`claude`, `copilot`, `cursor`, `codex`, `opencode`, `amp`, `goose`, `kiro`, `antigravity`). Defaults to `claude`. Passing this **overwrites** an existing `agentKit.targets`; without it, an already-set value is left alone. Unknown names error out before anything is written.
 
 ### `init` vs `sync` — different delivery
 
@@ -33,6 +35,8 @@ Behavior:
 - If `AGENTS.md` exists → leave it alone.
 - If `AGENTS.md` is missing → write a starter template.
 - Always derives `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md`.
+- Seeds `agentKit.targets` into `package.json`: writes `["claude"]` (the built-in default, made explicit so it's discoverable and editable) when no `agentKit.targets` exists; writes `--target`'s value when that flag is passed, overwriting any existing list. An existing `agentKit` block's other fields (`pick`, `omit`, …) and the file's indentation are preserved. Note `targets` only gates the *skills* export — `init` itself doesn't sync skills, so the seeded value first takes effect on the next `agent-kit sync`.
+- Wires `"postinstall": "agent-kit sync"` into `package.json` — but only when it's safe: (1) `@mongez/agent-kit` is already a declared `dependency`/`devDependency` (so the bare `agent-kit` binary resolves at install time — the `npx @mongez/agent-kit@latest init` bootstrap installs nothing, so wiring a postinstall there would break the next install), and (2) no `postinstall` already exists (an existing one is never clobbered). When either gate blocks, `init` prints a hint instead of writing.
 
 ## `agent-kit sync`
 

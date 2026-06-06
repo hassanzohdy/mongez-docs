@@ -41,6 +41,8 @@ Default skill-sync targets when the CLI omits `--target`. Valid values: `claude`
 
 Resolution order: `--target` flag → `agentKit.targets` → built-in default (`["claude"]`). An explicit empty array (`"targets": []`) is honored but warns — it syncs zero targets, almost always a mistake.
 
+`agent-kit init` **seeds this field for you** so you never have to discover the syntax by hand: it writes `"targets": ["claude"]` (the built-in default, made explicit) when none exists, or whatever you pass to `init --target a,b`. An already-set `targets` is left untouched unless you pass `--target`. See **[CLI usage](../cli-usage/)**.
+
 `targets` gates only the **skills** export. The derive step always emits `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, and `CONVENTIONS.md` regardless.
 
 ## `pick` — allowlist

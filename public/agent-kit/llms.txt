@@ -25,6 +25,8 @@ The AI coding agent landscape fragmented into a dozen tool-specific config files
   - *Auto-trigger:* User wires CI to catch derived-file drift, composes more than one tool/package/environment, or asks for a multi-step setup recipe.
 - [Authoring skills](https://github.com/hassanzohdy/agent-kit/blob/main/skills/authoring-skills/SKILL.md): How to lay out skills — both your project's own skills in a single nested `skills/` folder at the project root (flattened into `.claude/skills/` on sync), and reusable skills shipped from an npm package. Covers nested category organization, auto-discovery, flat destination naming, and the front-door convention.
   - *Auto-trigger:* User is organizing their project's own `skills/` folder (nested category subfolders) or editing a `skills/**/SKILL.md` inside a publishable package, or asks how to structure/ship skills.
+- [Troubleshooting](https://github.com/hassanzohdy/agent-kit/blob/main/skills/troubleshooting/SKILL.md): Symptom → cause → fix for the common failure modes — `agent-kit: command not found`, unscoped `npx agent-kit` fetching the wrong package, skills synced but invisible to the agent, `pick` matched nothing, slug collisions, `sync` errors when AGENTS.md is missing, a published package's `skills/` not reaching consumers, `--target` validation, watch ignoring `node_modules`, and `--override` clobbering hand-authored folders.
+  - *Auto-trigger:* User reports any error/log line from agent-kit, says "command not found", "skills aren't showing up", "wrong package", "pick matched no installed packages", "collision", "AGENTS.md missing", or "my skill folder disappeared".
 
 ## Optional
 

@@ -112,17 +112,20 @@ Three commands. All are idempotent — running them twice in a row is a no-op th
 
 ## `agent-kit init`
 
-Scaffold a starter `AGENTS.md` (only if it does not exist) and derive the per-tool files from it.
+Scaffold a starter `AGENTS.md` (only if it does not exist), derive the per-tool files from it, and seed `agentKit.targets` in `package.json`.
 
 Flags:
 
 - `--cwd <path>` — start from a different working directory.
+- `--target <names>` — comma-separated skill targets to write into `package.json`'s `agentKit.targets` (claude, copilot, cursor, codex, opencode, amp, goose, kiro, antigravity). Defaults to `claude`. Overwrites an existing `agentKit.targets`; without it, an already-set value is left alone. Unknown names error before any write.
 
 Behavior:
 
 - If `AGENTS.md` exists → leave it alone.
 - If `AGENTS.md` is missing → write a starter template.
 - Always derives `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md`.
+- Seeds `agentKit.targets` in `package.json` — `["claude"]` by default (the built-in default made explicit, so it's discoverable and editable), or `--target`'s value. Non-clobbering: an existing list is only replaced when `--target` is passed; other `agentKit` fields and the file's indentation are preserved. `targets` gates only the skills export, so the seeded value first takes effect on the next `agent-kit sync`.
+- Wires `"postinstall": "agent-kit sync"` in `package.json`, gated on safety: only when `@mongez/agent-kit` is already a declared `dependency`/`devDependency` (so the bare binary resolves — the `npx` bootstrap installs nothing, so wiring there would break the next install) AND no `postinstall` already exists (never clobbered). When blocked, `init` prints a hint instead.
 
 ## `agent-kit sync`
 
@@ -162,7 +165,7 @@ Configure defaults and filters from the project root's `package.json`:
 }
 ```
 
-- `targets` — default skill-sync targets. CLI `--target` overrides this completely (no merge). Empty array `[]` is honored as "no targets" + a warning.
+- `targets` — default skill-sync targets. CLI `--target` overrides this completely (no merge). Empty array `[]` is honored as "no targets" + a warning. `agent-kit init` seeds this field (default `["claude"]`, or `init --target …`), so it's usually already present and editable.
 - **`pick`** (allowlist) — when set, ONLY listed packages are included.
   - `pick[pkg] = true` → include all of the package's skills.
   - `pick[pkg] = ["skill-name"]` → include only those specific skills.
@@ -191,7 +194,7 @@ Flags:
 
 > **Auto-trigger:** user asks how to set up agent-kit with a specific IDE/agent (Claude Code, Cursor, Codex, Kiro, Gemini CLI, GitHub Copilot, Aider, Antigravity), which `--target` to use, or why their agent isn't picking up skills/instructions.
 
-Every project bootstraps the same way (`npx agent-kit init` → writes `AGENTS.md` + derives `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md`), then differs only by which `--target` you pass and where skills land:
+Every project bootstraps the same way (`npx agent-kit init` → writes `AGENTS.md` + derives `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md` + seeds `agentKit.targets` in `package.json`), then differs only by which `--target` you pass and where skills land:
 
 | Agent | `--target` | Derived file | Skills folder | Reload |
 | --- | --- | --- | --- | --- |
@@ -200,9 +203,14 @@ Every project bootstraps the same way (`npx agent-kit init` → writes `AGENTS.m
 | Codex | `codex` | — | `.codex/skills/` | next session |
 | Kiro | `kiro` | — | `.kiro/skills/` | window reload |
 | GitHub Copilot | `copilot` | `.github/copilot-instructions.md` | `.github/skills/` | window reload |
-| Antigravity | `antigravity` | — | `.agent/skills/` (singular) | window reload |
+| Antigravity | `antigravity` | — | `.agent/skills/` (singular "agent") | window reload |
+| OpenCode | `opencode` | — | `.opencode/skill/` (singular "skill") | next session |
+| Amp | `amp` | — | `.agents/skills/` (plural "agents") | window reload |
+| Goose | `goose` | — | `.goose/skills/` | next session |
 | Gemini CLI | _derive-only_ | `.gemini/GEMINI.md` | _none_ | every invocation |
 | Aider | _derive-only_ | `CONVENTIONS.md` | _none_ | every session |
+
+Path-lookalikes to mis-type: `.agent/skills/` (Antigravity, singular) ≠ `.agents/skills/` (Amp, plural) ≠ `.opencode/skill/` (OpenCode, singular `skill`). The `--target` name is always unambiguous; trust the flag.
 
 Multiple agents at once: `agent-kit sync --target claude,cursor,codex` (or `agentKit.targets`). The derive step always emits all four derived files regardless of skill targets. Reload quirk: if a skills dir didn't exist when the IDE session started, reload the window once after the first sync (Claude Code is the exception — live).
 
@@ -212,7 +220,7 @@ Multiple agents at once: `agent-kit sync --target claude,cursor,codex` (or `agen
 
 The `agentKit` block in the project root `package.json` sets defaults for every `agent-kit sync` (CLI flags still override). Malformed sub-fields are silently dropped.
 
-- **`targets`** — default skill-sync agents. Resolution: `--target` → `agentKit.targets` → `["claude"]`. Empty `[]` honored + warns. Gates the skills export only; derived files always emit.
+- **`targets`** — default skill-sync agents. Resolution: `--target` → `agentKit.targets` → `["claude"]`. Empty `[]` honored + warns. Gates the skills export only; derived files always emit. `agent-kit init` seeds this field for you (default `["claude"]`, or `init --target …`); a value you already set is only overwritten when you pass `init --target`.
 - **`pick`** (allowlist) — when set, ONLY listed packages sync. `true` = whole package; `string[]` = named skills by source folder name. Empty `{}` = nothing (+warn).
 - **`omit`** (denylist) — `true` = whole package; `string[]` = named skills. Runs AFTER `pick`. Pattern: `pick` a package, `omit` its noisy skill.
 - **`monorepo.projects`** — sibling project dirs / one-level globs to aggregate (see Monorepos skill). Each scanned as its own project, deps filtered by *its own* `pick`/`omit`, authored skills prefixed with the project dir name; root `omit` is a global veto. A project's own `targets`/`monorepo` are ignored; aggregation doesn't recurse.
@@ -347,3 +355,21 @@ Common mistakes and how to avoid them.
 ```
 
 The `description` field is the most important line — it determines whether an agent picks up the skill in the first place. Make it specific.
+
+# Skill: troubleshooting
+
+> **Auto-trigger:** user reports any error/log line from `agent-kit init`/`sync`/`watch`; user says "command not found", "skills aren't showing", "wrong package", "pick matched no installed packages", "collision", "AGENTS.md missing", "my skill folder disappeared"; user asks "why doesn't X work" after an agent-kit command.
+> **Skip when:** the question is about how to *use* a feature (CLI usage, configuration, monorepos) rather than a malfunction.
+
+Symptom → cause → fix for the common failure modes.
+
+- **`agent-kit: command not found`** — the bare binary needs a local install. `npm i -D @mongez/agent-kit`; then `postinstall: agent-kit sync` and plain `agent-kit sync` resolve.
+- **`npx agent-kit …` fetched the wrong package** — unscoped `agent-kit` resolves a different npm package when nothing is installed locally. Use the **scoped** form `npx @mongez/agent-kit@latest …` until you install locally; afterward unscoped is fine (npx prefers local).
+- **Sync succeeded but agent shows zero skills** — every agent except Claude Code reads its skills dir **at session start**. If the dir didn't exist when the IDE opened, reload the window (or restart the CLI session) once after the first sync.
+- **`agentKit.pick matched no installed packages`** — `pick` keys are matched exactly; typos / missing scope / packages-not-actually-installed silently drop everything. Check spellings against `ls node_modules/@scope` or switch to `omit` (denylist).
+- **"Two packages produced the same destination slug"** — extremely rare hard collision. `omit` one; report the case so the upstream can rename its skill folder.
+- **`sync` errors on missing `AGENTS.md`** — derive needs it. Run `init` once (it never clobbers), or pass `--skills-only` to bypass derive.
+- **Published package's `skills/` invisible to consumers** — `npm publish` only ships paths in `files`. Add `"skills"` to `files` and cut a patch.
+- **`--target` "Unknown skill target(s)"** — valid names: `claude`, `copilot`, `cursor`, `codex`, `opencode`, `amp`, `goose`, `kiro`, `antigravity`. `init` validates BEFORE writing — typos never persist.
+- **`watch` ignores `node_modules/**`** — by design (deps change on reinstall, not on edit). For local-linked packages, pass `--path <parent-dir>` so watch treats them as first-class sources.
+- **Hand-authored skill folder vanished after `sync`** — almost always `--override`. Drop it; without `--override`, hand-authored destinations are skipped with a warning, never replaced. Restore from git history.

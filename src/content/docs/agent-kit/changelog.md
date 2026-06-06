@@ -10,6 +10,28 @@ All notable changes to `@mongez/agent-kit` are documented here. The format follo
 
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[1.2.0]</span> <span class="cl-date">2026-06-06</span> <span class="cl-counts">Added (3) · Changed (1) · Docs (3)</span></summary>
+
+### Added
+
+- **`agent-kit init` now seeds `agentKit.targets` in `package.json`.** The skill-sync default has always been `["claude"]`, but it was *implicit* — you had to read the docs to learn both the default and the exact `agentKit` syntax for changing it. `init` now writes `"agentKit": { "targets": ["claude"] }` on disk, so the default is visible and a one-line edit away from adding `"cursor"`/`"codex"`/etc.
+- **New `--target` flag on `init`.** `agent-kit init --target claude,cursor` seeds that exact list instead of the default. Accepts the same vocabulary as `sync` (`claude`, `copilot`, `cursor`, `codex`, `opencode`, `amp`, `goose`, `kiro`, `antigravity`) and validates the names up front — an unknown target errors before anything is written, since (unlike a `sync` flag typo) the value is persisted.
+- **`init` auto-wires `"postinstall": "agent-kit sync"` — but only when it's safe.** Two gates prevent a broken install step: (1) `@mongez/agent-kit` must already be a declared `dependency`/`devDependency` (so the bare `agent-kit` binary actually resolves — the `npx @mongez/agent-kit@latest init` bootstrap installs nothing, so it would otherwise wire a postinstall that fails on the next install), and (2) no `postinstall` may already exist (an existing build step is never clobbered or appended to). When either gate blocks, `init` prints a hint instead of writing.
+
+### Changed
+
+- **`init` is non-clobbering for `agentKit.targets`.** An existing `agentKit.targets` is left untouched unless you pass `--target` (mirrors how `init` already refuses to overwrite an existing `AGENTS.md`). Other `agentKit` fields (`pick`, `omit`, `monorepo`), any sibling `scripts`, and the manifest's existing indentation + trailing newline are all preserved, and the file is only rewritten when the content actually changes. Note `targets` gates only the skills export, so the seeded value first takes effect on the next `agent-kit sync`.
+
+### Docs
+
+- **New [Troubleshooting](https://mongez.js.org/agent-kit/troubleshooting/) page / skill.** Symptom → cause → fix for the common failure modes: `agent-kit: command not found`, unscoped `npx agent-kit` fetching the wrong package, sync looks successful but the agent shows zero skills, `agentKit.pick matched no installed packages`, two-package slug collision, `sync` errors when `AGENTS.md` is missing, a published package's `skills/` invisible to consumers, `--target` validation errors, `watch` ignoring `node_modules`, and `--override` clobbering hand-authored folders.
+- **Agent integrations table + three new agent sections.** A one-table at-a-glance reference covers every supported `--target`, the derived file (if any), the skills folder, and the reload step. Added per-agent walkthroughs for **OpenCode** (`.opencode/skill/` — singular `skill`), **Amp** (`.agents/skills/` — plural `agents`), and **Goose** (`.goose/skills/`). The singular/plural-path lookalikes — `.agent/` (Antigravity) vs `.agents/` (Amp) vs `.opencode/skill/` (OpenCode) — are now explicitly called out so they're hard to mis-type.
+- **Sixty-second walkthrough now states the local install step.** The overview's bootstrap previously jumped from the no-install `npx @mongez/agent-kit@latest init` straight into `postinstall: agent-kit sync` without an explicit "install agent-kit as a dev dep" line, which left a contradiction with the same page's own scoped-npx warning. The install step is now spelled out, and the postinstall block notes that `init` may have already wired it.
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[1.1.1]</span> <span class="cl-date">2026-06-04</span> <span class="cl-counts">Added (1) · Changed (1)</span></summary>
 
 ### Added

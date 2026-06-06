@@ -5,7 +5,7 @@
 > per-package content, see each package's `/llms-full.txt` at
 > `https://mongez.js.org/<package>/llms-full.txt`.
 
-Generated: 2026-06-01T09:34:52.547Z
+Generated: 2026-06-06T09:57:42.315Z
 
 
 
@@ -8372,6 +8372,20 @@ type HttpResult<T> =
   | { data: null; error: HttpError;  status: number | null; response: Response | null; headers: Record<string, string> | null; request: OutgoingRequest }
 ```
 
+**Always pass the response type as a generic.** Every verb is `get<T = unknown>(…)`,
+so omitting `T` makes `data` `unknown` and `data.first_name` won't type-check
+(the #1 mistake when migrating from axios/fetch). Pass it explicitly and narrow on
+`error` first (the union flips `data` to non-null `T` on the success branch):
+
+```ts
+const { data, error } = await http.get<User>('/users/1');  // data: User | null
+if (error) return;                                          // data is null here
+console.log(data.first_name);                               // data: User — type-checks
+// arrays: http.get<User[]>('/users');  POST: http.post<User>('/users', body)
+```
+
+Use the generic, not an `as`/`any` cast — it flows through `all`/`race`/`Resource` too.
+
 ---
 
 ## CancellablePromise<T>
@@ -8882,7 +8896,7 @@ mongezVite(options) returns:
 
 > Complete API + workflow reference for `@mongez/pkgist`. Concatenation of every per-topic skill, intended for single-fetch loading by AI agents.
 
-> **Auto-trigger when loading this full reference:** code or config imports `defineConfig` from `@mongez/pkgist`; user runs `pkgist build`, `pkgist build:family`, `pkgist build:all`, `pkgist list`, `pkgist validate`; user edits `pkgist.config.ts` or `builder.ts`; user asks "how do I release my packages with pkgist", "how do I configure pkgist for X", "what does pkgist do step by step", "how do family versions work", "how do I auto-generate commit messages", "what's `commit: true`", "what files end up in the published package"; user is debugging a pkgist build or pipeline step.
+> **Auto-trigger when loading this full reference:** code or config imports `defineConfig` from `@mongez/pkgist`; user runs `pkgist init`, `pkgist build`, `pkgist build:family`, `pkgist build:all`, `pkgist list`, `pkgist validate`; user edits `pkgist.config.ts`; user asks "how do I release my packages with pkgist", "how do I configure pkgist for X", "what does pkgist do step by step", "how do family versions work", "how do I auto-generate commit messages", "what's `commit: true`", "what files end up in the published package"; user is debugging a pkgist build or pipeline step.
 >
 > **Skip when:** questions about other release tools (lerna, changesets, semantic-release, release-please); questions about the underlying bundler `tsdown` specifically (use tsdown docs); operational playbook for releasing a specific monorepo (use that project's own RELEASING.md or `.claude/skills/`); generic semver/npm/git questions not tied to pkgist.
 
@@ -8945,14 +8959,14 @@ export default defineConfig({
 
 # Configuration
 
-> **Auto-trigger:** user creating or editing `pkgist.config.ts` or `builder.ts`; user asks "how do I set up pkgist", "what goes in the config", "where do I configure pkgist"; user imports `defineConfig`; questions about `settings.concurrency`, `settings.buildDir`, `settings.sourcesDir`, or how `standalone[]` differs from `families[]`.
+> **Auto-trigger:** user creating or editing `pkgist.config.ts`; user runs `pkgist init`; user asks "how do I set up pkgist", "what goes in the config", "where do I configure pkgist"; user imports `defineConfig`; questions about `settings.concurrency`, `settings.buildDir`, `settings.sourcesDir`, or how `standalone[]` differs from `families[]`.
 > **Skip when:** per-package field details (use Package options); CLI invocation (use CLI); semver rules (use Versioning); git behavior (use Git workflow).
 
-pkgist auto-discovers a config file in cwd. Two filenames are recognised:
-- `pkgist.config.ts` (preferred)
-- `builder.ts` (legacy alias)
+pkgist auto-discovers a single config name in cwd: **`pkgist.config.ts`** then **`pkgist.config.js`** (first match wins). No legacy aliases. Run `pkgist init` to scaffold one, or pass `--config <path>`.
 
-Loaded at runtime via dynamic `import()`. Use ESM `import` syntax freely.
+Loaded at runtime via dynamic `import()`; `.ts` configs are loaded through `tsx`. Use ESM `import` syntax freely.
+
+`pkgist init` writes a starter `pkgist.config.ts` (`buildDir: "./builds"`, `sourcesDir: "./sources"`, one example package) and never overwrites an existing config unless `--force` is passed.
 
 ## defineConfig shape
 
@@ -9144,6 +9158,18 @@ Not allowed on family-member entries — families declare one shared version.
 | `"major"` | Bump major, reset minor + patch. `2.1.0` → `3.0.0` |
 | Literal semver string | Use exactly this version. `"3.0.0"` → `3.0.0` |
 
+## Per-run `--bump` override
+
+`--bump <strategy>` overrides the config `version` for a single invocation — same five values, no edit to `pkgist.config.ts`. Applies to every targeted package; for a family it replaces the shared version.
+
+```sh
+pkgist build @scope/utils --bump minor      # ignore config version, minor-bump this run
+pkgist build:family atom  --bump 6.1.0       # explicit shared family version
+pkgist build:all          --bump patch       # patch-bump every package this run
+```
+
+Named `--bump` (not `--version`) because commander reserves `--version` for `pkgist --version`. Pairs with `--commit` (Git workflow). Omit it and the config `version` / `"auto"` default applies.
+
 ## Standalone packages
 
 ```ts
@@ -9168,6 +9194,19 @@ family version: "patch"  →  all three become 5.1.4
 Adding a low-versioned package to a family means it jumps to match the family on first build. The family version is the compatibility contract.
 
 `version` is family-level only — members don't declare their own.
+
+### Intra-family dependency pinning
+
+Sibling packages reference each other with `"*"` in source so the workspace links them locally. `"*"` must never reach npm — a consumer could resolve a sibling to any published version. So in a **family build**, pkgist rewrites every `dependencies` / `peerDependencies` entry whose name is another **family member** to the **exact** shared release version in the *published* `package.json` (source keeps `"*"`):
+
+```jsonc
+// SOURCE (workspace linking, unchanged)   →   PUBLISHED at family version 5.1.4
+"dependencies": { "@scope/atom": "*" }     →   "dependencies": { "@scope/atom": "5.1.4" }
+```
+
+- Family builds only — standalone builds publish deps verbatim.
+- `dependencies` + `peerDependencies` only; non-member deps keep their original range.
+- Exact version, no `^` / `~`, so a family installs as one coherent same-version set.
 
 ## Picking the right strategy
 
@@ -9216,16 +9255,16 @@ For families: pick based on the most significant change in any member.
 When `commit` resolves to a non-empty message, in the package's `root`:
 
 ```
-1. git add .
+1. git add -A
 2. git commit -m "<message>"
 3. git push origin <branch>
 4. git tag v<new-version>
-5. git push origin v<new-version>
+5. git push origin --tags
 ```
 
-Branch from `pkg.branch` or `git rev-parse --abbrev-ref HEAD`.
+Branch from `pkg.branch` or `git rev-parse --abbrev-ref HEAD`. Step 5 pushes all local tags, including the new `v<new-version>`.
 
-**`git add .` adds everything dirty**, not just the version bump. Clean the tree before release to keep commits focused.
+**`git add -A` stages everything dirty**, not just the version bump. Clean the tree before release to keep commits focused.
 
 ## Family-level commit override
 
@@ -9241,6 +9280,23 @@ Family `commit` overrides per-package `commit`. Same shape (`string | true | fal
 ```
 
 Per-package `commit` on a family member is ignored when the family has `commit` set.
+
+## Per-run `--commit` override
+
+`--commit [message]` overrides the configured `commit` for one invocation — no config edit:
+
+| Invocation | Resolves to |
+|---|---|
+| `--commit "some message"` | that exact message |
+| `--commit` (bare) | auto `Released <new-version>` (same as `commit: true`) |
+| omitted | the package/family configured `commit` |
+
+Precedence: `--commit` (CLI) > family `commit` > per-package `commit`. To skip git, use `--no-git` (always wins). Pairs with `--bump` (Versioning) so the version + message both move onto the CLI and the config stays static for parallel release runs.
+
+```sh
+pkgist build @scope/utils --commit "fix: guard overflow"   # explicit
+pkgist build:family atom  --commit                          # bare → auto message
+```
 
 ## Tagging
 
@@ -9276,10 +9332,21 @@ Or `pkgist build:all --no-git` to skip git for the whole run, overriding any `co
 
 # CLI
 
-> **Auto-trigger:** user runs or asks about `pkgist build`, `pkgist build:family`, `pkgist build:all`, `pkgist list`, `pkgist validate`; user asks about `--dry-run`, `--no-publish`, `--no-git`, `--concurrency`, `--config`, `--verbose`; "how do I release just one package", "how do I dry-run", "what does pkgist list show".
+> **Auto-trigger:** user runs or asks about `pkgist init`, `pkgist build`, `pkgist build:family`, `pkgist build:all`, `pkgist list`, `pkgist validate`; user asks about `--dry-run`, `--no-publish`, `--no-git`, `--bump`, `--commit`, `--concurrency`, `--config`, `--verbose`; "how do I scaffold a config", "how do I release just one package", "how do I override the version/message from the CLI", "how do I dry-run", "what does pkgist list show".
 > **Skip when:** per-package config (Package options); pipeline internals (Pipeline); git/publish in depth (Git workflow).
 
 ## Commands
+
+### `init`
+
+Scaffold a `pkgist.config.ts` in the current directory (`buildDir: "./builds"`, `sourcesDir: "./sources"`, one example package).
+
+```sh
+pkgist init
+pkgist init --force        # overwrite an existing config
+```
+
+Does nothing (exit `0`) if a `pkgist.config.ts` / `pkgist.config.js` already exists, unless `--force`.
 
 ### `build [pkg...]`
 
@@ -9350,6 +9417,8 @@ Catches typos, missing dirs, malformed config. Cheap as a pre-commit / CI step.
 | `--dry-run` | Print every step without writing to disk, git, or npm. Always run before real release |
 | `--no-publish` | Skip `npm publish`. Build + commit + tag still run |
 | `--no-git` | Skip git entirely, overriding per-package `commit` |
+| `--bump <strategy>` | Per-run override of the config `version` (`patch` / `minor` / `major` / `auto` / explicit `x.y.z`); never edits the config |
+| `--commit [message]` | Per-run override of the config `commit`: a message string, or bare `--commit` for auto `Released <version>` |
 | `--concurrency <n>` | Override `settings.concurrency`. Use `1` to serialize for debugging |
 | `--config <path>` | Use specific config file. Path relative to cwd |
 | `--verbose` | Debug-level log lines |
@@ -9363,6 +9432,7 @@ Catches typos, missing dirs, malformed config. Cheap as a pre-commit / CI step.
 | Preview release | `pkgist build:all --dry-run` |
 | Real release everything | `pkgist build:all` |
 | Hot-fix one package | `pkgist build @scope/the-pkg` |
+| Hot-fix, version + message from CLI (no config edit) | `pkgist build @scope/the-pkg --bump patch --commit "fix: ..."` |
 | Release synchronized group | `pkgist build:family atom` |
 | Verify build but don't ship | `pkgist build:all --no-publish --no-git` |
 | Debug a failing build | `pkgist build @scope/the-pkg --verbose --concurrency 1` |
@@ -9386,14 +9456,14 @@ Builds run in parallel; one failure doesn't stop others.
 ```
 1. Load source package.json → read current version
 2. Resolve new version (auto-bump or explicit)
-3. Create build output directory (buildDir/<name>/<new-version>/)
-4. Snapshot source to sourcesDir/<name>/ — full copy excluding .git, node_modules, dist
+3. Create build output directory (buildDir/<package-name>/<new-version>/) — scope preserved as a directory
+4. Snapshot source to sourcesDir/<package-name>/ — full copy excluding .git, node_modules, dist, .turbo, .cache
    (only if settings.sourcesDir is set)
 5. Compile with tsdown → esm/ and cjs/ subdirectories
 6. Clone extra files/directories listed in `clone`
 7. Write clean package.json for the build (no devDeps, no scripts)
 8. Update source package.json version in-place
-9. Git: add . → commit → push → tag v<version> → push tags
+9. Git: add -A → commit → push → tag v<version> → push origin --tags
    (only if commit resolves to a non-empty string)
 10. npm publish --access <public|restricted> from build directory
     (only if publish !== false)
@@ -9486,9 +9556,13 @@ When `mainType: "esm"` or `formats: ["esm"]`:
 
 Clean generation — NOT a verbatim copy:
 
-- **Kept**: `name`, `description`, `version`, `author`, `license`, `repository`, `homepage`, `bugs`, `keywords`, `dependencies`, `peerDependencies`, `optionalDependencies`, `peerDependenciesMeta`, `engines`, `sideEffects`, `bin`, `os`, `cpu`, `funding`, `files`, `publishConfig`
-- **Replaced**: `main`, `module`, `types`, `exports`, `type`
-- **Dropped**: `devDependencies`, `scripts`, `private`, `workspaces`, everything else
+- **Kept**: `name`, `description`, `keywords`, `author`, `license`, `repository`, `homepage`, `bugs`, `dependencies`, `peerDependencies`, `sideEffects`, `bin`, `engines`
+- **Replaced / set**: `name`, `version`, `main`, `module`, `types`, `exports`, `type` (set to `"module"` for ESM-only builds)
+- **Dropped**: everything else — `devDependencies`, `scripts`, `private`, `workspaces`, `optionalDependencies`, `peerDependenciesMeta`, `files`, `publishConfig`, etc.
+
+### Intra-family dependency pinning (family builds only)
+
+In a family build, kept `dependencies` / `peerDependencies` entries that name another family member are rewritten to the exact shared release version (source `"*"` → e.g. `"5.1.4"`). Standalone builds publish deps verbatim. See the Versioning section.
 
 ### bin normalization
 
@@ -9496,7 +9570,7 @@ Leading `./` stripped from `bin` values. `{"my-cli": "./dist/cli.js"}` → `{"my
 
 ## Source snapshots (optional)
 
-If `settings.sourcesDir` is set, pkgist archives source per build (minus `.git`, `node_modules`, `dist`) into `<sourcesDir>/<name>/`. Useful for:
+If `settings.sourcesDir` is set, pkgist archives source per build (minus `.git`, `node_modules`, `dist`, `.turbo`, `.cache`) into `<sourcesDir>/<package-name>/` (scope preserved as a directory — `@mongez/cache` → `sources/@mongez/cache/`, unscoped at root). Useful for:
 - Reconstructing what shipped at any time
 - Diffing published versions without checking out tags
 - Recovering from edits between build and publish
@@ -9671,6 +9745,46 @@ pkgist build:all --no-git
 ```
 
 Or per-package `commit: false`.
+
+---
+
+# Changelog
+
+> **Auto-trigger:** user asks what's new in pkgist, what changed between versions, or which version introduced/fixed a behavior. Mirrors `CHANGELOG.md` (Keep a Changelog + SemVer). Newest first.
+
+## [1.4.0] - 2026-06-06
+
+- **Added — per-run `--bump` and `--commit` overrides** on `build`, `build:family`, `build:all`. `--bump <strategy>` overrides the config `version` (`patch` / `minor` / `major` / `auto` / explicit `x.y.z`); `--commit [message]` overrides the config `commit` (a string, or bare `--commit` for auto `Released <version>`). Both apply for that invocation only and never edit `pkgist.config.ts`, so the config stays a static registry and parallel release runs don't clobber each other's `version` / `commit` edits. Precedence: CLI flag > family `commit` > per-package config. The version flag is `--bump` (not `--version`) because commander reserves `--version` for the root version printer.
+
+## [1.3.0] - 2026-06-04
+
+- **Added — `pkgist init`** scaffolds a `pkgist.config.ts` (`./builds`, `./sources`, one example package); skips an existing config unless `--force`.
+- **Changed — single config name.** Discovery recognises only `pkgist.config.ts` then `pkgist.config.js`; the `builder.ts` / `mongez.ts` aliases are removed. Migration: rename `builder.ts` → `pkgist.config.ts`. The example template is renamed `pkgist.config.example.ts`.
+- **Changed — pkgist publishes ESM-only** (`mainType: "esm"`, `formats: ["esm"]`); targets Node 18+.
+- **Fixed — the published `pkgist` binary runs.** It shipped as CommonJS (`cjs/cli.cjs`) but `chalk` v5 is ESM-only and crashes when `require`d; the ESM-only binary (`esm/cli.mjs`) fixes `npx pkgist` / `pkgist init` for installed consumers.
+- **Docs** — professional, beginner→advanced README rewrite; every changelog entry is now dated.
+
+## [1.2.0] - 2026-06-04
+
+- **Added — intra-family dependency pinning.** Family builds now pin `dependencies` / `peerDependencies` that name another family member to the exact shared release version in the published `package.json` (source keeps `"*"`). Standalone builds unaffected.
+- **Added — `changelog` skill** + a Change Logs docs page.
+- **Fixed — `--no-git` is now honoured** (was silently ignored: the flag is stored as `git=false`, but the commands read `opts.noGit`). Affects `build`, `build:family`, `build:all`.
+- **Fixed — `src/build/` tracked by git again** (a bare `build` `.gitignore` rule matched at any depth and untracked the build-pipeline source; rules anchored to `/dist`, `/build`).
+- **Fixed — published `pkgist` CLI binary** (`bin` pointed at `dist/cli.js`, absent from the engine build; now `cjs/cli.cjs`).
+- **Docs** — documented dep pinning everywhere; corrected `llms-full.txt` drift (kept-fields list, snapshot exclusions, config filename count); aligned git wording to `git add -A` / `git push origin --tags`.
+
+## [1.1.3] - 2026-06-03
+
+- **Added** — per-topic skills + `llms.txt` / `llms-full.txt`, expanded install (npm/yarn/pnpm) with a CLI quick example, CI build smoke-test workflow (Node 20/22).
+- **Fixed** — reconciled documentation drift against source.
+
+## [1.1.2] - 2026-05-29
+
+- **Added** — the changelog. No code changes.
+
+## [1.1.0] - 2026-05-27
+
+- **Added** — `commit` accepts `true` (auto `Released <version>`) / `false` (explicit skip) in addition to a string.
 
 
 ---
@@ -10174,12 +10288,12 @@ npm install -D @mongez/agent-kit   # or yarn add -D @mongez/agent-kit, or pnpm a
 ## Quick start
 
 ```bash
-npx agent-kit init                         # Scaffold AGENTS.md + derive (idempotent)
-npx agent-kit sync                         # Derive + sync skills
-npx agent-kit watch                        # Re-sync on change (dev loop)
+npx @mongez/agent-kit@latest init          # Scaffold AGENTS.md + derive — no install, runs latest
+agent-kit sync                             # Derive + sync skills (once installed as a dep)
+agent-kit watch                            # Re-sync on change (dev loop)
 ```
 
-Wire into postinstall:
+Use the SCOPED name with npx when there's no local install — `npx agent-kit` (unscoped) resolves a different package; the bare `agent-kit` binary only works once installed. `init` is a one-time scaffold (always-latest npx is ideal); `sync` runs on every install + in CI, so pin it as a dev dependency and call it from postinstall — never always-latest, or a new version could silently change output.
 
 ```json
 { "scripts": { "postinstall": "agent-kit sync" } }
@@ -10204,13 +10318,16 @@ agent-kit sync                              # Derive + sync skills
 agent-kit sync --derive-only                # Skip skills export
 agent-kit sync --skills-only                # Skip derivation
 agent-kit sync --target claude,cursor       # Pick skill targets
-agent-kit sync --path @warlock.js           # Add extra scan dirs (monorepo / dev-server)
+agent-kit sync --path @warlock.js           # Add scan dirs (children = packages)
+agent-kit sync --projects backend,frontend  # Aggregate monorepo projects
 agent-kit sync --override                   # Replace user-authored dest folders
 agent-kit watch                             # Re-sync on changes
-agent-kit watch --path @warlock.js          # Watch extra dirs too
+agent-kit watch --projects backend,frontend # Watch + aggregate projects too
 ```
 
 Skill targets: `claude`, `copilot`, `cursor`, `codex`, `opencode`, `amp`, `goose`, `kiro`, `antigravity` (claude by default — or `agentKit.targets` from `package.json` if set).
+
+`--projects` is distinct from `--path`: a `--path` dir is treated like a `node_modules/` (its children are packages); a `--projects` dir is treated as one project (its own `skills/` + its own `node_modules/`, filtered by that project's `agentKit` config). See the Monorepos skill.
 
 ## Programmatic API
 
@@ -10221,6 +10338,7 @@ import {
   findProjectRoot,
   scanForSkillPackages,
   deriveSlugForSkill,
+  resolveMonorepoProjects,
 } from "@mongez/agent-kit";
 
 const root = await findProjectRoot();
@@ -10228,7 +10346,8 @@ await deriveAll({ root });
 await syncSkills({
   root,
   targets: ["claude", "cursor"],
-  scanPaths: ["@warlock.js"],
+  scanPaths: ["@warlock.js"],     // children = packages
+  projects: ["backend", "frontend"], // monorepo projects to aggregate
   override: false,
 });
 ```
@@ -10262,17 +10381,20 @@ Three commands. All are idempotent — running them twice in a row is a no-op th
 
 ## `agent-kit init`
 
-Scaffold a starter `AGENTS.md` (only if it does not exist) and derive the per-tool files from it.
+Scaffold a starter `AGENTS.md` (only if it does not exist), derive the per-tool files from it, and seed `agentKit.targets` in `package.json`.
 
 Flags:
 
 - `--cwd <path>` — start from a different working directory.
+- `--target <names>` — comma-separated skill targets to write into `package.json`'s `agentKit.targets` (claude, copilot, cursor, codex, opencode, amp, goose, kiro, antigravity). Defaults to `claude`. Overwrites an existing `agentKit.targets`; without it, an already-set value is left alone. Unknown names error before any write.
 
 Behavior:
 
 - If `AGENTS.md` exists → leave it alone.
 - If `AGENTS.md` is missing → write a starter template.
 - Always derives `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md`.
+- Seeds `agentKit.targets` in `package.json` — `["claude"]` by default (the built-in default made explicit, so it's discoverable and editable), or `--target`'s value. Non-clobbering: an existing list is only replaced when `--target` is passed; other `agentKit` fields and the file's indentation are preserved. `targets` gates only the skills export, so the seeded value first takes effect on the next `agent-kit sync`.
+- Wires `"postinstall": "agent-kit sync"` in `package.json`, gated on safety: only when `@mongez/agent-kit` is already a declared `dependency`/`devDependency` (so the bare binary resolves — the `npx` bootstrap installs nothing, so wiring there would break the next install) AND no `postinstall` already exists (never clobbered). When blocked, `init` prints a hint instead.
 
 ## `agent-kit sync`
 
@@ -10284,7 +10406,8 @@ Flags:
 - `--target <names>` — comma-separated skill targets. Defaults to `claude` (or whatever is set in `agentKit.targets`).
 - `--derive-only` — skip skills export.
 - `--skills-only` — skip derivation.
-- `--path <dirs>` / `-p` — comma-separated extra dirs to scan, each treated like a `node_modules/`. Use for monorepos and local dev setups. Packages found in scan paths override same-named entries in `node_modules/`.
+- `--path <dirs>` / `-p` — comma-separated extra dirs to scan, each treated like a `node_modules/` (its children are packages). For folders of linked packages. Scan-path packages override same-named entries in `node_modules/`.
+- `--projects <dirs>` — comma-separated monorepo project dirs (or one-level globs like `apps/*`). Each is treated as one project: its own `skills/` (prefixed with the project dir name) + its `node_modules/` deps filtered by that project's `agentKit` config. Defaults to `agentKit.monorepo.projects`.
 - `--override` — replace user-authored destination folders (skipped by default).
 
 This is the command to wire into your project's `postinstall`.
@@ -10303,12 +10426,15 @@ Configure defaults and filters from the project root's `package.json`:
     },
     "omit": {
       "@warlock.js/core": ["add-connector"]
+    },
+    "monorepo": {
+      "projects": ["backend", "frontend"]
     }
   }
 }
 ```
 
-- `targets` — default skill-sync targets. CLI `--target` overrides this completely (no merge). Empty array `[]` is honored as "no targets" + a warning.
+- `targets` — default skill-sync targets. CLI `--target` overrides this completely (no merge). Empty array `[]` is honored as "no targets" + a warning. `agent-kit init` seeds this field (default `["claude"]`, or `init --target …`), so it's usually already present and editable.
 - **`pick`** (allowlist) — when set, ONLY listed packages are included.
   - `pick[pkg] = true` → include all of the package's skills.
   - `pick[pkg] = ["skill-name"]` → include only those specific skills.
@@ -10317,17 +10443,89 @@ Configure defaults and filters from the project root's `package.json`:
   - `omit[pkg] = true` → skip the entire package's skills.
   - `omit[pkg] = ["skill-name"]` → skip specific skills from that package (matched against the source folder name, not the flat slug).
   - Entries for packages not installed are silently ignored.
+- **`monorepo.projects`** — sibling project dirs (or one-level globs) to aggregate into this root's skill dirs. Each is scanned as its own project; its deps are filtered by *its own* `pick`/`omit`; its authored `skills/` are prefixed with the project dir name. Root `omit` applies as a global veto over the aggregate. See the Monorepos skill.
 - Common pattern: `pick` an allowlist of packages, then `omit` a noisy skill from one of them.
 
 ## `agent-kit watch`
 
-Watch `AGENTS.md`, the project's local `skills/**/SKILL.md`, `node_modules/**/skills/**/SKILL.md`, and any `--path` skill globs; re-derive and re-sync on change. Debounced 150ms.
+Watch `AGENTS.md` and the real skill-source directories (root `skills/`, each `--path` package's `skills/`, each `--projects` project's `skills/` + `package.json`); re-derive and re-sync on change. Debounced 150ms. Concrete dirs are watched (not globs) — chokidar v4+ dropped glob support. `node_modules/` deps aren't watched (they change on install → `postinstall`).
 
 Flags:
 
 - `--cwd <path>` — working directory override.
-- `--path <dirs>` / `-p` — extra dirs whose `**/skills/**/SKILL.md` should also be watched.
+- `--path <dirs>` / `-p` — extra package dirs whose `skills/` should also be watched.
+- `--projects <dirs>` — monorepo project dirs (or one-level globs) to aggregate + watch. Defaults to `agentKit.monorepo.projects`.
 - `--override` — replace user-authored destination folders on each re-sync.
+
+---
+
+# Skill: agent-integrations
+
+> **Auto-trigger:** user asks how to set up agent-kit with a specific IDE/agent (Claude Code, Cursor, Codex, Kiro, Gemini CLI, GitHub Copilot, Aider, Antigravity), which `--target` to use, or why their agent isn't picking up skills/instructions.
+
+Every project bootstraps the same way (`npx agent-kit init` → writes `AGENTS.md` + derives `CLAUDE.md`, `.gemini/GEMINI.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md` + seeds `agentKit.targets` in `package.json`), then differs only by which `--target` you pass and where skills land:
+
+| Agent | `--target` | Derived file | Skills folder | Reload |
+| --- | --- | --- | --- | --- |
+| Claude Code | `claude` | `CLAUDE.md` | `.claude/skills/` | live (next prompt) |
+| Cursor | `cursor` | — (reads `AGENTS.md`) | `.cursor/skills/` | window reload |
+| Codex | `codex` | — | `.codex/skills/` | next session |
+| Kiro | `kiro` | — | `.kiro/skills/` | window reload |
+| GitHub Copilot | `copilot` | `.github/copilot-instructions.md` | `.github/skills/` | window reload |
+| Antigravity | `antigravity` | — | `.agent/skills/` (singular "agent") | window reload |
+| OpenCode | `opencode` | — | `.opencode/skill/` (singular "skill") | next session |
+| Amp | `amp` | — | `.agents/skills/` (plural "agents") | window reload |
+| Goose | `goose` | — | `.goose/skills/` | next session |
+| Gemini CLI | _derive-only_ | `.gemini/GEMINI.md` | _none_ | every invocation |
+| Aider | _derive-only_ | `CONVENTIONS.md` | _none_ | every session |
+
+Path-lookalikes to mis-type: `.agent/skills/` (Antigravity, singular) ≠ `.agents/skills/` (Amp, plural) ≠ `.opencode/skill/` (OpenCode, singular `skill`). The `--target` name is always unambiguous; trust the flag.
+
+Multiple agents at once: `agent-kit sync --target claude,cursor,codex` (or `agentKit.targets`). The derive step always emits all four derived files regardless of skill targets. Reload quirk: if a skills dir didn't exist when the IDE session started, reload the window once after the first sync (Claude Code is the exception — live).
+
+# Skill: configuration
+
+> **Auto-trigger:** user edits or asks about the `agentKit` config block in `package.json` — `targets`, `pick`, `omit`, `monorepo.projects` — or about filtering noisy dependency skills / pinning default targets.
+
+The `agentKit` block in the project root `package.json` sets defaults for every `agent-kit sync` (CLI flags still override). Malformed sub-fields are silently dropped.
+
+- **`targets`** — default skill-sync agents. Resolution: `--target` → `agentKit.targets` → `["claude"]`. Empty `[]` honored + warns. Gates the skills export only; derived files always emit. `agent-kit init` seeds this field for you (default `["claude"]`, or `init --target …`); a value you already set is only overwritten when you pass `init --target`.
+- **`pick`** (allowlist) — when set, ONLY listed packages sync. `true` = whole package; `string[]` = named skills by source folder name. Empty `{}` = nothing (+warn).
+- **`omit`** (denylist) — `true` = whole package; `string[]` = named skills. Runs AFTER `pick`. Pattern: `pick` a package, `omit` its noisy skill.
+- **`monorepo.projects`** — sibling project dirs / one-level globs to aggregate (see Monorepos skill). Each scanned as its own project, deps filtered by *its own* `pick`/`omit`, authored skills prefixed with the project dir name; root `omit` is a global veto. A project's own `targets`/`monorepo` are ignored; aggregation doesn't recurse.
+
+# Skill: monorepos
+
+> **Auto-trigger:** user works in a monorepo / full-stack repo, asks why a sub-project's skills aren't visible at the root, or mentions `--projects`, `agentKit.monorepo.projects`, or workspaces.
+
+Agents discover skills only from the **session-root** skills dir — they don't recurse into subdirectories. So in a repo opened at the root, `backend/skills/` is invisible. `agent-kit` aggregates each declared project up into the root.
+
+```sh
+npx agent-kit sync --projects backend,frontend
+# or: { "agentKit": { "monorepo": { "projects": ["backend", "frontend"] } } }
+```
+
+Mental model: **each declared project is scanned as if `agent-kit sync` ran inside it** — its `node_modules/` deps (filtered by *that project's* `agentKit` config) + its authored `skills/` — merged up into the root.
+
+- **Authored skills are prefixed with the project dir name**: `backend/skills/code-standards` → `backend-code-standards`. Two projects can ship a same-named skill without colliding.
+- **Dependency skills keep their package-name slug** (`warlock-js-core-use-cache`) and **dedupe across projects to one copy** (union of kept skills).
+- **Per-project config**: each project's deps filtered by *its* `pick`/`omit`. A project's own authored skills are always included (`pick` never drops them).
+- **Root `omit` is a global veto** over the whole aggregate.
+- **`--projects` vs `--path`**: `--path X` treats X as a node_modules (children are packages); `--projects X` treats X as one project (its own `skills/` + `node_modules/`). They compose.
+- **One-level globs** only: `apps/*`, `packages/*`, bare `*`. Multi-level/mid-path globs unsupported.
+- **Per-workspace `AGENTS.md`**: aggregation is skills-only; for per-project `CLAUDE.md`, run `agent-kit sync --cwd backend` in each workspace.
+- **Watch**: `agent-kit watch --projects backend,frontend` watches each project's `skills/` + `package.json` (not `node_modules/`).
+- Built for a handful of full-stack projects, not hundreds of workspaces.
+
+# Skill: recipes
+
+> **Auto-trigger:** user wires CI to catch derived-file drift, composes more than one tool/package/environment, or wants a multi-step setup recipe (filtering, programmatic API, watch mode).
+
+- **Per-workspace `AGENTS.md`**: run `agent-kit sync --cwd packages/api` per workspace (workspace-aware script) so each gets its own derived `CLAUDE.md`. (For aggregating skills across projects, see Monorepos.)
+- **Filter a noisy dependency**: `omit` (drop) or `pick` (allowlist) in `agentKit` — `true` for whole package, `string[]` for specific skills by source folder name.
+- **CI drift guardrail**: run `npx agent-kit sync` in CI then `git diff --exit-code` — fails if someone edited `AGENTS.md` but didn't commit the re-derived files.
+- **Programmatic API**: import `deriveAll` / `syncSkills` and call directly inside a longer Node pipeline (API takes `scanPaths`/`projects` arrays; CLI flags are comma-separated strings).
+- **Watch while iterating**: `agent-kit watch` re-runs sync on each change (150ms debounce); pair with `--target`/`--projects` to scope it.
 
 ---
 
@@ -10426,3 +10624,21 @@ Common mistakes and how to avoid them.
 ```
 
 The `description` field is the most important line — it determines whether an agent picks up the skill in the first place. Make it specific.
+
+# Skill: troubleshooting
+
+> **Auto-trigger:** user reports any error/log line from `agent-kit init`/`sync`/`watch`; user says "command not found", "skills aren't showing", "wrong package", "pick matched no installed packages", "collision", "AGENTS.md missing", "my skill folder disappeared"; user asks "why doesn't X work" after an agent-kit command.
+> **Skip when:** the question is about how to *use* a feature (CLI usage, configuration, monorepos) rather than a malfunction.
+
+Symptom → cause → fix for the common failure modes.
+
+- **`agent-kit: command not found`** — the bare binary needs a local install. `npm i -D @mongez/agent-kit`; then `postinstall: agent-kit sync` and plain `agent-kit sync` resolve.
+- **`npx agent-kit …` fetched the wrong package** — unscoped `agent-kit` resolves a different npm package when nothing is installed locally. Use the **scoped** form `npx @mongez/agent-kit@latest …` until you install locally; afterward unscoped is fine (npx prefers local).
+- **Sync succeeded but agent shows zero skills** — every agent except Claude Code reads its skills dir **at session start**. If the dir didn't exist when the IDE opened, reload the window (or restart the CLI session) once after the first sync.
+- **`agentKit.pick matched no installed packages`** — `pick` keys are matched exactly; typos / missing scope / packages-not-actually-installed silently drop everything. Check spellings against `ls node_modules/@scope` or switch to `omit` (denylist).
+- **"Two packages produced the same destination slug"** — extremely rare hard collision. `omit` one; report the case so the upstream can rename its skill folder.
+- **`sync` errors on missing `AGENTS.md`** — derive needs it. Run `init` once (it never clobbers), or pass `--skills-only` to bypass derive.
+- **Published package's `skills/` invisible to consumers** — `npm publish` only ships paths in `files`. Add `"skills"` to `files` and cut a patch.
+- **`--target` "Unknown skill target(s)"** — valid names: `claude`, `copilot`, `cursor`, `codex`, `opencode`, `amp`, `goose`, `kiro`, `antigravity`. `init` validates BEFORE writing — typos never persist.
+- **`watch` ignores `node_modules/**`** — by design (deps change on reinstall, not on edit). For local-linked packages, pass `--path <parent-dir>` so watch treats them as first-class sources.
+- **Hand-authored skill folder vanished after `sync`** — almost always `--override`. Drop it; without `--override`, hand-authored destinations are skipped with a warning, never replaced. Restore from git history.

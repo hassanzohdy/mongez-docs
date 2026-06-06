@@ -10,6 +10,18 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[1.5.0] - 2026-06-06</span> <span class="cl-counts">Changed (1)</span></summary>
+
+### Changed
+
+- **Build output and source snapshots now preserve the package scope as a directory.** Previously the scope was stripped, flattening every package into a single level (`@mongez/cache` → `builds/cache/<version>/`) and risking name collisions across scopes. Scoped packages now land at `<buildDir>/<scope>/<name>/<version>/` (e.g. `builds/@mongez/cache/1.3.5/`); unscoped packages stay at the root (e.g. `builds/create-warlock/4.1.16/`). Source snapshots follow the same shape (`<sourcesDir>/<scope>/<name>/`). The change mirrors how `node_modules/@scope/...` is laid out and keeps a release runner that hosts many scopes (`@mongez` + `@warlock.js` side by side) organised on disk.
+
+  **Migration:** existing artifacts at the old flat paths are orphaned by the upgrade. Either delete them, move them under the new `<scope>/` directory, or just let the next build re-populate. No `pkgist.config.ts` change is required — `buildDir` and `sourcesDir` keep their existing values; only the per-package leaf path changes.
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[1.4.0] - 2026-06-06</span> <span class="cl-counts">Added (1)</span></summary>
 
 ### Added

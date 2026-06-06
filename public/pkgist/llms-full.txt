@@ -562,8 +562,8 @@ Builds run in parallel; one failure doesn't stop others.
 ```
 1. Load source package.json → read current version
 2. Resolve new version (auto-bump or explicit)
-3. Create build output directory (buildDir/<name>/<new-version>/)
-4. Snapshot source to sourcesDir/<name>/ — full copy excluding .git, node_modules, dist, .turbo, .cache
+3. Create build output directory (buildDir/<package-name>/<new-version>/) — scope preserved as a directory
+4. Snapshot source to sourcesDir/<package-name>/ — full copy excluding .git, node_modules, dist, .turbo, .cache
    (only if settings.sourcesDir is set)
 5. Compile with tsdown → esm/ and cjs/ subdirectories
 6. Clone extra files/directories listed in `clone`
@@ -676,7 +676,7 @@ Leading `./` stripped from `bin` values. `{"my-cli": "./dist/cli.js"}` → `{"my
 
 ## Source snapshots (optional)
 
-If `settings.sourcesDir` is set, pkgist archives source per build (minus `.git`, `node_modules`, `dist`, `.turbo`, `.cache`) into `<sourcesDir>/<name>/`. Useful for:
+If `settings.sourcesDir` is set, pkgist archives source per build (minus `.git`, `node_modules`, `dist`, `.turbo`, `.cache`) into `<sourcesDir>/<package-name>/` (scope preserved as a directory — `@mongez/cache` → `sources/@mongez/cache/`, unscoped at root). Useful for:
 - Reconstructing what shipped at any time
 - Diffing published versions without checking out tags
 - Recovering from edits between build and publish

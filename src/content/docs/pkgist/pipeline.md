@@ -17,8 +17,8 @@ What pkgist does for each package, in order. Steps 4 and 9 are conditional; the 
 ```
 1. Load source package.json → read current version
 2. Resolve new version (auto-bump or explicit)
-3. Create build output directory (buildDir/<name>/<new-version>/)
-4. Snapshot source to sourcesDir/<name>/ — full copy excluding .git, node_modules, dist, .turbo, .cache
+3. Create build output directory (buildDir/<package-name>/<new-version>/) — scope preserved as a directory
+4. Snapshot source to sourcesDir/<package-name>/ — full copy excluding .git, node_modules, dist, .turbo, .cache
    (only if settings.sourcesDir is set)
 5. Compile with tsdown → esm/ and cjs/ subdirectories
 6. Clone extra files/directories listed in `clone`
@@ -36,12 +36,24 @@ Build, clone, write, git, and publish each happen in parallel across packages up
 
 ### With `preserveModules: true` (default)
 
-Each source file becomes its own output file, mirroring the source tree:
+Each source file becomes its own output file, mirroring the source tree. The package name (including any `@scope/`) is preserved verbatim as the directory path:
 
 ```
 builds/
-└── utils/
-    └── 2.1.1/
+├── @mongez/                            ← scope directory for "@mongez/utils"
+│   └── utils/
+│       └── 2.1.1/
+├── @warlock.js/                        ← another scope, side-by-side
+│   └── core/
+│       └── 4.1.16/
+└── create-warlock/                     ← unscoped packages live at the root
+    └── 4.1.16/
+```
+
+Inside any one versioned directory (e.g. `builds/@mongez/utils/2.1.1/`):
+
+```
+builds/@mongez/utils/2.1.1/
         ├── package.json            ← clean: no devDeps, no scripts
         ├── README.md               ← cloned
         ├── LICENSE                 ← cloned
@@ -163,7 +175,7 @@ The `bin` field is preserved but normalized: leading `./` is stripped (npm rejec
 
 ## Source snapshots (optional)
 
-If `settings.sourcesDir` is set, pkgist archives a full copy of the source (minus `.git`, `node_modules`, `dist`, `.turbo`, `.cache`) into `<sourcesDir>/<name>/` before every build. Useful for:
+If `settings.sourcesDir` is set, pkgist archives a full copy of the source (minus `.git`, `node_modules`, `dist`, `.turbo`, `.cache`) into `<sourcesDir>/<package-name>/` before every build (scope preserved — `@mongez/cache` → `sources/@mongez/cache/`). Useful for:
 
 - Reconstructing what was published at any point in time
 - Diffing published versions without checking out specific tags

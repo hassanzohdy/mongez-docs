@@ -5,9 +5,53 @@ sidebar:
   label: "Changelog"
 ---
 
-All notable changes to `@mongez/reinforcements` are documented in this file.
+All notable changes to `@mongez/reinforcements` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 3.2.0
+
+<details class="changelog-version" open>
+<summary><span class="cl-version">[3.3.0]</span> <span class="cl-date">2026-06-17</span> <span class="cl-counts">Added (13) · Tests (1)</span></summary>
+
+### Added
+
+**Objects**
+
+- **`when(condition, value)`** — conditional object construction for inline spreading. Returns `value` when `condition` is truthy, otherwise `{}`, so a key is only present when the condition holds: `{ ...when(isAdmin, { role: "admin" }) }`. The value may be a factory function, invoked lazily and only when the condition is truthy. Cleaner than `...(condition && { … })`, which spreads `false` when the condition fails.
+
+**Arrays**
+
+- **`partition(array, predicate)`** — split an array into `[pass, fail]` by a predicate, in a single pass, preserving order.
+- **`keyBy(array, key | selector)`** — index an array into an object keyed by a dot-notation path or a selector function; last item wins on key collision.
+- **`intersection(...arrays)`** — unique values present in every array (set intersection), ordered by the first array.
+- **`difference(array, ...others)`** — unique values from the first array that appear in none of the others (set difference).
+- **`union(...arrays)`** — unique values across all arrays, preserving first-seen order (set union).
+- **`zip(...arrays)` / `unzip(rows)`** — pair arrays into index-aligned tuples and the inverse; the longest input wins, with missing slots filled by `undefined`.
+
+**Numbers**
+
+- **`formatDuration(ms, options?)`** — human-readable duration from milliseconds (`3661000` → `"1h 1m 1s"`). Options: `units` (cap the number of parts), `long` (`"1 minute 30 seconds"`), `separator`.
+- **`ordinal(value, options?)`** — English ordinal for an integer (`1` → `"1st"`, `22` → `"22nd"`), handling the 11–13 exception and negatives. `{ withNumber: false }` returns just the suffix.
+
+**Async**
+
+- **`poll(fn, options?)`** — repeatedly call `fn` until `until(result)` is truthy (default: result is truthy), then resolve with that result. Supports `interval`, `timeout`, `attempts`, and `AbortSignal`. Built for job-status / readiness polling.
+- **`waitFor(condition, options?)`** — resolve once a boolean `condition` becomes truthy; a thin `poll` wrapper. Exports `WaitForOptions` / `PollOptions` types.
+- **`pReduce(items, reducer, initial)`** — sequential async reduce, awaiting the accumulator between steps. The async sibling of `Array.prototype.reduce`.
+
+**Functions**
+
+- **`attempt(fn, fallback?)`** — run `fn` and return its result; on throw or rejection return `fallback` (or `undefined`). Works for both sync and async functions — a promise-returning `fn` yields a promise.
+
+All additions are standalone, tree-shakeable, and non-breaking.
+
+### Tests
+
+- 53 new tests across 13 spec files (`when`, `partition`, `keyBy`, `intersection`, `difference`, `union`, `zip`, `unzip`, `ordinal`, `formatDuration`, `poll`, `waitFor`, `pReduce`, `attempt`). Suite total: 110 files / 441 tests passing.
+
+</details>
+
+
+<details class="changelog-version">
+<summary><span class="cl-version">[3.2.0]</span> <span class="cl-date">2026-05-29</span> <span class="cl-counts">Added (6) · Tests (1)</span></summary>
 
 ### Added
 
@@ -24,7 +68,11 @@ All additions are optional with defaults preserving the previous behaviour — *
 
 - `retry.test.ts` expanded to 14 tests covering each option, seeded-jitter determinism, abort timing, and async `shouldRetry`.
 
-## 3.1.0
+</details>
+
+
+<details class="changelog-version">
+<summary><span class="cl-version">[3.1.0]</span> <span class="cl-date">2026-05-23</span> <span class="cl-counts">Added (2) · Tests (1)</span></summary>
 
 ### Added
 
@@ -35,7 +83,11 @@ All additions are optional with defaults preserving the previous behaviour — *
 
 - 96 test files, 372 tests, all passing (+2 files / +18 tests over 3.0.0).
 
-## 3.0.0
+</details>
+
+
+<details class="changelog-version">
+<summary><span class="cl-version">[3.0.0]</span> <span class="cl-date">2026-05-17</span> <span class="cl-counts">Breaking (17) · Added (59)</span></summary>
 
 ### Breaking
 
@@ -135,3 +187,5 @@ All additions are optional with defaults preserving the previous behaviour — *
 
 **Mixed**
 - `coalesce(...values)` — first non-nullish.
+
+</details>

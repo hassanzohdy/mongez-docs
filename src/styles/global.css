@@ -912,9 +912,12 @@ main:has(.mongez-packages-page) > .content-panel:first-child {
 }
 
 .mongez-highlight-icon {
-  grid-row: 1 / span 2;
+  /* Pair the icon with the heading row (not the full card) and center them
+     together, so the icon sits consistently against the title whether the
+     title is one line or wraps to two. */
+  grid-row: 1;
   grid-column: 1;
-  align-self: start;
+  align-self: center;
   width: 36px;
   height: 36px;
   padding: 7px;
@@ -929,6 +932,7 @@ main:has(.mongez-packages-page) > .content-panel:first-child {
   /* Override Starlight's default heading margins inside the card. */
   margin: 0 !important;
   grid-column: 2;
+  align-self: center;
   font-family: var(--sl-font-mono);
   font-size: 0.95rem;
   font-weight: 600;

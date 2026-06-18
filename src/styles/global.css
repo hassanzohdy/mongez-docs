@@ -979,21 +979,22 @@ main:has(.mongez-packages-page) > .content-panel:first-child {
   box-shadow: 0 6px 26px -10px rgba(var(--hl-rgb), 0.55);
 }
 
-/* Icon tile — beside the text, spanning both rows. The negative margin-top
- * pulls the 40px tile up by half its overhang over the heading's first line
- * box (0.95rem × 1.35 line-height), so the icon is centered on the title's
- * FIRST line on every card — identical whether the title is one line or two
- * (no "hangs below 1-line, centered on 2-line" drift). */
+/* Icon tile — beside the text, spanning both rows. Sized close to the
+ * heading's first-line box so it sits level with the title (a larger tile
+ * overshoots a single-line heading and floats above it). The negative
+ * margin-top centers the tile on the heading's first line (0.95rem × 1.35
+ * line-height) on every card — identical whether the title is one line or
+ * two (no "hangs below 1-line, centered on 2-line" drift). */
 .mongez-highlight-icon {
   grid-row: 1 / span 2;
   grid-column: 1;
   align-self: start;
-  margin-top: calc((0.95rem * 1.35 - 40px) / 2);
-  width: 40px;
-  height: 40px;
-  padding: 9px;
+  margin-top: calc((0.95rem * 1.35 - 30px) / 2);
+  width: 30px;
+  height: 30px;
+  padding: 7px;
   flex-shrink: 0;
-  border-radius: 11px;
+  border-radius: 9px;
   color: var(--hl-a1);
   background: linear-gradient(
     140deg,

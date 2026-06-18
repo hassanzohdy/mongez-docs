@@ -899,6 +899,10 @@ main:has(.mongez-packages-page) > .content-panel:first-child {
   grid-template-columns: auto 1fr;
   column-gap: 1rem;
   row-gap: 0.25rem;
+  /* Pack content to the top so equal-height (stretched) cards don't leak their
+     slack into the title→description gap — keeps that spacing identical on
+     every card. */
+  align-content: start;
   padding: 1.1rem 1.2rem;
   border-radius: 10px;
   border: 1px solid var(--sl-color-hairline);
@@ -912,12 +916,13 @@ main:has(.mongez-packages-page) > .content-panel:first-child {
 }
 
 .mongez-highlight-icon {
-  /* Pair the icon with the heading row (not the full card) and center them
-     together, so the icon sits consistently against the title whether the
-     title is one line or wraps to two. */
+  /* Top-align the icon with the title so every card's icon starts on the same
+     line as its heading. Keep it in row 1 only (not spanning) so the heading
+     row is always the icon's height — that makes the title→description spacing
+     identical on every card, regardless of title or description length. */
   grid-row: 1;
   grid-column: 1;
-  align-self: center;
+  align-self: start;
   width: 36px;
   height: 36px;
   padding: 7px;
@@ -932,7 +937,7 @@ main:has(.mongez-packages-page) > .content-panel:first-child {
   /* Override Starlight's default heading margins inside the card. */
   margin: 0 !important;
   grid-column: 2;
-  align-self: center;
+  align-self: start;
   font-family: var(--sl-font-mono);
   font-size: 0.95rem;
   font-weight: 600;

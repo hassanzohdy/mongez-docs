@@ -38,6 +38,17 @@ export default defineConfig({
       // Browser tab icon — reuse the fire-and-ice bolt logo. Lives in
       // public/, referenced by absolute path.
       favicon: "/mongez.png",
+      // Injected into every page's <head>. Google Search Console site
+      // verification for mongez.js.org.
+      head: [
+        {
+          tag: "meta",
+          attrs: {
+            name: "google-site-verification",
+            content: "ARcACUyhaNj7uvsLp5qhjGhzWvOQMqX9ZGxS8wpHT0I",
+          },
+        },
+      ],
       // Starlight 0.30 uses the object form `{ github: url }`.
       // The array form `[{ icon, label, href }]` only landed in 0.32+.
       social: {

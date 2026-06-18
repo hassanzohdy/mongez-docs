@@ -48,6 +48,17 @@ export default defineConfig({
             content: "ARcACUyhaNj7uvsLp5qhjGhzWvOQMqX9ZGxS8wpHT0I",
           },
         },
+        // Link-preview image (Open Graph + Twitter) so WhatsApp / X / Slack /
+        // Discord render a banner. Absolute URL, 1200×630, ~51KB JPEG (well
+        // under WhatsApp's preview size limit). Starlight already emits the
+        // og:title/description/url + twitter:card tags; this adds the image.
+        { tag: "meta", attrs: { property: "og:image", content: "https://mongez.js.org/og.jpg" } },
+        { tag: "meta", attrs: { property: "og:image:secure_url", content: "https://mongez.js.org/og.jpg" } },
+        { tag: "meta", attrs: { property: "og:image:type", content: "image/jpeg" } },
+        { tag: "meta", attrs: { property: "og:image:width", content: "1200" } },
+        { tag: "meta", attrs: { property: "og:image:height", content: "630" } },
+        { tag: "meta", attrs: { property: "og:image:alt", content: "Mongez — production TypeScript packages" } },
+        { tag: "meta", attrs: { name: "twitter:image", content: "https://mongez.js.org/og.jpg" } },
       ],
       // Starlight 0.30 uses the object form `{ github: url }`.
       // The array form `[{ icon, label, href }]` only landed in 0.32+.

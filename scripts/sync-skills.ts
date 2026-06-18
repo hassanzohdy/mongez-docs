@@ -330,7 +330,11 @@ function rewriteSiblingLinks(content: string): string {
  * (so non-standard changelogs are never mangled).
  */
 function accordionizeChangelog(body: string): string {
-  const lines = body.split("\n");
+  // Split on CRLF *or* LF — source CHANGELOG.md files may ship with Windows
+  // line endings, and a stray trailing `\r` breaks the version/date regex in
+  // renderVersionBlock (`.` won't cross `\r`, so the heading match fails and
+  // the date never lands in its own span).
+  const lines = body.split(/\r?\n/);
   const firstIdx = lines.findIndex((l) => /^##\s+\[/.test(l));
   if (firstIdx === -1) return body;
 

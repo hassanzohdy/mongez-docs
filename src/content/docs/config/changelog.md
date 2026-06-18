@@ -5,7 +5,8 @@ sidebar:
   label: "Changelog"
 ---
 
-## Unreleased
+<details class="changelog-version" open>
+<summary><span class="cl-version">[1.1.4]</span> <span class="cl-date">2026-05-26</span> <span class="cl-counts">Added (4) · Fixed (1) · Documentation (2) · Dependency bumps (1)</span></summary>
 
 ### Added
 
@@ -14,7 +15,7 @@ sidebar:
 - **CI.** GitHub Actions workflow: Node 18/20/22 on Ubuntu, plus Node 20 on Windows.
 - **`vitest.config.ts`** with self-detecting sibling-alias: in the monorepo, `@mongez/reinforcements` resolves to `../reinforcements/src` for live cross-package edits; in a standalone checkout, it falls back to `node_modules` so CI is hermetic.
 
-### Fixed (behavior)
+### Fixed
 
 - **`config.set(string)` with a single argument now throws `TypeError` instead of silently replacing the tree.** Previously, shape detection was `arguments.length === 1`, so calling `config.set("api.url")` flowed into `merge(data, "api.url")` — and the underlying `@mongez/reinforcements` `merge` returns the latest non-plain-object source as-is, clobbering `data` with the string `"api.url"`. Detection is now `typeof key === "object" && key !== null && !Array.isArray(key)`; non-object single-arg calls raise a clear error directing callers to either pass an object (deep merge) or a `(path, value)` pair (path write). **This is a behavioral break — calls that previously silently corrupted state now throw — but the prior behavior was always a bug; it's a desirable break.**
 
@@ -27,6 +28,4 @@ sidebar:
 
 - **`@mongez/reinforcements: ^2.x.x` → `^3.1.0`**. Compatible API for the surfaces this package uses (`get`, `set`, `merge`). The `merge` array strategy default is still `"replace"`, matching prior behavior. See [reinforcements v3 changelog](../reinforcements/CHANGELOG.md) for the full diff.
 
-### Notes
-
-- **Public API signatures unchanged.** `config.set` / `config.get` / `config.list` keep their TypeScript signatures. The only behavioral change is the throw on invalid single-arg `set` calls — see Fixed (behavior) above.
+</details>

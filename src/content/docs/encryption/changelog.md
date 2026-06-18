@@ -5,11 +5,8 @@ sidebar:
   label: "Changelog"
 ---
 
-## Unreleased
-
-### Fixed
-
-- *(none yet — no behavioural changes since 1.0.4.)*
+<details class="changelog-version" open>
+<summary><span class="cl-version">[1.1.3]</span> <span class="cl-date">2026-05-26</span> <span class="cl-counts">Added (6)</span></summary>
 
 ### Added
 
@@ -20,22 +17,10 @@ sidebar:
 - **CI**. GitHub Actions workflow: Node 18/20/22 × Ubuntu, plus Node 20 × Windows.
 - **`package.json` polish**. `sideEffects: false`, sharper `description`, expanded `keywords`, `vitest` and `typescript` dev-dependencies, `test` / `test:watch` scripts.
 
-### Changed
-
-- *(none — the public API is unchanged.)*
-
-### Removed
-
-- *(none.)*
-
 ### Tests
 
 ```
 30 passing
 ```
 
-### Known caveats (documented, not fixed)
-
-- `decrypt` logs decode errors via `console.warn` and returns `null`. Callers cannot distinguish "wrong key" from "malformed input" from "tampered cipher" — the wrapper does not provide authentication, so by design it can only signal "did this round-trip as JSON or not."
-- `encrypt(undefined)` round-trips to `undefined` (because `JSON.stringify({ data: undefined })` is `"{}"`, which decrypts and parses to `{}`, whose `.data` is `undefined`). This is a property of the JSON layer, not of the cipher.
-- `encrypt` of a value containing circular references throws synchronously (from `JSON.stringify`) before any encryption happens — caller responsibility.
+</details>

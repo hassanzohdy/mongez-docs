@@ -5,7 +5,8 @@ sidebar:
   label: "Changelog"
 ---
 
-## Unreleased
+<details class="changelog-version" open>
+<summary><span class="cl-version">[2.1.3]</span> <span class="cl-date">2026-05-26</span> <span class="cl-counts">Fixed (18) · Added (5) · Changed (10) · Removed (2)</span></summary>
 
 ### Fixed
 
@@ -45,21 +46,19 @@ sidebar:
   - Keyword list expanded from 10 generic terms to a comprehensive index of every exported predicate.
   - Removed Jest config block.
   - `devDependencies`: dropped `jest`, `ts-jest`, `@types/jest`, `jest-esm-jsx-transform`; bumped `typescript` to `^5.4`; added `vitest@^2.1` and `happy-dom@^15`.
+- Dropped dev dependencies: `jest`, `ts-jest`, `@types/jest`, `jest-esm-jsx-transform`. The package no longer carries a Jest config.
+- Added dev dependencies: `vitest@^2.1`, `happy-dom@^15`.
+- Bumped: `typescript@^4.5` → `^5.4`.
 
 ### Removed
 
 - `tests/` directory (replaced by `src/__tests__/`).
 - Stale devDeps listed above.
 
-### Dependency notes
-
-- Dropped: `jest`, `ts-jest`, `@types/jest`, `jest-esm-jsx-transform`. The package no longer carries a Jest config.
-- Added: `vitest@^2.1`, `happy-dom@^15`.
-- Bumped: `typescript@^4.5` → `^5.4`.
-- No runtime dependencies. The package remains zero-dep.
-
 ### Tests
 
 ```
 89 passing + 0 skipped = 89 total across 5 files
 ```
+
+</details>

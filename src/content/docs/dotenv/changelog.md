@@ -5,7 +5,8 @@ sidebar:
   label: "Changelog"
 ---
 
-## Unreleased
+<details class="changelog-version" open>
+<summary><span class="cl-version">[1.2.4]</span> <span class="cl-date">2026-05-26</span> <span class="cl-counts">Added (7) · Fixed (4)</span></summary>
 
 ### Added
 
@@ -29,3 +30,5 @@ sidebar:
 ```
 56 passed | 0 skipped
 ```
+
+</details>

@@ -5,7 +5,8 @@ sidebar:
   label: "Changelog"
 ---
 
-## Unreleased
+<details class="changelog-version" open>
+<summary><span class="cl-version">[1.2.4]</span> <span class="cl-date">2026-05-26</span> <span class="cl-counts">Fixed (3) · Removed (1) · Added (5)</span></summary>
 
 ### Fixed
 
@@ -25,12 +26,10 @@ sidebar:
 - **`vitest.config.ts`** based on the @mongez/react-atom pattern. happy-dom environment, self-detecting sibling-alias helper (currently no aliases — kept for future use), and `disableJavaScriptFileLoading` / `disableCSSFileLoading` / `disableIframePageLoading` happy-dom settings so absolute-URL `<link>` and `<script>` tags don't trigger real network calls during the test run.
 - **`package.json` fields.** `description` (was generic), `keywords` (expanded), `repository`, `sideEffects: false`, `scripts.test`, `scripts.test:watch`, and devDependencies for `happy-dom`, `typescript`, `vitest`.
 
-### Changed
-
-Nothing in the runtime surface.
-
 ### Tests
 
 ```
 81 passing, 0 skipped
 ```
+
+</details>

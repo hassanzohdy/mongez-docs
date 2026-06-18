@@ -5,11 +5,8 @@ sidebar:
   label: "Changelog"
 ---
 
-## Unreleased
-
-### Fixed
-
-- _(No public-API behavior changes in this pass — the function's output is identical to v1.0.0. Bugs noticed and left in place are tracked as skipped tests in `src/__tests__/concat-route.test.ts`; see the file:line comments inside.)_
+<details class="changelog-version" open>
+<summary><span class="cl-version">[1.1.4]</span> <span class="cl-date">2026-05-26</span> <span class="cl-counts">Added (5)</span></summary>
 
 ### Added
 
@@ -19,16 +16,10 @@ sidebar:
 - **CI**. GitHub Actions workflow: Node 18/20/22 × Ubuntu, plus Node 20 × Windows.
 - **Package metadata**. `keywords`, `sideEffects: false`, and `test`/`test:watch` scripts. `vitest` and `typescript` added as devDependencies.
 
-### Changed
-
-- _(None — the public API of `concatRoute` is unchanged.)_
-
-### Removed
-
-- _(None.)_
-
 ### Tests
 
 ```
 <count emitted by `yarn test` — see CI for the canonical number>
 ```
+
+</details>

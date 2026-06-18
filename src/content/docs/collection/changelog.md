@@ -5,7 +5,8 @@ sidebar:
   label: "Changelog"
 ---
 
-## Unreleased
+<details class="changelog-version" open>
+<summary><span class="cl-version">[1.3.5]</span> <span class="cl-date">2026-05-27</span> <span class="cl-counts">Fixed (7) · Added (5) · Changed (8)</span></summary>
 
 ### Fixed
 
@@ -36,15 +37,10 @@ sidebar:
   - `scripts.test` set to `vitest run`; `scripts.test:watch` added; `scripts.test:coverage` added.
   - Removed `jest`, `ts-jest`, `jest-esm-jsx-transform`, `@types/jest` from `devDependencies`; added `vitest`.
 
-### Not changed (intentionally)
-
-- **No public API changes**. Every method, alias, and operator is preserved. Existing call sites continue to work identically.
-- **No new features**. The package is being brought up to the documentation and test bar — no method additions or signature changes.
-- **No runtime dependency additions**. Only the version of `@mongez/reinforcements` was bumped.
-- **Old `tests/` folder** under jest is left in place for safety (not deleted) — it can be removed in a follow-up once teams confirm the new vitest suite is the source of truth.
-
 ### Tests
 
 ```
 235 passing + 0 skipped = 235 total
 ```
+
+</details>

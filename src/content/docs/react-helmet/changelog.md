@@ -5,7 +5,8 @@ sidebar:
   label: "Changelog"
 ---
 
-## Unreleased
+<details class="changelog-version" open>
+<summary><span class="cl-version">[1.2.3]</span> <span class="cl-date">2026-05-26</span> <span class="cl-counts">Fixed (5) · Added (5) · Changed (1)</span></summary>
 
 ### Fixed
 
@@ -27,12 +28,10 @@ sidebar:
 
 - **Documentation** — `README.md` rewritten to match the marketing-style format used across the rest of the `@mongez/*` family: tagline, install, 30-second tour, props reference, configuration, examples, related packages, limitations.
 
-### Removed
-
-- _Nothing removed; the public API surface is unchanged._
-
 ### Tests
 
 ```
 42 tests passing, 0 skipped
 ```
+
+</details>

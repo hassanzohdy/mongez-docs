@@ -159,6 +159,25 @@ If any of those fail, the likely cause is one of:
 - `name` prop missing on an input → it won't be collected into `values`.
 - `<button>` placed outside the `<Form>` → click won't trigger form submission.
 
+### 5. SSR projects: pass a static `id` to every `<Form>`
+
+In **server-rendered** apps (Next.js, Remix, Astro, TanStack Start, any setup that renders on the server then hydrates on the client), **always pass an explicit, static `id` to each `<Form>`**:
+
+```tsx
+<Form id="signup" onSubmit={({ values }) => api.signup(values)}>
+  <TextInput name="email" type="email" required />
+  <SubmitButton>Sign up</SubmitButton>
+</Form>
+```
+
+**Why.** When you omit `id`, the form generates one at construction with `Math.random()` (`frm-<random>`), and renders it as the `<form id="form-frm-…">` attribute. The server and the client each run that random generation independently, so they produce **different** ids — React reports a hydration mismatch and discards the server markup for that subtree. A static `id` makes the rendered attribute deterministic (`form-signup`) and identical on both sides, so hydration is clean.
+
+Rules of thumb:
+
+- **One static `id` per `<Form>`, and keep it unique on the page.** The `id` also drives the internal form id and its event prefix (`form.<id>`), so two forms sharing an `id` would cross-wire their events.
+- **Inputs don't need this.** A control's id is derived from its `name` (`input-<name>`), which is already deterministic — only the `<Form>` wrapper falls back to a random id, so that's the only place you must set one.
+- **Client-only apps** (plain Vite/CRA SPA, React Native via `NativeForm`) never hydrate server markup, so the random id is harmless there — but setting a static `id` anyway is a good habit and makes the rendered `<form>` easier to target in tests and styles.
+
 ## Where to go next
 
 - **[Create form control](../create-form-control/)** — patterns for text inputs, checkboxes, radios, multi-value controls, custom validation

@@ -240,6 +240,7 @@ export default defineConfig({
             { slug: "http/caching" },
             { slug: "http/interceptors" },
             { slug: "http/streaming" },
+            { slug: "http/server-side" },
             { slug: "http/recipes" },
             {
               label: "API Reference",

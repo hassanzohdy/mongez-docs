@@ -122,6 +122,13 @@ Coercion table:
 | `"3000"` | `3000` (number) |
 | `"3.14"` | `3.14` (number) |
 | `"-7"` | `-7` (number) |
+| `"0123456789"` | `"0123456789"` (string — leading zero would be lost) |
+| `"1234567890123456789"` | string (beyond MAX_SAFE_INTEGER) |
+| `"0x1F"` | `"0x1F"` (string — would become 31) |
+| `"1e5"` | `"1e5"` (string — would become 100000) |
+| `"+15551234567"` | `"+15551234567"` (string — `+` would be stripped) |
+| `"1.50"` | `"1.50"` (string — trailing zero is significant) |
+| `"Infinity"` / `"NaN"` | string |
 | `"true"` | `true` (boolean) |
 | `"false"` | `false` (boolean) |
 | `"null"` | `null` |
@@ -132,6 +139,8 @@ Coercion table:
 | `undefined` | `undefined` |
 
 `true` / `false` / `null` are case-sensitive. `True`, `YES`, `1` stay as strings.
+
+Numeric coercion requires an EXACT ROUND TRIP — `isNumeric` is `Number.isFinite(n) && String(n) === value`, not `!isNaN(value)`. A value becomes a number only when converting it back yields the original characters, so nothing that would lose information is converted. The same rule applies to `process.env` values: in a `.env` file an author can opt out by quoting, but a platform-injected value is never quote-stripped, so the operator has no opt-out — and injected secrets, account IDs and tokens are exactly the values that look numeric.
 
 `${VAR}` is resolved at parse time against the internal store first, then `process.env`. A reference that resolves in NEITHER place throws, naming the key:
 
@@ -259,7 +268,7 @@ Keys the file declares that the environment does NOT provide are loaded normally
 
 - **`env()` returns `any`** — no type-safe key narrowing.
 - **Forward references are unsupported.** `A=${B}` with `B` declared on a later line throws; declare `B` first (or in `.env.shared`, or in `process.env`).
-- **Numeric coercion is `!isNaN(value)`-based**, so a zero-padded value like `0123` becomes the number `123`. Quote it (`KEY="0123"`) to keep it a string.
+- **Numeric coercion requires an exact round trip** (since 1.3.1). Identifier-shaped values (`0123456789`, `0x1F`, `1e5`, `+1555…`, anything past `MAX_SAFE_INTEGER`) stay strings from both sources. Quoting still works in a `.env` file as an explicit opt-out.
 - **`env.all()` returns the store by reference** — mutating the returned object mutates the store.
 - **The default `precedence` is `"file-wins"`**, which lets a baked-in `.env` file override platform-injected variables. Pass `"process-wins"` in containers. v2.0 flips the default.
 

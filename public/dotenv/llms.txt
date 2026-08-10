@@ -32,6 +32,7 @@ Every export ships from the package root. No subpath entries.
 5. `.env.shared` loads first; `.env.${NODE_ENV}` (or `.env`) loads second and overwrites shared keys when `override` is `true`.
 6. `precedence` decides who wins when a key is in BOTH the file and the real environment. Default `"file-wins"` — the `.env` file overwrites platform-injected values, which is the wrong default for containers. Pass `"process-wins"` in Docker / Kubernetes / CI. **v2.0 flips the default.**
 7. `env.all()` returns the loaded store only. It is not merged with `process.env`.
+8. Numeric coercion requires an EXACT round trip (`Number.isFinite(n) && String(n) === value`). `0123456789`, `0x1F`, `1e5`, `+15551234567`, `1.50`, `Infinity`, `NaN` and anything past `MAX_SAFE_INTEGER` all stay strings — from a `.env` file and from `process.env` alike.
 
 ## Optional
 

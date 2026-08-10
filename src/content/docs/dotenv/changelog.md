@@ -6,6 +6,46 @@ sidebar:
 ---
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[1.3.1]</span> <span class="cl-date">2026-08-10</span> <span class="cl-counts">Fixed (3) · Tests (2)</span></summary>
+
+Follow-up to the 1.3.0 review by @Ion. Narrows numeric coercion so it can no longer corrupt identifier-shaped values. Every value this stops converting was being **corrupted, not served**.
+
+### Fixed
+
+- **Numeric coercion now requires an exact round trip** (`src/index.ts`). `isNumeric` changed from `!isNaN(value)` to `Number.isFinite(Number(value)) && String(Number(value)) === value`: a value becomes a number only when converting it back yields the original characters. Applied to **both** call sites — `parseValue` (`.env` files) and `coerceProcessValue` (`process.env`) — so the two sources cannot drift apart.
+
+  | Value | Was | Now |
+  |---|---|---|
+  | `0123456789` | `123456789` — leading zero destroyed | `"0123456789"` |
+  | `1234567890123456789` | `1234567890123456800` — past `MAX_SAFE_INTEGER` | `"1234567890123456789"` |
+  | `0x1F` | `31` | `"0x1F"` |
+  | `1e5` | `100000` | `"1e5"` |
+  | `+15551234567` | `15551234567` — `+` stripped | `"+15551234567"` |
+  | `1.50` | `1.5` — significant trailing zero dropped | `"1.50"` |
+  | `Infinity` | `Infinity` — no longer a string | `"Infinity"` |
+  | `NaN` | `"NaN"` (unchanged, but see below) | `"NaN"` |
+
+  Genuine numbers (`3000`, `1.5`, `-2`, `0`) round-trip and still coerce.
+
+  **Why this became urgent in 1.3.0 specifically.** The coercion rule itself is old, but until 1.3.0 it only applied to `.env` files, where an author can opt out by quoting the value (`parseValue` returns early on quotes, before the numeric branch). 1.3.0 applied the same rule to `process.env`, and `coerceProcessValue` deliberately never strips quotes — correctly, since a quote in a real environment variable belongs to the secret. The net effect was that a value injected by Docker or Kubernetes had **no opt-out at all**, and injected secrets, account IDs and tokens are exactly the values that look numeric. Round-tripping removes the need for an escape hatch.
+
+  Two refinements beyond the reviewed one-liner, both verified empirically rather than reasoned about:
+  - **`Number.isFinite`, not a plain NaN check.** The bare round trip `String(Number(v)) === v` accepts the string `"NaN"` (`String(Number("NaN"))` is `"NaN"`), which would have started coercing a value that is a string today — a new corruption introduced by the fix, and `NaN` is especially bad to leak since it compares unequal to itself.
+  - **`Infinity` is closed too.** It round-trips, so the reviewed one-liner would have left it coercing even though the review's own table lists it as a corruption to fix. `Number.isFinite` closes that row and `-Infinity` with it.
+
+### Tests
+
+- New `src/__tests__/numeric-coercion.test.ts` (26 assertions). Every row above is asserted from a `.env` file **and** from `process.env`; a final test compares the two result sets directly so the sources can never diverge. `0123456789` is pinned in its own regression test — it is the case an operator cannot defend against.
+- New direct coverage for the `loadedKeys` half of `isProcessProvided` in `src/__tests__/process-env.test.ts`. The two halves of the test leave `process.env.APP_MODE` in an identical state and differ only in **who** wrote it; the outcomes are opposite. Removing the `loadedKeys` check makes them agree and the test fails — previously this invariant was only covered indirectly through the precedence tests.
+
+```
+104 passed | 0 skipped
+```
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[1.3.0]</span> <span class="cl-date">2026-08-10</span> <span class="cl-counts">Added (5) · Fixed (3) · Docs (2)</span></summary>
 
 Four defects reported on 2026-08-10, all at the boundary between a `.env` file and the real process environment. Every change here only affects cases that were previously **wrong**; no currently-working configuration changes behaviour.

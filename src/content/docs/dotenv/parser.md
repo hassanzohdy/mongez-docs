@@ -53,9 +53,13 @@ const [key, value] = parseLine("# comment");
 
 | Input | Output | Notes |
 |---|---|---|
-| `"3000"` | `3000` (number) | Any string `isNaN(x)` false |
+| `"3000"` | `3000` (number) | Coerced only on an exact round trip |
 | `"3.14"` | `3.14` (number) | Decimals supported |
 | `"-7"` | `-7` (number) | Negatives supported |
+| `"0123456789"` | `"0123456789"` (string) | Leading zero would be lost |
+| `"1e5"` | `"1e5"` (string) | Exponent notation does not round-trip |
+| `"+15551234567"` | `"+15551234567"` (string) | `+` would be stripped |
+| `"Infinity"` / `"NaN"` | string | Never what a config file meant |
 | `"true"` | `true` (boolean) | Case-sensitive |
 | `"false"` | `false` (boolean) | Case-sensitive |
 | `"null"` | `null` | Case-sensitive |
@@ -67,6 +71,24 @@ const [key, value] = parseLine("# comment");
 | `undefined` | `undefined` | Falsy input passes through |
 
 `true` / `false` / `null` matching is exact — case-sensitive, no whitespace tolerance beyond `String(value).trim()`.
+
+### Numbers coerce only on an exact round trip
+
+`isNumeric` is `Number.isFinite(n) && String(n) === value`, not `!isNaN(value)`. A value becomes a number only when converting it back to a string gives the original characters, so nothing that would lose information is ever converted:
+
+```ts
+parseValue("3000");                // 3000            — round-trips
+parseValue("0123456789");          // "0123456789"    — leading zero would be lost
+parseValue("1234567890123456789"); // string          — beyond MAX_SAFE_INTEGER
+parseValue("0x1F");                // "0x1F"          — would become 31
+parseValue("1e5");                 // "1e5"           — would become 100000
+parseValue("+15551234567");        // "+15551234567"  — `+` would be stripped
+parseValue("1.50");                // "1.50"          — trailing zero is significant
+parseValue("Infinity");            // "Infinity"
+parseValue("NaN");                 // "NaN"
+```
+
+The same rule governs values read from `process.env`. That symmetry is the point: in a `.env` file an author can opt out of coercion by quoting, but a platform-injected value is never quote-stripped, so the operator has no opt-out — and injected secrets, account IDs and tokens are exactly the values that look numeric.
 
 ## `${VAR}` interpolation
 

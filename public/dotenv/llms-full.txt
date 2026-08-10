@@ -1,6 +1,6 @@
 # @mongez/dotenv — full reference
 
-> **Auto-trigger when loading this full reference:** code imports `loadEnv`, `loadEnvFile`, `parseLine`, `parseValue`, `env`, `env.all`, `resetEnv`, or `EnvLoaderOptions` from `@mongez/dotenv`; typical import pattern `import { loadEnv, loadEnvFile, parseLine, parseValue, env, resetEnv, type EnvLoaderOptions } from "@mongez/dotenv"`; user asks "how do I load .env files", "how do I pick env file by NODE_ENV", "how does `.env.shared` layering work", "how does `env()` coerce values", "why is my `null` becoming `undefined`", "how does `${VAR}` interpolation work", "how do I read a typed env value", "how do I bootstrap env at startup", "how do I build a typed config from env", or "how do I do a full `process.env` reset in tests".
+> **Auto-trigger when loading this full reference:** code imports `loadEnv`, `loadEnvFile`, `parseLine`, `parseValue`, `env`, `env.all`, `resetEnv`, `EnvLoaderOptions`, or `EnvPrecedence` from `@mongez/dotenv`; typical import pattern `import { loadEnv, loadEnvFile, parseLine, parseValue, env, resetEnv, type EnvLoaderOptions } from "@mongez/dotenv"`; user asks "how do I load .env files", "how do I pick env file by NODE_ENV", "how does `.env.shared` layering work", "how does `env()` coerce values", "why is my `null` becoming `undefined`", "how does `${VAR}` interpolation work", "how do I read a typed env value", "how do I bootstrap env at startup", "how do I build a typed config from env", "how do I do a full `process.env` reset in tests", "why does my `.env` file override the variable Docker/Kubernetes/CI injected", "why does `env()` return the default for a variable that IS set in the environment", "why does my value contain the literal string `undefined`", or "why does `loadEnv()` throw when there is no `.env` file".
 >
 > **Skip when:** the question is about the higher-level app-config layer with groups, dot-notation lookups, defaults, or schema — that's `@mongez/config`, not this `.env`-file parser; browser/cookie/localStorage env shims; caching concerns — that's `@mongez/cache`; runtime schema validation via `zod`/`valibot` (layered on top, not provided here); or the upstream `dotenv` package itself.
 
@@ -25,6 +25,7 @@ import {
   env,
   resetEnv,
   type EnvLoaderOptions,
+  type EnvPrecedence,
 } from "@mongez/dotenv";
 ```
 
@@ -35,10 +36,13 @@ function loadEnv(envPath?: string, options?: EnvLoaderOptions): void
 ```
 
 ```ts
+type EnvPrecedence = "file-wins" | "process-wins";
+
 type EnvLoaderOptions = {
-  override?: boolean;       // default true — also write into process.env
-  dir?: string;             // default cwd() — search root for .env files
-  loadSharedEnv?: boolean;  // default true — load .env.shared first
+  override?: boolean;          // default true — also write into process.env
+  dir?: string;                // default cwd() — search root for .env files
+  loadSharedEnv?: boolean;     // default true — load .env.shared first
+  precedence?: EnvPrecedence;  // default "file-wins" — who wins vs process.env
 };
 ```
 
@@ -47,16 +51,43 @@ Resolution order when `envPath` is omitted:
 1. If `loadSharedEnv` is true (default) and `${dir}/.env.shared` exists, load it.
 2. Try `${dir}/.env.${process.env.NODE_ENV}`. If it exists, load it.
 3. Otherwise load `${dir}/.env`.
+4. If that does not exist either, do nothing. A project with no `.env` of any kind is a supported state — no throw.
+
+A path passed explicitly as `envPath` is different: a missing one still throws, because the caller named it and a typo must be loud. Only the paths `loadEnv` derives for itself are optional.
 
 `override` controls whether parsed values are also written to `process.env[key]`. Defaults to `true`. Even with `override: false`, values are still stored internally and accessible via `env(...)` / `env.all()`.
 
-## loadEnvFile(envPath, override)
+## precedence — file vs. the real environment
+
+`override` controls the write-back. `precedence` controls who WINS when a key exists in both a `.env` file and `process.env`.
+
+| Value | Behaviour |
+|---|---|
+| `"file-wins"` (default) | The file value replaces the injected one, in the internal store and (when `override`) in `process.env` itself. |
+| `"process-wins"` | An already-set `process.env` value is authoritative: the file does not replace it in the store and does not write over it. The file becomes a fallback layer. |
 
 ```ts
-function loadEnvFile(envPath: string, override: boolean): void
+// Docker / Kubernetes / CI — the platform owns the environment.
+loadEnv(undefined, { precedence: "process-wins" });
 ```
 
-Loads exactly one file. Throws if the path does not exist:
+Notes:
+
+- `"file-wins"` is the historical behaviour and stays the default for all of v1.x so a minor bump never changes what a running deployment reads. **v2.0 flips the default to `"process-wins"`**, matching `dotenv`, `dotenv-flow`, Vite and Next.
+- Keys the loader itself wrote earlier in the same run (`.env.shared`, or a previous `loadEnvFile`) are tracked in an internal `Set` and are NOT mistaken for platform-injected values, so file layering keeps working under `"process-wins"`.
+- A value taken from `process.env` is coerced to a primitive the same way a file value is (`"8080"` → `8080`), but WITHOUT quote stripping or `${VAR}` interpolation, and values with significant leading/trailing whitespace are left untouched.
+
+## loadEnvFile(envPath, override, precedence?)
+
+```ts
+function loadEnvFile(
+  envPath: string,
+  override: boolean,
+  precedence?: EnvPrecedence,   // default "file-wins"
+): void
+```
+
+Loads exactly one file. Always throws if the path does not exist — it is the primitive and never guesses:
 
 ```
 .env file not found at /path/to/file
@@ -102,12 +133,18 @@ Coercion table:
 
 `true` / `false` / `null` are case-sensitive. `True`, `YES`, `1` stay as strings.
 
-`${VAR}` is resolved against the internal store (NOT `process.env`). Unresolved references become the literal string `"undefined"`:
+`${VAR}` is resolved at parse time against the internal store first, then `process.env`. A reference that resolves in NEITHER place throws, naming the key:
 
 ```ts
 parseValue("prefix:${NOT_DEFINED}:suffix");
-// "prefix:undefined:suffix"
+// Error: Cannot resolve ${NOT_DEFINED}: "NOT_DEFINED" is not defined in the loaded
+// env data or in process.env. Forward references are not supported — declare
+// "NOT_DEFINED" before the line that references it, or in .env.shared, which loads first.
 ```
+
+Before 1.3.0 this returned the literal string `"prefix:undefined:suffix"` — value corruption rather than a missing value, since the app starts and then fails much later (`postgres://undefined/app`).
+
+Forward references are unsupported: lines are processed top-to-bottom within a file, so a referenced key must come from an earlier line, from `.env.shared` (loaded first), or from `process.env`.
 
 ## env(key, defaultValue?)
 
@@ -118,16 +155,23 @@ const env: {
 };
 ```
 
-Reads from the internal store. Falls back to `defaultValue` (or `undefined`) when the key is missing.
+Lookup order: **internal store → `process.env` → `defaultValue`** (or `undefined`).
 
 ```ts
 env("APP_PORT");          // 3000
 env("APP_PORT", 8080);    // 3000 (loaded value wins)
+env("NODE_ENV");          // "production" (from process.env — no file declares it)
 env("MISSING", 0);        // 0
 env.all();                // { APP_PORT: 3000, ... }  (by reference — do not mutate)
 ```
 
-**Sharp edge:** `env` uses `??`, so a deliberately-loaded `null` collapses to the default / `undefined`. Use `env.all()[key]` to see the raw stored value when you need to distinguish "missing" from "loaded as null".
+`env` uses `key in envData` (not `??`), so a deliberately-loaded `null` is preserved and distinguishable from a missing key: with `EST_TIME=null` in the file, `env("EST_TIME", "fallback")` returns `null`.
+
+A value that comes from the `process.env` step is coerced the same way a file value is (`"8080"` → `8080`, `"true"` → `true`, `"null"` → `null`) so a key's type does not depend on where it came from. That coercion is narrower than `parseValue`: no quote stripping, no `${VAR}` interpolation, and values with significant leading/trailing whitespace pass through untouched.
+
+Before 1.3.0 `env()` never consulted `process.env`, so a platform-injected variable that no `.env` file declared returned its default forever — including `env("NODE_ENV")` before `loadEnv()` had run at all.
+
+`env.all()` returns the loaded store only. It is deliberately NOT merged with `process.env`; use `env(key)` for the fallback.
 
 ## resetEnv()
 
@@ -136,9 +180,10 @@ function resetEnv(): void
 ```
 
 1. Clears every key from the internal store.
-2. Copies the initial `process.env` snapshot (captured at module import time) back onto `process.env`.
+2. Deletes every `process.env` key that `loadEnvFile` wrote since module load (tracked internally in a `Set`).
+3. Copies the initial `process.env` snapshot (captured at module import time) back onto `process.env`.
 
-It does NOT delete keys that have been added to `process.env` since module load. If you need a clean slate, delete the keys explicitly before calling `resetEnv`.
+The net effect is a true "back to t0" for anything the loader added. Keys that callers set directly on `process.env`, without going through `loadEnv` / `loadEnvFile`, are not tracked and survive the reset — the caller owns their own additions.
 
 ## File-format rules
 
@@ -146,7 +191,7 @@ It does NOT delete keys that have been added to `process.env` since module load.
 - `KEY="value"` — string, even if it looks numeric.
 - `KEY="value with spaces"` — quotes preserve whitespace.
 - `KEY="value \"with\" escapes"` — `\"` becomes `"`.
-- `KEY=${OTHER}` — interpolation of an already-loaded key.
+- `KEY=${OTHER}` — interpolation of an already-loaded key, or of a `process.env` key. Throws if neither has it.
 - `# comment line` — ignored.
 - Blank lines — ignored.
 - `KEY=` — yields `["KEY", ""]`.
@@ -191,16 +236,34 @@ process.env.APP_PORT;                   // unchanged (was undefined → still un
 env("APP_PORT");                        // 3000
 ```
 
-Override only affects `process.env`. The internal store is populated either way.
+Override only affects `process.env`. The internal store is populated either way. It does NOT control precedence — see the `precedence` section above.
+
+## Precedence semantics
+
+```ts
+process.env.APP_HOST = "injected-host";   // e.g. Kubernetes
+// .env contains: APP_HOST=localhost
+
+loadEnv();                                            // precedence: "file-wins" (default)
+env("APP_HOST");                                      // "localhost"      — the file won
+process.env.APP_HOST;                                 // "localhost"      — overwritten
+
+loadEnv(undefined, { precedence: "process-wins" });
+env("APP_HOST");                                      // "injected-host"  — the platform won
+process.env.APP_HOST;                                 // "injected-host"  — left intact
+```
+
+Keys the file declares that the environment does NOT provide are loaded normally under both settings.
 
 ## Known limitations
 
-- **`null` is swallowed by `env()`** — see "Sharp edge" above.
-- **Quoted values with `#` AND a trailing comment trim wrongly**: `KEY="abc#def" # comment` returns `ab` (the parser splits on `#`, takes the left half, then slices off both ends — but the right end is no longer a quote).
-- **`resetEnv` does not delete later-added keys** from `process.env`.
-- **`parseValue` is called twice per line** inside `loadEnvFile` (once in `parseLine`, once in the loop). Currently idempotent for supported value shapes.
+- **`env()` returns `any`** — no type-safe key narrowing.
+- **Forward references are unsupported.** `A=${B}` with `B` declared on a later line throws; declare `B` first (or in `.env.shared`, or in `process.env`).
+- **Numeric coercion is `!isNaN(value)`-based**, so a zero-padded value like `0123` becomes the number `123`. Quote it (`KEY="0123"`) to keep it a string.
+- **`env.all()` returns the store by reference** — mutating the returned object mutates the store.
+- **The default `precedence` is `"file-wins"`**, which lets a baked-in `.env` file override platform-injected variables. Pass `"process-wins"` in containers. v2.0 flips the default.
 
-All four are reproduced as `.skip()`'d tests in `src/__tests__/known-bugs.test.ts`. Flipping `.skip` to `it` reproduces each.
+The four defects documented in `src/__tests__/known-bugs.test.ts` (the `null` collapse, the quoted-`#`-with-comment mis-trim, the double `parseValue` call, and `resetEnv` leaving keys behind) were all fixed in 1.2.4; that file now pins the corrected behaviour. The four defects from the 2026-08-10 report are covered in `src/__tests__/process-env.test.ts`.
 
 ## Patterns
 
@@ -246,6 +309,17 @@ const name: string = env("APP_NAME", "App");
 import { loadEnvFile } from "@mongez/dotenv";
 
 loadEnvFile("/etc/myapp/secrets.env", /* override */ false);
+```
+
+### Containerised deploy
+
+```ts
+import { loadEnv, env } from "@mongez/dotenv";
+
+loadEnv(undefined, { precedence: "process-wins" });
+
+env("DATABASE_URL");  // the value the platform injected, not the baked-in .env line
+env("APP_NAME");      // from .env — the platform does not set it
 ```
 
 ## What this package does NOT do

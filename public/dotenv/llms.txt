@@ -13,10 +13,10 @@ Every export ships from the package root. No subpath entries.
 
 ## Reference (by surface)
 
-- [Loader](https://raw.githubusercontent.com/hassanzohdy/mongez-dotenv/main/skills/loader.md): `loadEnv`, `loadEnvFile`, `EnvLoaderOptions`, the NODE_ENV → `.env.shared` → fallback resolution chain, override semantics, `resetEnv`.
-  - *Auto-trigger:* Load when code calls `loadEnv`/`loadEnvFile`/`resetEnv` or asks about NODE_ENV file selection, `.env.shared` layering, or override behaviour.
-- [Parser](https://raw.githubusercontent.com/hassanzohdy/mongez-dotenv/main/skills/parser.md): `parseLine`, `parseValue`, the type coercion table (number / boolean / null / quoted-string), `${VAR}` interpolation, `env(key, defaultValue?)`, `env.all()`.
-  - *Auto-trigger:* Load when code calls `parseLine`/`parseValue`/`env` or asks about value coercion rules, `${VAR}` interpolation, or the null-collapse edge case.
+- [Loader](https://raw.githubusercontent.com/hassanzohdy/mongez-dotenv/main/skills/loader.md): `loadEnv`, `loadEnvFile`, `EnvLoaderOptions`, `EnvPrecedence`, the NODE_ENV → `.env.shared` → fallback resolution chain, override semantics, file-vs-`process.env` precedence, `resetEnv`.
+  - *Auto-trigger:* Load when code calls `loadEnv`/`loadEnvFile`/`resetEnv` or asks about NODE_ENV file selection, `.env.shared` layering, override behaviour, why a `.env` file overrides a Docker/Kubernetes/CI-injected variable, or what happens when no `.env` file exists.
+- [Parser](https://raw.githubusercontent.com/hassanzohdy/mongez-dotenv/main/skills/parser.md): `parseLine`, `parseValue`, the type coercion table (number / boolean / null / quoted-string), `${VAR}` interpolation, `env(key, defaultValue?)` and its `process.env` fallback, `env.all()`.
+  - *Auto-trigger:* Load when code calls `parseLine`/`parseValue`/`env` or asks about value coercion rules, `${VAR}` interpolation, why `env()` returns a default for a variable that is set in the real environment, or why a value contains the literal string `undefined`.
 
 ## Recipes
 
@@ -25,11 +25,13 @@ Every export ships from the package root. No subpath entries.
 
 ## Quick rules
 
-1. Call `loadEnv()` once at process startup. Idempotent — subsequent calls merge.
-2. `env("KEY")` reads the TYPED value (number/boolean/string/null). `process.env.KEY` returns the string-coerced form.
-3. `${VAR}` is resolved at parse time. The referenced key must appear earlier in the file (or in `.env.shared`, which is loaded first).
-4. `null` is a known sharp edge: `env(key)` collapses `null` to `undefined` via `??`. Use `env.all()[key]` if you need the literal stored value.
+1. Call `loadEnv()` once at process startup. Idempotent — subsequent calls merge. If no `.env` file exists on the derived path, it is a no-op, not an error.
+2. `env("KEY")` reads the TYPED value (number/boolean/string/null). Lookup order is loaded store → `process.env` → `defaultValue`. `process.env.KEY` returns the string-coerced form.
+3. `${VAR}` is resolved at parse time, from the loaded store then `process.env`. A reference that resolves in neither place THROWS, naming the key. Forward references (declared later in the same file) are unsupported.
+4. `env(key)` preserves a deliberately-loaded `null` (it uses `key in envData`, not `??`), so `EST_TIME=null` reads back as `null` rather than the default.
 5. `.env.shared` loads first; `.env.${NODE_ENV}` (or `.env`) loads second and overwrites shared keys when `override` is `true`.
+6. `precedence` decides who wins when a key is in BOTH the file and the real environment. Default `"file-wins"` — the `.env` file overwrites platform-injected values, which is the wrong default for containers. Pass `"process-wins"` in Docker / Kubernetes / CI. **v2.0 flips the default.**
+7. `env.all()` returns the loaded store only. It is not merged with `process.env`.
 
 ## Optional
 

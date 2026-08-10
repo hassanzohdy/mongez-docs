@@ -25,7 +25,7 @@ A small, zero-dependency `.env` loader for Node.js. Reads `KEY=VALUE` lines, **c
 <div class="mongez-highlight" data-accent="ice">
   <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
   <h3><code>$&#123;VAR&#125;</code> interpolation</h3>
-  <p><code>DB_URL=postgres://$&#123;DB_USER&#125;:$&#123;DB_PASS&#125;@$&#123;DB_HOST&#125;/db</code> — substitution happens at parse time, references resolve from already-loaded keys.</p>
+  <p><code>DB_URL=postgres://$&#123;DB_USER&#125;:$&#123;DB_PASS&#125;@$&#123;DB_HOST&#125;/db</code> — substitution happens at parse time, resolving from already-loaded keys then <code>process.env</code>. An unresolvable reference throws instead of corrupting the value.</p>
 </div>
 
 <div class="mongez-highlight" data-accent="fire">
@@ -91,8 +91,11 @@ Boot once at process start, then read typed values from anywhere. `env()` return
 | Internal store | Module-level `envData` object | The typed view of every loaded key. Read via `env()` / `env.all()`. |
 | `process.env` mirror | Real Node `process.env` | Optional write-through, controlled by `override`. Always stores strings. |
 | Initial snapshot | Module-level `initialProcessEnvData` | Captured at first import. `resetEnv` restores keys from this snapshot. |
+| Precedence | `precedence` option | Who wins when a key is in both the file and `process.env`. `"file-wins"` (default) or `"process-wins"`. |
 
 The loader is **stateful and module-scoped**. One store per Node process. Calling `loadEnv` twice merges the second file's keys into the first store rather than starting over.
+
+`env(key)` reads **store → `process.env` → default**, so a platform-injected variable that no file names is still visible.
 
 ## Scope boundaries
 
@@ -105,7 +108,9 @@ The loader is **stateful and module-scoped**. One store per Node process. Callin
 ## Quirks worth knowing
 
 1. **`process.env` always stringifies.** Even though the package writes `process.env.PORT = 3000`, Node's `process.env` setter coerces to `"3000"`. Use `env()` for the typed value.
-2. **`${VAR}` is parse-time only.** Substitutions happen the moment the value is parsed. Later updates to the referenced key do not re-trigger substitution in earlier lines.
+2. **`${VAR}` is parse-time only.** Substitutions happen the moment the value is parsed. Later updates to the referenced key do not re-trigger substitution in earlier lines. Forward references (declaring the key later in the same file) are unsupported and throw.
+3. **The default precedence is `"file-wins"`, which is the deployment hazard.** A `.env` file baked into a container image replaces the `DATABASE_URL` / port / secret the platform injected. Pass `precedence: "process-wins"` in containerised environments. **v2.0 flips the default.**
+4. **`env.all()` is the file store only** — it is not merged with `process.env`. The fallback lives in `env(key)`.
 
 ## Where to go next
 

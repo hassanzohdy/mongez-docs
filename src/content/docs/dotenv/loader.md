@@ -13,13 +13,20 @@ sidebar:
 
 ```ts
 function loadEnv(envPath?: string, options?: EnvLoaderOptions): void
-function loadEnvFile(envPath: string, override: boolean): void
+function loadEnvFile(
+  envPath: string,
+  override: boolean,
+  precedence?: EnvPrecedence,   // default "file-wins"
+): void
 function resetEnv(): void
 
+type EnvPrecedence = "file-wins" | "process-wins";
+
 type EnvLoaderOptions = {
-  override?: boolean;       // default true — also write into process.env
-  dir?: string;             // default cwd() — search root
-  loadSharedEnv?: boolean;  // default true — load .env.shared first
+  override?: boolean;           // default true — also write into process.env
+  dir?: string;                 // default cwd() — search root
+  loadSharedEnv?: boolean;      // default true — load .env.shared first
+  precedence?: EnvPrecedence;   // default "file-wins" — who wins vs process.env
 };
 ```
 
@@ -28,6 +35,7 @@ type EnvLoaderOptions = {
 1. If `loadSharedEnv` is `true` and `${dir}/.env.shared` exists, load it first.
 2. Try `${dir}/.env.${process.env.NODE_ENV}` (e.g. `.env.development`).
 3. If that file does not exist, fall back to `${dir}/.env`.
+4. If that does not exist either, do nothing — no throw. A project with no `.env` at all is a supported state.
 
 ```ts
 process.env.NODE_ENV = "development";
@@ -48,6 +56,24 @@ loadEnv("/etc/secrets.env");    // explicit path skips the resolver,
                                  // but .env.shared is still loaded first
                                  // unless loadSharedEnv: false
 ```
+
+An explicitly-passed `envPath` that does not exist still throws — the caller named it, so a typo must be loud. Only the paths `loadEnv` derives for itself (steps 2–3 above) are optional.
+
+## Precedence semantics — file vs. the real environment
+
+| Setting | A key in BOTH the file and `process.env` |
+|---|---|
+| `precedence: "file-wins"` (default) | The file value replaces the injected one, in the store and (when `override`) in `process.env`. |
+| `precedence: "process-wins"` | The injected value is authoritative. The file does not replace it in the store and does not write over it. |
+
+```ts
+// Docker / Kubernetes / CI: the platform owns the environment.
+loadEnv(undefined, { precedence: "process-wins" });
+```
+
+- `"file-wins"` stays the default for the whole v1.x line so a minor bump never changes what a running deployment reads. **v2.0 flips the default to `"process-wins"`.**
+- Keys the loader itself wrote earlier in the same run (`.env.shared`, or a previous `loadEnvFile`) are tracked in an internal `Set` and are NOT mistaken for platform-injected values — file layering keeps working under `"process-wins"`.
+- Values taken from `process.env` are coerced to primitives the same way file values are (`"8080"` → `8080`), but WITHOUT quote stripping or `${VAR}` interpolation.
 
 ## Override semantics
 
@@ -90,9 +116,10 @@ If a key appears in both files, the environment-specific file wins (it loads sec
 
 ```ts
 loadEnvFile("/abs/path/to/.env", /* override */ true);
+loadEnvFile("/abs/path/to/.env", true, "process-wins");
 ```
 
-Loads exactly one file. Throws if the path does not exist:
+Loads exactly one file. Always throws if the path does not exist — it is the primitive and never guesses:
 
 ```
 Error: .env file not found at /abs/path/to/.env
@@ -135,6 +162,11 @@ loadEnv(undefined, { dir: path.resolve(__dirname, "../config") });
 ```ts
 // 4. Skip the shared layer (rare).
 loadEnv(undefined, { loadSharedEnv: false });
+```
+
+```ts
+// 4b. Containerised deploy — injected values outrank the baked-in file.
+loadEnv(undefined, { precedence: "process-wins" });
 ```
 
 ```ts

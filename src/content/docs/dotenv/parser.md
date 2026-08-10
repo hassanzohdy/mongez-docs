@@ -84,28 +84,39 @@ env("APP_URL");
 
 Resolution rules:
 
-1. The substitution is read from the internal store (`envData`), NOT from `process.env`.
+1. The substitution is read from the internal store (`envData`) first, then from `process.env`. A key the platform injected resolves even though no file declares it.
 2. Substitution happens at parse time. Later mutations to the referenced key do not re-run substitution.
-3. Unresolved references substitute the literal string `"undefined"`:
+3. A reference that resolves in neither place **throws, naming the key**:
 
 ```ts
 parseValue("prefix:${UNKNOWN}:suffix");
-// "prefix:undefined:suffix"
+// Error: Cannot resolve ${UNKNOWN}: "UNKNOWN" is not defined in the loaded env
+// data or in process.env. Forward references are not supported — declare
+// "UNKNOWN" before the line that references it, or in .env.shared, which loads first.
 ```
 
-4. Inside a `loadEnvFile` run, lines are processed top-to-bottom. A `${VAR}` reference must point to a key that appeared in an earlier line (or in `.env.shared`, which loads first).
+   Before 1.3.0 this returned the literal string `"prefix:undefined:suffix"` — a corrupted value that starts the app and fails much later, far from the cause. Emitting a broken string is never better than a named error.
+
+4. Inside a `loadEnvFile` run, lines are processed top-to-bottom, so **forward references are unsupported**. A `${VAR}` reference must point to a key from an earlier line, from `.env.shared` (which loads first), or from `process.env` — otherwise it throws.
 
 ## Reading values
 
+Lookup order is **internal store → `process.env` → `defaultValue`**.
+
 ```ts
-env("APP_PORT");                  // 3000     (number — typed)
+env("APP_PORT");                  // 3000     (number — typed, from .env)
 env("APP_PORT", 8080);            // 3000     (loaded value wins over default)
+env("NODE_ENV");                  // "test"   (from process.env — no file declares it)
 env("MISSING");                   // undefined
 env("MISSING", "default");        // "default"
 env("MISSING", 0);                // 0
 env("MISSING", false);            // false
 env.all();                        // { APP_NAME: "...", APP_PORT: 3000, ... }
 ```
+
+A value that comes from the `process.env` step is coerced to a primitive the same way a file value is — `"8080"` → `8080`, `"true"` → `true`, `"null"` → `null` — so a key's type does not depend on whether it arrived from a file or from the platform. That coercion is deliberately narrower than `parseValue`: no quote stripping and no `${VAR}` interpolation, because a real environment variable is a literal value (a quote or a `${` inside it belongs to the secret). Values with significant leading/trailing whitespace are returned untouched.
+
+Before 1.3.0 `env()` never consulted `process.env`, so any platform-injected variable that no `.env` file happened to name returned its default forever — including `env("NODE_ENV")` before `loadEnv()` had run at all.
 
 `env(key, default)` uses `key in envData` (not `??`), so a deliberately-loaded `null` is preserved and distinguishable from a missing key:
 
@@ -125,7 +136,7 @@ all.HACKED = "yes";
 env("HACKED");   // "yes"  — mutations to env.all() leak into the store
 ```
 
-Treat the return as read-only.
+Treat the return as read-only. It contains only what the `.env` files declared — it is deliberately NOT merged with `process.env`, or every iteration over it would become a dump of the machine's variables. Use `env(key)` when you want the `process.env` fallback.
 
 ## Standalone `parseLine` / `parseValue`
 
@@ -136,4 +147,4 @@ parseLine('PORT=3000');           // ["PORT", 3000]
 parseValue('"hello world"');      // "hello world"
 ```
 
-But `${VAR}` substitution still reads from the module's `envData` store, which is empty until something populates it. So `parseValue("${X}")` returns `"undefined"` unless `X` was previously set by some earlier `loadEnv` / `loadEnvFile` call (or you call `parseLine` after one).
+But `${VAR}` substitution reads from the module's `envData` store (empty until something populates it), then from `process.env`. So `parseValue("${X}")` **throws** unless `X` was set by an earlier `loadEnv` / `loadEnvFile` call or exists in the real environment.

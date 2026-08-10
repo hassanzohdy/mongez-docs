@@ -2,7 +2,7 @@
 title: "Recipes"
 name: mongez-dotenv-recipes
 description: |
-  Idiomatic patterns and worked examples for common `@mongez/dotenv` use cases — bootstrapping, layered env files, typed config objects, read-only mode, `null` handling, and full reset.
+  Idiomatic patterns and worked examples for common `@mongez/dotenv` use cases — bootstrapping, layered env files, typed config objects, read-only mode, `process-wins` precedence for containerised deploys, reading platform-injected variables, optional `.env`, `null` handling, and full reset.
 sidebar:
   order: 99
 ---
@@ -117,7 +117,55 @@ process.env.APP_PORT;   // unchanged
 env("APP_PORT");        // typed value from the file
 ```
 
-Useful when a parent process / orchestrator already set `process.env` and you want the file as a fallback rather than a replacement.
+`override` controls only the write-back. It does **not** control precedence: with the default `precedence: "file-wins"`, the file value still replaces the injected one inside the store, so `env("APP_PORT")` returns the file's value even when the orchestrator set a different one. Use `precedence` for that.
+
+## Let the platform's injected values win (Docker / Kubernetes / CI)
+
+```ts
+import { loadEnv, env } from "@mongez/dotenv";
+
+loadEnv(undefined, { precedence: "process-wins" });
+
+// DATABASE_URL injected by the platform → the .env line is ignored,
+//                                         and process.env is left intact.
+// APP_NAME only in .env                 → the file value is used.
+env("DATABASE_URL");
+env("APP_NAME");
+```
+
+Reach for this in any containerised deploy. The default, `"file-wins"`, means a `.env` file baked into the image silently overwrites what the platform injected — the exact inversion of what `dotenv`, `dotenv-flow`, Vite and Next do. It stays the default for all of v1.x so a minor bump never changes what a running deployment reads; **v2.0 flips it**.
+
+Combine with `override: false` when `process.env` should also be left untouched for the keys the file does own:
+
+```ts
+loadEnv(undefined, { precedence: "process-wins", override: false });
+```
+
+## Reading a variable that only the platform sets
+
+```ts
+import { env } from "@mongez/dotenv";
+
+// No .env file declares NODE_ENV or PORT — the platform injected them.
+env("NODE_ENV", "development");   // "production" (from process.env)
+env("PORT", 3000);                // 8080         (coerced to a number)
+```
+
+`env()` reads **store → `process.env` → default**, so this works even before `loadEnv()` has been called. Values taken from `process.env` get the same narrow coercion a file value gets, without quote stripping or `${VAR}` interpolation.
+
+## Optional `.env` (no file on disk)
+
+```ts
+import { loadEnv } from "@mongez/dotenv";
+
+loadEnv();   // directory has no .env, .env.shared, or .env.<NODE_ENV> → no-op
+```
+
+`loadEnv()` skips the paths it derives when nothing is on disk, so a container that gets everything from injected variables needs no guard. A path you pass explicitly still throws when missing:
+
+```ts
+loadEnv("/etc/myapp/secrets.env");  // throws if absent — you named it
+```
 
 ## Distinguishing a loaded `null` from a missing key
 

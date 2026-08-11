@@ -5,7 +5,7 @@
 > per-package content, see each package's `/llms-full.txt` at
 > `https://mongez.js.org/<package>/llms-full.txt`.
 
-Generated: 2026-08-08T19:47:50.886Z
+Generated: 2026-08-11T20:50:19.232Z
 
 
 
@@ -5042,7 +5042,7 @@ const themeAtom = createAtom({
 
 # @mongez/dotenv — full reference
 
-> **Auto-trigger when loading this full reference:** code imports `loadEnv`, `loadEnvFile`, `parseLine`, `parseValue`, `env`, `env.all`, `resetEnv`, or `EnvLoaderOptions` from `@mongez/dotenv`; typical import pattern `import { loadEnv, loadEnvFile, parseLine, parseValue, env, resetEnv, type EnvLoaderOptions } from "@mongez/dotenv"`; user asks "how do I load .env files", "how do I pick env file by NODE_ENV", "how does `.env.shared` layering work", "how does `env()` coerce values", "why is my `null` becoming `undefined`", "how does `${VAR}` interpolation work", "how do I read a typed env value", "how do I bootstrap env at startup", "how do I build a typed config from env", or "how do I do a full `process.env` reset in tests".
+> **Auto-trigger when loading this full reference:** code imports `loadEnv`, `loadEnvFile`, `parseLine`, `parseValue`, `env`, `env.all`, `resetEnv`, `EnvLoaderOptions`, or `EnvPrecedence` from `@mongez/dotenv`; typical import pattern `import { loadEnv, loadEnvFile, parseLine, parseValue, env, resetEnv, type EnvLoaderOptions } from "@mongez/dotenv"`; user asks "how do I load .env files", "how do I pick env file by NODE_ENV", "how does `.env.shared` layering work", "how does `env()` coerce values", "why is my `null` becoming `undefined`", "how does `${VAR}` interpolation work", "how do I read a typed env value", "how do I bootstrap env at startup", "how do I build a typed config from env", "how do I do a full `process.env` reset in tests", "why does my `.env` file override the variable Docker/Kubernetes/CI injected", "why does `env()` return the default for a variable that IS set in the environment", "why does my value contain the literal string `undefined`", or "why does `loadEnv()` throw when there is no `.env` file".
 >
 > **Skip when:** the question is about the higher-level app-config layer with groups, dot-notation lookups, defaults, or schema — that's `@mongez/config`, not this `.env`-file parser; browser/cookie/localStorage env shims; caching concerns — that's `@mongez/cache`; runtime schema validation via `zod`/`valibot` (layered on top, not provided here); or the upstream `dotenv` package itself.
 
@@ -5067,6 +5067,7 @@ import {
   env,
   resetEnv,
   type EnvLoaderOptions,
+  type EnvPrecedence,
 } from "@mongez/dotenv";
 ```
 
@@ -5077,10 +5078,13 @@ function loadEnv(envPath?: string, options?: EnvLoaderOptions): void
 ```
 
 ```ts
+type EnvPrecedence = "file-wins" | "process-wins";
+
 type EnvLoaderOptions = {
-  override?: boolean;       // default true — also write into process.env
-  dir?: string;             // default cwd() — search root for .env files
-  loadSharedEnv?: boolean;  // default true — load .env.shared first
+  override?: boolean;          // default true — also write into process.env
+  dir?: string;                // default cwd() — search root for .env files
+  loadSharedEnv?: boolean;     // default true — load .env.shared first
+  precedence?: EnvPrecedence;  // default "file-wins" — who wins vs process.env
 };
 ```
 
@@ -5089,16 +5093,43 @@ Resolution order when `envPath` is omitted:
 1. If `loadSharedEnv` is true (default) and `${dir}/.env.shared` exists, load it.
 2. Try `${dir}/.env.${process.env.NODE_ENV}`. If it exists, load it.
 3. Otherwise load `${dir}/.env`.
+4. If that does not exist either, do nothing. A project with no `.env` of any kind is a supported state — no throw.
+
+A path passed explicitly as `envPath` is different: a missing one still throws, because the caller named it and a typo must be loud. Only the paths `loadEnv` derives for itself are optional.
 
 `override` controls whether parsed values are also written to `process.env[key]`. Defaults to `true`. Even with `override: false`, values are still stored internally and accessible via `env(...)` / `env.all()`.
 
-## loadEnvFile(envPath, override)
+## precedence — file vs. the real environment
+
+`override` controls the write-back. `precedence` controls who WINS when a key exists in both a `.env` file and `process.env`.
+
+| Value | Behaviour |
+|---|---|
+| `"file-wins"` (default) | The file value replaces the injected one, in the internal store and (when `override`) in `process.env` itself. |
+| `"process-wins"` | An already-set `process.env` value is authoritative: the file does not replace it in the store and does not write over it. The file becomes a fallback layer. |
 
 ```ts
-function loadEnvFile(envPath: string, override: boolean): void
+// Docker / Kubernetes / CI — the platform owns the environment.
+loadEnv(undefined, { precedence: "process-wins" });
 ```
 
-Loads exactly one file. Throws if the path does not exist:
+Notes:
+
+- `"file-wins"` is the historical behaviour and stays the default for all of v1.x so a minor bump never changes what a running deployment reads. **v2.0 flips the default to `"process-wins"`**, matching `dotenv`, `dotenv-flow`, Vite and Next.
+- Keys the loader itself wrote earlier in the same run (`.env.shared`, or a previous `loadEnvFile`) are tracked in an internal `Set` and are NOT mistaken for platform-injected values, so file layering keeps working under `"process-wins"`.
+- A value taken from `process.env` is coerced to a primitive the same way a file value is (`"8080"` → `8080`), but WITHOUT quote stripping or `${VAR}` interpolation, and values with significant leading/trailing whitespace are left untouched.
+
+## loadEnvFile(envPath, override, precedence?)
+
+```ts
+function loadEnvFile(
+  envPath: string,
+  override: boolean,
+  precedence?: EnvPrecedence,   // default "file-wins"
+): void
+```
+
+Loads exactly one file. Always throws if the path does not exist — it is the primitive and never guesses:
 
 ```
 .env file not found at /path/to/file
@@ -5133,6 +5164,13 @@ Coercion table:
 | `"3000"` | `3000` (number) |
 | `"3.14"` | `3.14` (number) |
 | `"-7"` | `-7` (number) |
+| `"0123456789"` | `"0123456789"` (string — leading zero would be lost) |
+| `"1234567890123456789"` | string (beyond MAX_SAFE_INTEGER) |
+| `"0x1F"` | `"0x1F"` (string — would become 31) |
+| `"1e5"` | `"1e5"` (string — would become 100000) |
+| `"+15551234567"` | `"+15551234567"` (string — `+` would be stripped) |
+| `"1.50"` | `"1.50"` (string — trailing zero is significant) |
+| `"Infinity"` / `"NaN"` | string |
 | `"true"` | `true` (boolean) |
 | `"false"` | `false` (boolean) |
 | `"null"` | `null` |
@@ -5144,12 +5182,20 @@ Coercion table:
 
 `true` / `false` / `null` are case-sensitive. `True`, `YES`, `1` stay as strings.
 
-`${VAR}` is resolved against the internal store (NOT `process.env`). Unresolved references become the literal string `"undefined"`:
+Numeric coercion requires an EXACT ROUND TRIP — `isNumeric` is `Number.isFinite(n) && String(n) === value`, not `!isNaN(value)`. A value becomes a number only when converting it back yields the original characters, so nothing that would lose information is converted. The same rule applies to `process.env` values: in a `.env` file an author can opt out by quoting, but a platform-injected value is never quote-stripped, so the operator has no opt-out — and injected secrets, account IDs and tokens are exactly the values that look numeric.
+
+`${VAR}` is resolved at parse time against the internal store first, then `process.env`. A reference that resolves in NEITHER place throws, naming the key:
 
 ```ts
 parseValue("prefix:${NOT_DEFINED}:suffix");
-// "prefix:undefined:suffix"
+// Error: Cannot resolve ${NOT_DEFINED}: "NOT_DEFINED" is not defined in the loaded
+// env data or in process.env. Forward references are not supported — declare
+// "NOT_DEFINED" before the line that references it, or in .env.shared, which loads first.
 ```
+
+Before 1.3.0 this returned the literal string `"prefix:undefined:suffix"` — value corruption rather than a missing value, since the app starts and then fails much later (`postgres://undefined/app`).
+
+Forward references are unsupported: lines are processed top-to-bottom within a file, so a referenced key must come from an earlier line, from `.env.shared` (loaded first), or from `process.env`.
 
 ## env(key, defaultValue?)
 
@@ -5160,16 +5206,23 @@ const env: {
 };
 ```
 
-Reads from the internal store. Falls back to `defaultValue` (or `undefined`) when the key is missing.
+Lookup order: **internal store → `process.env` → `defaultValue`** (or `undefined`).
 
 ```ts
 env("APP_PORT");          // 3000
 env("APP_PORT", 8080);    // 3000 (loaded value wins)
+env("NODE_ENV");          // "production" (from process.env — no file declares it)
 env("MISSING", 0);        // 0
 env.all();                // { APP_PORT: 3000, ... }  (by reference — do not mutate)
 ```
 
-**Sharp edge:** `env` uses `??`, so a deliberately-loaded `null` collapses to the default / `undefined`. Use `env.all()[key]` to see the raw stored value when you need to distinguish "missing" from "loaded as null".
+`env` uses `key in envData` (not `??`), so a deliberately-loaded `null` is preserved and distinguishable from a missing key: with `EST_TIME=null` in the file, `env("EST_TIME", "fallback")` returns `null`.
+
+A value that comes from the `process.env` step is coerced the same way a file value is (`"8080"` → `8080`, `"true"` → `true`, `"null"` → `null`) so a key's type does not depend on where it came from. That coercion is narrower than `parseValue`: no quote stripping, no `${VAR}` interpolation, and values with significant leading/trailing whitespace pass through untouched.
+
+Before 1.3.0 `env()` never consulted `process.env`, so a platform-injected variable that no `.env` file declared returned its default forever — including `env("NODE_ENV")` before `loadEnv()` had run at all.
+
+`env.all()` returns the loaded store only. It is deliberately NOT merged with `process.env`; use `env(key)` for the fallback.
 
 ## resetEnv()
 
@@ -5178,9 +5231,10 @@ function resetEnv(): void
 ```
 
 1. Clears every key from the internal store.
-2. Copies the initial `process.env` snapshot (captured at module import time) back onto `process.env`.
+2. Deletes every `process.env` key that `loadEnvFile` wrote since module load (tracked internally in a `Set`).
+3. Copies the initial `process.env` snapshot (captured at module import time) back onto `process.env`.
 
-It does NOT delete keys that have been added to `process.env` since module load. If you need a clean slate, delete the keys explicitly before calling `resetEnv`.
+The net effect is a true "back to t0" for anything the loader added. Keys that callers set directly on `process.env`, without going through `loadEnv` / `loadEnvFile`, are not tracked and survive the reset — the caller owns their own additions.
 
 ## File-format rules
 
@@ -5188,7 +5242,7 @@ It does NOT delete keys that have been added to `process.env` since module load.
 - `KEY="value"` — string, even if it looks numeric.
 - `KEY="value with spaces"` — quotes preserve whitespace.
 - `KEY="value \"with\" escapes"` — `\"` becomes `"`.
-- `KEY=${OTHER}` — interpolation of an already-loaded key.
+- `KEY=${OTHER}` — interpolation of an already-loaded key, or of a `process.env` key. Throws if neither has it.
 - `# comment line` — ignored.
 - Blank lines — ignored.
 - `KEY=` — yields `["KEY", ""]`.
@@ -5233,16 +5287,34 @@ process.env.APP_PORT;                   // unchanged (was undefined → still un
 env("APP_PORT");                        // 3000
 ```
 
-Override only affects `process.env`. The internal store is populated either way.
+Override only affects `process.env`. The internal store is populated either way. It does NOT control precedence — see the `precedence` section above.
+
+## Precedence semantics
+
+```ts
+process.env.APP_HOST = "injected-host";   // e.g. Kubernetes
+// .env contains: APP_HOST=localhost
+
+loadEnv();                                            // precedence: "file-wins" (default)
+env("APP_HOST");                                      // "localhost"      — the file won
+process.env.APP_HOST;                                 // "localhost"      — overwritten
+
+loadEnv(undefined, { precedence: "process-wins" });
+env("APP_HOST");                                      // "injected-host"  — the platform won
+process.env.APP_HOST;                                 // "injected-host"  — left intact
+```
+
+Keys the file declares that the environment does NOT provide are loaded normally under both settings.
 
 ## Known limitations
 
-- **`null` is swallowed by `env()`** — see "Sharp edge" above.
-- **Quoted values with `#` AND a trailing comment trim wrongly**: `KEY="abc#def" # comment` returns `ab` (the parser splits on `#`, takes the left half, then slices off both ends — but the right end is no longer a quote).
-- **`resetEnv` does not delete later-added keys** from `process.env`.
-- **`parseValue` is called twice per line** inside `loadEnvFile` (once in `parseLine`, once in the loop). Currently idempotent for supported value shapes.
+- **`env()` returns `any`** — no type-safe key narrowing.
+- **Forward references are unsupported.** `A=${B}` with `B` declared on a later line throws; declare `B` first (or in `.env.shared`, or in `process.env`).
+- **Numeric coercion requires an exact round trip** (since 1.3.1). Identifier-shaped values (`0123456789`, `0x1F`, `1e5`, `+1555…`, anything past `MAX_SAFE_INTEGER`) stay strings from both sources. Quoting still works in a `.env` file as an explicit opt-out.
+- **`env.all()` returns the store by reference** — mutating the returned object mutates the store.
+- **The default `precedence` is `"file-wins"`**, which lets a baked-in `.env` file override platform-injected variables. Pass `"process-wins"` in containers. v2.0 flips the default.
 
-All four are reproduced as `.skip()`'d tests in `src/__tests__/known-bugs.test.ts`. Flipping `.skip` to `it` reproduces each.
+The four defects documented in `src/__tests__/known-bugs.test.ts` (the `null` collapse, the quoted-`#`-with-comment mis-trim, the double `parseValue` call, and `resetEnv` leaving keys behind) were all fixed in 1.2.4; that file now pins the corrected behaviour. The four defects from the 2026-08-10 report are covered in `src/__tests__/process-env.test.ts`.
 
 ## Patterns
 
@@ -5288,6 +5360,17 @@ const name: string = env("APP_NAME", "App");
 import { loadEnvFile } from "@mongez/dotenv";
 
 loadEnvFile("/etc/myapp/secrets.env", /* override */ false);
+```
+
+### Containerised deploy
+
+```ts
+import { loadEnv, env } from "@mongez/dotenv";
+
+loadEnv(undefined, { precedence: "process-wins" });
+
+env("DATABASE_URL");  // the value the platform injected, not the baked-in .env line
+env("APP_NAME");      // from .env — the platform does not set it
 ```
 
 ## What this package does NOT do
@@ -7366,26 +7449,6 @@ This file is structured for LLM consumption: each section is self-contained, can
 
 ---
 
-## 0. What's new in v4 (major rewrite)
-
-v4 keeps the public surface (`useFormControl`, the rules system, value collection) largely compatible but rebuilds the core:
-
-- **`Form` / `NativeForm` are now function components** (`forwardRef`). They lazily instantiate a single **`FormEngine`** and expose it via `ref`. The engine is the thing your `ref` and `useForm()` return — it implements `FormInterface`.
-- **`FormEngine` is a plain class** (not a `React.Component`). It is React-free, unit-testable in isolation, and the home of all form logic.
-- **`BaseForm` is a deprecated alias for `FormEngine`** (`export const BaseForm = FormEngine`), kept for one major. To support a custom renderer, subclass `FormEngine` and render a thin function component over it instead of subclassing `BaseForm`.
-- **SSR-safe id via React `useId()`** — the auto-generated form id (`form-<react-id>`) is now stable across server/client, fixing the old `Math.random()` hydration mismatch. No `id` prop is required for SSR.
-- **Async validation genuinely gates submission.** `formControl.validate()` returns `ReactNode | Promise<ReactNode>`. Sync rules stay synchronous (no extra microtask); the path goes async only when a rule returns a Promise. New per-control `isValidating` flag (on `FormControl` and the hook return). Stale async results are discarded via a per-control sequence token.
-- **Standard Schema support** (`@warlock.js/seal`, `zod`, `valibot`, …) with **zero runtime dependency** — whole-form (`<Form schema>`) and per-field (`useFormControl({ schema })`), plus type inference.
-- **Reactive hydration**: the `values` prop re-hydrates mounted controls and seeds later-mounting ones; `form.fill()`, `form.setValues()`, `form.setDefaultValue()`. `defaultValue` stays the reset baseline.
-- **Bulk server errors**: `form.setErrors({ "dot.name": message })` (HTTP 422 mapping).
-- **Awaited submit**: if `onSubmit` returns a Promise, submitting state auto-clears when it settles.
-- **`validateOn: "change" | "blur" | "submit"`** — per-control prop > `<Form validateOn>` > global config > `"change"`.
-- **New hooks**: `useFieldArray`, `useWatch`. **New a11y helpers** on the `useFormControl` return: `getInputProps`, `getErrorProps`, `errorId`, `onBlur`.
-
-Each topic has a full section below. Migration is mostly a no-op for consumers; only code that subclassed `BaseForm` or relied on a class-component instance shape needs review.
-
----
-
 ## 1. Installation
 
 > **Auto-trigger:** code imports `Form`, `NativeForm`, `useFormControl`, `enValidationTranslation`, `arValidationTranslation`, `frValidationTranslation`, `esValidationTranslation`, `itValidationTranslation`, or `deValidationTranslation` from `@mongez/react-form`; user asks "how do I install @mongez/react-form", "how do I set up a form in a new project", or "why does my validation show validation.required instead of a real message"; `import { Form, useFormControl } from "@mongez/react-form"` at app entry.
@@ -7423,54 +7486,29 @@ Without this, error messages render as raw keys like `validation.required`.
 
 ## 3. Form components
 
-> **Auto-trigger:** code imports `Form`, `NativeForm`, `FormEngine`, `useFormEngine`, or `BaseForm` from `@mongez/react-form`, attaches a `ref` to `<Form>` / `<NativeForm>`, or imports `useFormControl` / `useForm` / `useSubmitButton` in a file that also imports from `react-native` (e.g. `TextInput`, `Pressable`, `View`, `Text` from `"react-native"`); user asks "how do I use @mongez/react-form on React Native or Expo", "why doesn't my form submit fire on RN", "how do I get the form engine via ref", "what replaced BaseForm in v4", "how do I wire `onChangeText` / `onFocus` / `Pressable` into a form control", or "how do I make a checkbox on React Native"; `import { NativeForm } from "@mongez/react-form"`.
+> **Auto-trigger:** code imports `NativeForm` from `@mongez/react-form`, or imports `useFormControl` / `useForm` / `useSubmitButton` in a file that also imports from `react-native` (e.g. `TextInput`, `Pressable`, `View`, `Text` from `"react-native"`); user asks "how do I use @mongez/react-form on React Native or Expo", "why doesn't my form submit fire on RN", "how do I wire `onChangeText` / `onFocus` / `Pressable` into a form control", or "how do I make a checkbox on React Native"; `import { NativeForm } from "@mongez/react-form"`.
 > **Skip when:** `mongez-react-form-getting-started` once install and locale registration are done; `mongez-react-form-create-form-control` for the platform-agnostic hook contract; `mongez-react-form-submit-button` for non-RN button patterns; Web-only `Form` component usage; `react-hook-form`/`formik` on RN.
 
-Two components, same API, different platforms — **both are function components (`forwardRef`)** built over the React-free `FormEngine`:
+Two components, same API, different platforms:
 
 - **`Form`** — Web. Renders an HTML `<form>` element. Browser submit event drives the submission.
 - **`NativeForm`** — React Native. Renders a Fragment by default (or any component passed via `component` prop). Submission is always programmatic via `form.submit()`.
 
-Both lazily instantiate one `FormEngine` (which implements `FormInterface`) and expose it via `ref`. That same engine is what `useForm()` returns to descendants.
-
-### Accessing the engine via `ref`
-
-```tsx
-import { Form, type FormInterface } from "@mongez/react-form";
-import { useRef } from "react";
-
-const formRef = useRef<FormInterface>(null);
-
-<Form ref={formRef} onSubmit={handle}>{/* ... */}</Form>;
-
-// later, imperatively:
-formRef.current?.fill({ user: { firstName: "Jane" } });
-formRef.current?.submit();
-```
-
-The ref resolves to the `FormEngine` instance — every method on `FormInterface` (`values()`, `validate()`, `fill()`, `setErrors()`, `reset()`, …) is available.
+Both implement `FormInterface` and share the abstract `BaseForm` engine.
 
 ### Form props (both Web and Native)
 
-`FormProps` extends `React.FormHTMLAttributes<HTMLFormElement>` (minus the overridden keys), so any standard `<form>` attribute (`className`, `style`, `noValidate`, …) flows through to the rendered element.
-
 ```ts
-type FormProps<Schema extends StandardSchemaV1 | undefined = undefined> = {
-  onSubmit?: (options: FormSubmitOptions<Schema>) => void | Promise<any>;
+type FormProps = {
+  onSubmit?: (options: FormSubmitOptions) => void;
   onError?: (invalidControls: FormControl[]) => void;
   component?: React.ComponentType<any>;        // override the rendered element
-  defaultValue?: Record<string, any>;          // RESET BASELINE for every control by name (dot-notation supported)
-  values?: Record<string, any>;                // REACTIVE current values — re-hydrates on identity change (see §15)
-  schema?: Schema;                             // whole-form Standard Schema validator (see §16)
-  validateOn?: "change" | "blur" | "submit";  // default validation trigger for all controls (see §17)
+  defaultValue?: Record<string, any>;          // default values for every control by name (dot-notation supported)
   ignoreEmptyValues?: boolean;                 // omit empty values from form.values()
-  id?: string;                                 // form id — OPTIONAL; auto-derived from React useId() and SSR-safe
+  id?: string;                                 // form id; pass a static, unique value in SSR apps (auto-generated via Math.random() when absent — see §3 SSR)
   children: React.ReactNode;
 };
 ```
-
-- **`onSubmit` may return a `Promise`** — when it does, the engine auto-clears submitting state once it settles (§18). Sync `onSubmit` behaves as before.
-- **`schema` drives `onSubmit` value typing**: `FormProps<Schema>` types `values` as `InferFormValues<Schema>` (§16).
 
 ### `FormSubmitOptions` (the argument to `onSubmit`)
 
@@ -7478,7 +7516,7 @@ type FormProps<Schema extends StandardSchemaV1 | undefined = undefined> = {
 {
   form: FormInterface;
   event?: React.FormEvent;        // undefined when programmatically submitted (and always on Native)
-  values: FormValues<Schema>;     // getter — calls form.values() each access; typed from schema when present
+  values: Record<string, any>;    // getter — calls form.values() each access
   formData: FormData;             // getter — calls form.formData() each access
 }
 ```
@@ -7509,11 +7547,9 @@ import { View } from "react-native";
 </NativeForm>
 ```
 
-### SSR — the form id is now SSR-safe automatically
+### SSR — pass a static `id` to every `<Form>`
 
-In v4 the form id is derived from React's `useId()` when no `id` prop is passed (`useFormEngine` computes `props.id ? String(props.id) : "form-" + useId()`). `useId()` returns the same value on the server render and the client hydration, so the rendered `<form id="form-…">` attribute is **deterministic on both sides** — the old `Math.random()` hydration mismatch is gone. **No `id` prop is required for SSR correctness.**
-
-You may still pass an explicit, static `id`:
+In server-rendered apps (Next.js, Remix, Astro, TanStack Start, …), always give each `<Form>` an explicit, static `id`:
 
 ```tsx
 <Form id="signup" onSubmit={({ values }) => api.signup(values)}>
@@ -7521,17 +7557,17 @@ You may still pass an explicit, static `id`:
 </Form>
 ```
 
-- A static `id` makes the `<form>` easy to target in tests and styles, and it sets the event prefix (`form.<id>`) explicitly.
-- Keep each form's `id` unique on the page — the id drives the internal event prefix, so duplicate ids cross-wire events.
-- Inputs derive their id from `name` (`input-<name>`), which is already deterministic.
+When `id` is omitted, the form generates one at construction with `Math.random()` (`frm-<random>`) and renders it as the `<form id="form-frm-…">` attribute. The server render and the client hydration each run that generation independently and produce **different** ids — React reports a hydration mismatch and discards the server markup for that subtree. A static `id` makes the rendered attribute deterministic (`form-signup`) and identical on both sides.
 
-> Note on the internal engine id: when constructed without options, `FormEngine` falls back to a counter-based id (`frm-<base36 counter>`), not `Math.random()`. In practice `Form` / `NativeForm` always pass the `useId()`-derived id, so the rendered attribute is the SSR-safe `form-<react-id>`.
+- Keep each form's `id` unique on the page — it also drives the internal form id and its event prefix (`form.<id>`), so duplicate ids cross-wire events.
+- Inputs don't need this: a control's id derives from its `name` (`input-<name>`), which is already deterministic. Only the `<Form>` wrapper falls back to a random id.
+- Client-only apps (plain SPA, React Native `NativeForm`) never hydrate server markup, so the random id is harmless there — but a static `id` is still a good habit and makes the `<form>` easier to target in tests and styles.
 
 ---
 
 ## 4. Form controls — the canonical pattern
 
-> **Auto-trigger:** code imports `useFormControl`, `useRadioInput`, `useFieldArray`, `useWatch`, `RadioGroupContext`, `HiddenInput`, `FormControlProps`, `FormControlHook`, or `FormControl` from `@mongez/react-form`; calls `getInputProps` / `getErrorProps` or reads `isValidating` / `errorId` / `onBlur` from the hook; user asks "how do I build a custom text input / checkbox / radio / multi-select for @mongez/react-form", "how do I wire `inputRef` / `otherProps` / `checked` / `setChecked` / `getInputProps`", "how do I build a dynamic list of fields", "how do I watch a field's value", or "how do I make a multi-value input"; `import { useFormControl } from "@mongez/react-form"` in a component file.
+> **Auto-trigger:** code imports `useFormControl`, `useRadioInput`, `RadioGroupContext`, `HiddenInput`, `FormControlProps`, `FormControlHook`, or `FormControl` from `@mongez/react-form`; user asks "how do I build a custom text input / checkbox / radio / multi-select for @mongez/react-form", "how do I wire `inputRef` / `otherProps` / `checked` / `setChecked`", or "how do I make a multi-value input"; `import { useFormControl } from "@mongez/react-form"` in a component file.
 > **Skip when:** `mongez-react-form-validation-rules` for choosing or writing rules (rules go into the `rules` array, but the rules system itself is a separate skill); `mongez-react-form-submit-button` for submit-button wiring; `mongez-react-form-form-events` for subscribing to lifecycle events; raw React `useState` form inputs unrelated to `@mongez/react-form`; `react-hook-form`'s `useController` or `Controller`.
 
 Every input is built around `useFormControl`. The hook registers the input with the surrounding form and returns a state bundle.
@@ -7653,7 +7689,6 @@ import { HiddenInput } from "@mongez/react-form";
   value: any;
   changeValue: (value, options?: FormControlChangeOptions) => void;
   error: ReactNode;
-  errorId: string;                 // stable id for the error element (input's aria-describedby)
   errorsList: { [ruleName: string]: ReactNode };
   setError: (error: ReactNode) => void;
   checked: boolean;
@@ -7664,17 +7699,11 @@ import { HiddenInput } from "@mongez/react-form";
   disabled: boolean;
   disable: () => void;
   enable: () => void;
-  isInvalid: boolean;              // touched AND failing validation (getter)
-  isValidating: boolean;           // an async validation rule is in-flight (see §14)
-  onBlur: () => void;              // blur handler — validates when validateOn === "blur" (see §17)
-  otherProps: object;              // pass-through props (excludes hook + rule-preserved keys; validateOn + schema are stripped out)
-  getInputProps: (overrides?) => object;   // a11y-complete prop bag for the host input (see §19)
-  getErrorProps: () => { id, role, "aria-live" }; // prop bag for the error element (see §19)
-  validate: () => ReactNode | Promise<ReactNode>;
+  isInvalid: boolean;              // touched AND failing validation
+  otherProps: object;              // pass-through props (excludes hook + rule-preserved keys)
+  validate: () => void;
 }
 ```
-
-> **`otherProps` no longer leaks `validateOn` or `schema`.** Both are destructured out before the rest props are assembled, so spreading `otherProps` onto a DOM element won't emit invalid attributes.
 
 ---
 
@@ -7739,7 +7768,7 @@ useFormControl({ ...props, rules: [requiredRule, minLengthRule, emailRule] });
 />
 ```
 
-The `validate` prop accepts sync or async functions. An async (`Promise`-returning) `validate` flips the control's `isValidating` flag and **genuinely gates submission** — `form.validate()` awaits it before the submit pipeline proceeds (§14). The per-instance `validate` runs **first** in the rule list (before the passed `rules`, then any per-field `schema` last).
+The `validate` prop accepts sync or async functions. Async returns block downstream rules until resolved.
 
 ### Writing a custom rule
 
@@ -7913,7 +7942,7 @@ getForm("form-id");         // module-level — returns by id
 
 ```ts
 form.submit();                                   // trigger validation + submission
-form.validate(controls?);                        // Promise<FormControl[]> — awaits async rules
+form.validate(controls?);                        // Promise<FormControl[]>
 form.validateVisible();                          // validate only visible controls (Web only; on RN it's identical to validate())
 form.values(names?);                             // collect values as nested object
 form.value(name);                                // single control value by name
@@ -7921,11 +7950,6 @@ form.formData();                                 // FormData object (for multipa
 form.controls(names?);                           // array of FormControl
 form.control(name, getBy?);                      // single FormControl by name or id
 form.change(name, value);                        // mutate a control's value programmatically
-form.fill(values, options?);                     // bulk-write values + seed late controls (§15)
-form.setValues(values, options?);                // alias of fill
-form.setDefaultValue(defaultValue);              // update reset baseline; re-hydrate pristine controls (§15)
-form.setErrors({ "dot.name": message });         // bulk server-error (422) mapping (§15)
-form.getInitialValue(name);                      // seed value from hydration snapshot then baseline
 form.reset();                                    // reset all to initial values
 form.resetErrors();                              // clear errors only
 form.disable(isDisabled);                        // disable/enable all controls
@@ -7933,12 +7957,9 @@ form.enable();                                   // shorthand for disable(false)
 form.isValid();                                  // boolean
 form.isSubmitting();                             // boolean
 form.submitting(true | false);                   // toggle in-flight state
-form.wasSubmitted;                               // boolean — true after the first submit attempt (§17)
 form.on(event, callback);                        // event subscription
 form.id;                                         // string
 form.formElement;                                // HTMLFormElement (Web) | any (Native)
-form.schema;                                      // the whole-form Standard Schema, if provided
-form.validateOn;                                 // form-level default validation trigger
 ```
 
 ### Default values
@@ -7973,7 +7994,6 @@ import { setFormConfigurations } from "@mongez/react-form";
 setFormConfigurations({
   ignoreEmptyValues: true,        // default false
   formComponent: MyCustomForm,    // default "form" — replaces the rendered element for ALL Web Forms
-  validateOn: "blur",             // default "change" — global validation trigger for all controls (§17)
 });
 ```
 
@@ -8044,7 +8064,6 @@ The "active form" tracks the most recently mounted form globally — when forms 
   initialChecked: boolean;
   isDirty: boolean;
   isTouched: boolean;
-  isValidating: boolean;       // an async validation rule is in-flight (§14)
   isValid: boolean | null;     // null = not yet validated
   error: ReactNode;
   errorsList: { [ruleName: string]: ReactNode };
@@ -8062,7 +8081,7 @@ The "active form" tracks the most recently mounted form globally — when forms 
   change(value, opts?): void;
   setChecked(checked): void;
   setError(error): void;
-  validate(): Promise<ReactNode>;   // awaited by form.validate() so async rules gate submit (§14)
+  validate(): ReactNode;
   isCollectable(): boolean;
   collectValue(): any;
   isVisible(): boolean;
@@ -8096,18 +8115,15 @@ The "active form" tracks the most recently mounted form globally — when forms 
   placeholder?: string;
   label?: ReactNode;
   rules?: InputRule[];
-  validate?: InputRule["validate"];              // per-instance custom validation (sync or async)
-  schema?: StandardSchemaV1;                     // per-field Standard Schema — wrapped as a rule, appended last (§16)
+  validate?: InputRule["validate"];              // per-instance custom validation
   errors?: { [ruleName: string]: ReactNode };    // override messages per rule
   errorKeys?: { [placeholder: string]: ReactNode }; // override message placeholders
   onChange?: (value, options) => void;
   onError?: (error: ReactNode) => void;
-  validateOn?: "change" | "blur" | "submit";     // per-control validation trigger (§17)
+  validateOn?: "change" | "blur";
   [key: string]: any;                            // anything else flows to otherProps
 }
 ```
-
-`FormControlOptions` (the 2nd `useFormControl` argument) also accepts a `schema` field — equivalent to the `schema` prop, handy when authoring a reusable input wrapper.
 
 ### `InputRule`
 
@@ -8143,8 +8159,8 @@ The "active form" tracks the most recently mounted form globally — when forms 
 - Listing `requiredRule` after value-dependent rules — they skip empty values and won't run.
 - Returning `false` from a `validate` function — must return a `ReactNode` or `undefined`. `false` is treated as truthy.
 - Spreading raw `props` (not `otherProps`) onto the host element — leaks hook-internal props.
-- Forgetting `form.submitting(false)` in the API-failure path **when `onSubmit` is synchronous** — button stays disabled. (If `onSubmit` returns a Promise, the engine auto-clears submitting state on settle; see §18.)
-- Calling `form.submitting(false)` manually after an awaited (Promise-returning) `onSubmit` — redundant; the engine already clears it. Harmless but unnecessary.
+- Forgetting `form.submitting(false)` in the API-failure path — button stays disabled.
+- Omitting a static `id` on `<Form>` in SSR apps — the auto-generated `Math.random()` id differs between server and client and triggers a React hydration mismatch. Pass a stable, unique `id` per form.
 - Subscribing to events without unsubscribing — leaks on remount, duplicate handlers.
 - Mixing `Form` (Web) and `NativeForm` (Native) in the same code path — pick the one matching the platform.
 - Using `<button onClick={() => form.submit()}>` on Web inside `<Form>` — works, but `<button type="submit">` is simpler and lets the browser handle the event natively.
@@ -8152,414 +8168,154 @@ The "active form" tracks the most recently mounted form globally — when forms 
 
 ---
 
-## 14. Async validation gating & `isValidating`
+## 14. Architecture & extending `BaseForm`
 
-> **Auto-trigger:** code reads `isValidating` from `useFormControl` / `formControl`; user asks "how do I show a spinner while async validation runs", "does async validation block submit in @mongez/react-form", "why does my submit fire before the async username check finishes", or "how does the async validation gating work"; a `validate` / rule that returns a `Promise`.
+### Class hierarchy
 
-In v4 a control's `validate()` returns `ReactNode | Promise<ReactNode>` and the form **awaits each control** during `form.validate()`, so async rules genuinely gate submission — the submit pipeline does not proceed until every control's async validation resolves.
+```
+BaseForm<P extends FormProps>   (abstract — engine, no rendering)
+  ├── Form          (Web — renders <form>, DOM submit handling)
+  └── NativeForm    (React Native — Fragment default, programmatic submit)
+```
 
-### Sync-fast-path
+`BaseForm` is exported from the package root. Subclass it to support any other React renderer (`react-three-fiber`, terminal UIs, server-rendered validation, custom hosts).
 
-The rule pipeline runs synchronously and returns a plain `ReactNode` when **every** rule resolves synchronously — no extra microtask, identical timing to v3. It returns a `Promise` only once a rule's `validate` returns a `Promise`. So the common all-sync case stays sync; only forms with a genuinely async rule pay the async cost.
+### What `BaseForm` provides out of the box
 
-### `isValidating`
+Inheriting from `BaseForm` gives you the full `FormInterface` for free:
 
-When an async rule is in-flight, the control flips `isValidating` to `true` (exposed both on `FormControl.isValidating` and on the `useFormControl` return), then back to `false` when it resolves. Use it for per-field spinners:
+**Control registry:** `register(formControl)`, `unregister(formControl)`, `control(value, getBy?)`, `controls(names?)`, internal `formControls[]` array. Automatically wires per-control `onChange` subscriptions to maintain `dirtyControls`.
+
+**Validation pipeline:** `validate(controls?)`, `validateVisible()`, plus the events `validating`, `validation`, `validControl`, `invalidControl`, `validControls`, `invalidControls`. Listener returning `false` from `validating` aborts the run.
+
+**Value collection:** `values(names?)`, `value(name)`, `formData()`, `collectValues(names?)`, `shouldIgnoreEmptyValues()`. Honors dot-notation names (`user.firstName` → nested objects), array indices (`tags.0`), `multiple: true` controls, and `ignoreEmptyValues`.
+
+**State tracking:** `isDirty`, `dirtyControls[]`, `setIsDirty()`, `isSubmitting()`, `submitting(boolean)`, `isValid()`, `disable(isDisabled?)`, `enable()`. Each transition fires the matching event.
+
+**Event bus:** `on(event, cb)`, `trigger(event, ...args)`, `triggerAll(event, ...args)`. Built on `@mongez/events`. Event names are typed via `FormEventType`.
+
+**Active-form registry:** Constructor auto-registers via `setActiveForm()` + `addToFormsList()`. `componentWillUnmount` auto-unregisters. So `getActiveForm()` and `getForm(id)` work without any subclass setup.
+
+**Reset:** `reset()`, `resetErrors()`. `reset()` fires `resetting` → calls each control's `reset()` → resets internal flags → fires `reset`.
+
+**Default-value resolution:** `props.defaultValue` is exposed as `this.defaultValue` and consumed by `useFormControl` via the `FormContext` lookup chain.
+
+**Shared submit pipeline:** Protected `handleSubmit(event?)` method — runs `validate()`, short-circuits on invalid form / already-submitting, calls `props.onSubmit({ form, event, values, formData })` with `values` and `formData` as getters (lazy), then fires the `submit` event.
+
+### What you must implement
+
+Two abstract surfaces:
+
+1. **`submit(): void`** — programmatic submit. Typical implementation calls `this.handleSubmit()`.
+2. **`render(): ReactNode`** — must wrap children in `<FormContext.Provider value={this}>` so descendants' `useFormControl` calls find the form. Beyond that, render whatever fits the platform.
+
+### Canonical subclass templates
+
+**Headless (no host element):**
 
 ```tsx
-const { value, changeValue, error, isValidating } = useFormControl(props);
+import { BaseForm, FormContext, type FormProps, type FormInterface } from "@mongez/react-form";
 
-return (
-  <>
-    <input value={value} onChange={(e) => changeValue(e.target.value)} />
-    {isValidating && <Spinner />}
-    {error && <span className="error">{error}</span>}
-  </>
-);
-```
+export class HeadlessForm extends BaseForm implements FormInterface {
+  public formElement = null;
 
-### Stale-result discarding
-
-Each validation run captures a monotonic per-control sequence token (`validationSeq`). If a newer run starts before an earlier async rule resolves, the **stale** result is discarded — only the latest run commits its error/validity. This prevents a slow earlier request (e.g. a username check for "jo") from overwriting the result of a newer one ("john").
-
-### Async per-field schema / custom validate
-
-Both a per-field Standard `schema` (§16) and a `validate` prop that returns a Promise participate in the same gating and `isValidating` flag. The per-field schema rule is appended **last** in the pipeline.
-
----
-
-## 15. Reactive hydration — `values`, `fill`, `setValues`, `setDefaultValue`, `setErrors`
-
-> **Auto-trigger:** code passes a `values` prop to `<Form>`, or calls `form.fill(...)`, `form.setValues(...)`, `form.setDefaultValue(...)`, `form.setErrors(...)`, or `form.getInitialValue(...)`; user asks "how do I load an edit form whose record arrives after mount", "how do I bulk-set form values", "how do I map a 422 server error response onto fields", or "what's the difference between defaultValue and values".
-
-### `defaultValue` vs `values`
-
-- **`defaultValue`** is the **reset baseline**. `form.reset()` restores every control to it. It is read once when a control mounts (per-control `defaultValue`/`value` props still win over the form-level lookup).
-- **`values`** is the **reactive current data**. Changing the *identity* of the `values` object **re-hydrates already-mounted controls** and **seeds controls that mount later** (via `engine.hydrationValues`, read through `form.getInitialValue(name)`). Ideal for edit forms whose record loads asynchronously.
-
-```tsx
-const { data: user } = useUser(id);   // arrives after mount
-
-<Form values={user} onSubmit={save}>
-  <TextInput name="firstName" />
-  <TextInput name="email" />
-</Form>;
-```
-
-When `user` resolves and its object identity changes, both already-mounted controls receive the new values and any control mounting afterward seeds from the latest snapshot.
-
-### `form.fill(values, options?)` / `form.setValues(values, options?)`
-
-Bulk-write values onto mounted controls and merge them into the hydration snapshot for later-mounting controls. `setValues` is an alias of `fill`. **Does not change the reset baseline.**
-
-```ts
-form.fill(
-  { user: { firstName: "Jane" }, country: "EG" },
-  { dirty: false, validate: false }  // both default to false
-);
-```
-
-`FillOptions`: `{ dirty?: boolean (default false); validate?: boolean (default false) }`. `dirty: false` writes without marking controls dirty (so the form stays pristine); `validate: false` skips revalidation on write.
-
-### `form.setDefaultValue(defaultValue)`
-
-Update the reset baseline. **Pristine (non-dirty) controls re-hydrate** to the new baseline; dirty controls keep the user's edits. (`Form` calls this automatically when the `defaultValue` prop identity changes.)
-
-### `form.getInitialValue(name)`
-
-Resolve a control's seed value: the reactive hydration snapshot first, then the reset baseline; returns `undefined` when neither has it. Used internally by `useFormControl` (and `useFieldArray`) when a control mounts.
-
-### `form.setErrors({ "dot.name": message })`
-
-Bulk-assign errors keyed by dot-notation control name — the canonical way to map a server validation response (HTTP 422) back onto controls. Names with no matching control are ignored. Triggers `invalidControls` so submit buttons re-disable.
-
-```ts
-onSubmit={async ({ values, form }) => {
-  try {
-    await api.save(values);
-  } catch (e) {
-    if (e.status === 422) form.setErrors(e.data.errors); // { "user.email": "Already taken" }
+  public submit() {
+    if (this.isSubmitting()) return;
+    this.handleSubmit();
   }
-}}
-```
 
----
-
-## 16. Standard Schema interop (seal / zod / valibot)
-
-> **Auto-trigger:** code passes a `schema` prop to `<Form>` or `useFormControl`, imports `isStandardSchema`, `standardSchemaToRule`, `runStandardSchema`, `issuePathToName`, `StandardSchemaV1`, `InferFormValues`, or `InferFormInput`; user asks "how do I validate a @mongez/react-form with zod / valibot / @warlock.js/seal", "how do I infer onSubmit value types from my schema", or "how do I run a whole-form schema on submit".
-> **Skip when:** `mongez-react-form-validation-rules` for the built-in `InputRule` system (the schema is wrapped as a rule but rule authoring is a separate topic).
-
-v4 consumes any [Standard Schema](https://standardschema.dev) validator (`@warlock.js/seal`, `zod`, `valibot`, `arktype`, …) **with zero runtime dependency** — it only duck-types the `~standard` property (`isStandardSchema`). The spec's `~standard.validate` may be sync or async; the adapter awaits uniformly.
-
-### Whole-form validation
-
-```tsx
-import { Form } from "@mongez/react-form";
-import { z } from "zod";
-
-const schema = z.object({
-  email: z.string().email(),
-  age: z.coerce.number().min(18),
-});
-
-<Form
-  schema={schema}
-  onSubmit={({ values }) => api.save(values)}  // values typed as { email: string; age: number }
->
-  <TextInput name="email" />
-  <TextInput name="age" type="number" />
-</Form>;
-```
-
-On submit the engine collects the form's values, runs the schema, and **maps each issue back to its control** by `issue.path` → dot-notation name (`issuePathToName`) → `control.setError`. **Issues whose control is not in the validated subset are ignored**, so `form.validateVisible()` (steppers) won't fail on hidden fields. Whole-form schema validation runs **after** per-control rules, inside `form.validate()`.
-
-### Per-field schema
-
-```tsx
-useFormControl({ ...props, schema: z.string().email() });
-// or the prop form:
-<TextInput name="email" schema={z.string().email()} />
-```
-
-The schema is wrapped as an `InputRule` (`standardSchemaToRule`) appended **last** in that control's pipeline. `requiresValue` is `false`, so empty values are still handed to the schema (its own `optional`/`required` semantics decide). The first issue's message becomes the rendered error. Async-capable — participates in the §14 gating + `isValidating`.
-
-### Type inference helpers
-
-```ts
-import type { InferFormValues, InferFormInput, StandardSchemaV1 } from "@mongez/react-form";
-
-type Values = InferFormValues<typeof schema>;  // post-validation OUTPUT shape (used for onSubmit)
-type Input  = InferFormInput<typeof schema>;   // pre-validation INPUT shape
-```
-
-`FormProps<Schema>` threads the schema type through so `onSubmit`'s `values` is `InferFormValues<Schema>`.
-
-### Adapter exports
-
-| Export | Purpose |
-|---|---|
-| `isStandardSchema(value)` | Duck-type guard for the `~standard` property |
-| `runStandardSchema(schema, value)` | Run a schema; returns `Promise<{ value } \| { issues }>` |
-| `issuePathToName(path)` | Issue path (`["user", { key: "addr" }, 0]`) → dot name (`user.addr.0`) |
-| `standardSchemaToRule(schema, name?)` | Wrap a single-field schema as an async `InputRule` |
-| `StandardSchemaV1` | The spec interface (+ `InferInput` / `InferOutput` namespace types) |
-| `InferFormValues` / `InferFormInput` | Output / input shape aliases |
-
----
-
-## 17. `validateOn` — change / blur / submit
-
-> **Auto-trigger:** code passes `validateOn` to `<Form>` or an input, or sets `setFormConfigurations({ validateOn })`, or reads `onBlur` / `wasSubmitted`; user asks "how do I validate on blur instead of on every keystroke", "how do I only validate on submit", or "how do I set the validation trigger globally".
-
-Each control resolves its trigger with this precedence: **per-control `validateOn` prop > `<Form validateOn>` > `setFormConfigurations({ validateOn })` global > `"change"`** (default).
-
-| Mode | Behavior |
-|---|---|
-| `"change"` | Validate on every value change (the v3 behavior). |
-| `"blur"` | Validate when the field blurs. Wire `onBlur` (or use `getInputProps`, §19). |
-| `"submit"` | Validate only when the form is submitted. |
-
-**Revalidate-on-change after error/submit:** for `"blur"` and `"submit"`, once the field has **already errored** (`formControl.isValid === false`) or the form **has been submitted** (`form.wasSubmitted === true`), subsequent value changes revalidate live — so a cleared error updates immediately instead of staying stale until the next blur/submit. The engine sets `wasSubmitted = true` at the start of `handleSubmit`.
-
-```tsx
-<Form validateOn="blur">
-  <TextInput name="email" />                      {/* inherits "blur" */}
-  <TextInput name="coupon" validateOn="submit" /> {/* overrides to "submit" */}
-</Form>
-```
-
-```ts
-import { setFormConfigurations } from "@mongez/react-form";
-setFormConfigurations({ validateOn: "blur" });    // global default
-```
-
-The `useFormControl` return exposes **`onBlur`** — a handler that marks the control touched and validates when the resolved mode is `"blur"`. Spread it directly or via `getInputProps`.
-
----
-
-## 18. Awaited submit
-
-> **Auto-trigger:** `onSubmit` returns a Promise / is `async`; user asks "do I still need form.submitting(false) after an async submit", "why is my submit button stuck disabled / not stuck disabled", or "how does awaited submit work".
-
-If `onSubmit` returns a `Promise`, the engine **auto-clears the submitting state when the promise settles — success OR failure** — so you no longer call `form.submitting(false)` manually in that case:
-
-```tsx
-<Form onSubmit={async ({ values }) => {
-  await api.save(values);   // submitting(false) fires automatically on resolve/reject
-}} />
-```
-
-- **Sync `onSubmit`** behaves exactly as before: the button is your responsibility, and the API-failure path must still call `form.submitting(false)` to re-enable it.
-- A throw from a sync `onSubmit` clears submitting state and re-throws.
-- Internally: `handleSubmit` sets `wasSubmitted = true`, validates (awaited), short-circuits on invalid/already-submitting, calls `submitting(true)`, then `onSubmit`; if the result is thenable it attaches `.then(clear, clear)`.
-
----
-
-## 19. Accessibility — `getInputProps` / `getErrorProps`
-
-> **Auto-trigger:** code calls `getInputProps(...)` or `getErrorProps()`, or reads `errorId`; user asks "how do I make my form inputs accessible", "how do I wire aria-invalid / aria-describedby", or "what's the recommended way to spread props onto my input".
-
-`useFormControl` returns two prop-bag builders that wire correct ARIA without boilerplate.
-
-### `getInputProps(overrides?)`
-
-Returns an accessibility-complete bag to spread onto the host input. It includes:
-
-- `id`, `name`, `ref` (the `inputRef`), `disabled`
-- `value` + `onChange` for text inputs, or `checked` + `onChange` for `type="checkbox"`/`"radio"`
-- `onBlur` (the §17 blur handler)
-- `aria-invalid` (when touched-and-invalid), `aria-required` (from the `required` prop), `aria-describedby` (the `errorId` when an error is present)
-- all `otherProps`, then your `overrides` merged last
-
-```tsx
-export function TextInput(props: FormControlProps) {
-  const { getInputProps, getErrorProps, error } = useFormControl(props);
-
-  return (
-    <>
-      <input {...getInputProps()} />
-      {error && <span {...getErrorProps()}>{error}</span>}
-    </>
-  );
+  public render() {
+    return (
+      <FormContext.Provider value={this}>
+        {(this.props as FormProps).children}
+      </FormContext.Provider>
+    );
+  }
 }
 ```
 
-`overrides` win over the computed values, so `getInputProps({ className: "input", onBlur: myHandler })` works.
-
-### `getErrorProps()`
-
-Returns `{ id: errorId, role: "alert", "aria-live": "polite" }` for the error element so screen readers announce it. `errorId` (also returned directly) is `` `${id}-error` `` and is referenced by the input's `aria-describedby` automatically.
-
----
-
-## 20. `useFieldArray` — dynamic repeated rows
-
-> **Auto-trigger:** code imports/calls `useFieldArray`; user asks "how do I build a repeating/dynamic list of fields", "how do I add/remove address rows in @mongez/react-form", or "how do I keep field rows stable when reordering".
-
-`useFieldArray(name)` manages a dynamic list of repeated field rows with **stable keys** that survive reordering and removal. Each row's input names derive from its current index (`addresses.0.city`, `addresses.1.city`, …), so the form's dot-notation collection nests them into an array automatically.
+**Web (mirrors what `Form.tsx` does):**
 
 ```tsx
-import { useFieldArray } from "@mongez/react-form";
+import { BaseForm, FormContext } from "@mongez/react-form";
 
-function Addresses() {
-  const { fields, append, remove } = useFieldArray("addresses");
+export class CustomWebForm extends BaseForm {
+  public formElement!: HTMLFormElement;
 
-  return (
-    <>
-      {fields.map((field) => (
-        <div key={field.key}>
-          <TextInput name={`${field.name}.city`} />
-          <TextInput name={`${field.name}.zip`} />
-          <button type="button" onClick={() => remove(field.index)}>Remove</button>
-        </div>
-      ))}
-      <button type="button" onClick={() => append()}>Add address</button>
-    </>
-  );
+  public submit() {
+    if (!this.formElement || this.isSubmitting()) return;
+    this.formElement.requestSubmit();
+  }
+
+  protected async triggerSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    await this.handleSubmit(e);
+  }
+
+  public render() {
+    return (
+      <FormContext.Provider value={this}>
+        <form
+          ref={(el) => (this.formElement = el!)}
+          onSubmit={this.triggerSubmit.bind(this)}
+          noValidate
+        >
+          {(this.props as any).children}
+        </form>
+      </FormContext.Provider>
+    );
+  }
 }
 ```
 
-### Return shape (`FieldArrayHelpers`)
+### Generic prop type
 
-```ts
-{
-  fields: { key: string; index: number; name: string }[];  // map with key={key}, name prefix={name}
-  append: (count = 1) => void;       // add rows at the end
-  prepend: (count = 1) => void;      // add rows at the start
-  remove: (index?) => void;          // remove at index, or the last row when omitted
-  insert: (index) => void;           // insert one row at index
-  move: (from, to) => void;          // move a row
-  swap: (a, b) => void;              // swap two rows
-  replace: (count) => void;          // replace all rows with `count` fresh rows
+`BaseForm<P extends FormProps = FormProps>` — pass a wider prop type to your subclass when it needs platform-specific props:
+
+```tsx
+type MyFormProps = FormProps & { view: "modal" | "inline" };
+
+export class MyForm extends BaseForm<MyFormProps> {
+  public submit() { this.handleSubmit(); }
+  public render() {
+    const { view, children } = this.props;
+    return (
+      <FormContext.Provider value={this}>
+        <div className={`form form-${view}`}>{children}</div>
+      </FormContext.Provider>
+    );
+  }
 }
 ```
 
-- **`field.key`** is a stable React key — always use it, never the index. **`field.name`** is the dot-notation prefix; compose child names as `` `${field.name}.city` ``.
-- The initial row count seeds from `form.getInitialValue(name)` (so a hydrated array renders its rows). On `form.reset()`, the list returns to its initial row count.
+### When NOT to subclass
 
----
-
-## 21. `useWatch` — reactive value reads
-
-> **Auto-trigger:** code imports/calls `useWatch`; user asks "how do I read another field's value reactively", "how do I build a dependent/conditional field", or "how do I watch the whole form's values".
-
-`useWatch` reactively reads form values from any descendant and re-renders the calling component whenever **any** control changes (the engine now emits a form-level `change` event on every control change) or the form resets.
-
-```tsx
-import { useWatch } from "@mongez/react-form";
-
-const all = useWatch();                 // whole collected values object
-const email = useWatch("user.email");   // single control value
-const [first, last] = useWatch(["firstName", "lastName"]); // array of values
-```
-
-Overloads: `useWatch()` → `Record<string, any>`; `useWatch(name)` → that value; `useWatch(names[])` → an array of values. Outside a form it returns `{}`, `undefined`, or an array of `undefined` respectively.
-
-Use it for dependent fields (show a "state" select only when `country === "US"`), live summaries, or character counters — without subscribing to events manually.
-
----
-
-## 22. Architecture & extending `FormEngine`
-
-### Component model (v4)
-
-```
-FormEngine        (plain class — implements FormInterface, React-free, no rendering)
-  ├── Form        (Web FC — forwardRef; renders <form>, DOM submit, exposes engine via ref)
-  └── NativeForm  (React Native FC — forwardRef; Fragment default, programmatic submit)
-
-BaseForm = FormEngine   (deprecated alias, kept for one major — removed in v5)
-```
-
-`Form` / `NativeForm` are **function components** that lazily instantiate one `FormEngine` (held in a `useRef`) and wrap children in `<FormContext.Provider value={engine}>`. The shared wiring lives in `useFormEngine(props, submitHandler)`:
-
-- lazy single-engine instantiation (stable identity for context + the event bus)
-- SSR-safe id from `useId()`
-- `engine.setOptions(...)` synced every render (no React state mutated)
-- reactive `values` → `engine.fill(...)` on identity change; reactive `defaultValue` → `engine.setDefaultValue(...)`
-- `engine.activate()` / `engine.destroy()` for the active-form registry on mount/unmount
-
-### What `FormEngine` provides
-
-`FormEngine` implements the full `FormInterface`:
-
-**Control registry:** `register(formControl)`, `unregister(formControl)`, `control(value, getBy?)`, `controls(names?)`. Wires per-control `onChange` to maintain `dirtyControls` and emit the form-level `change` event (consumed by `useWatch`).
-
-**Validation pipeline (async-aware):** `validate(controls?)` — `await`s each control's `validate()` so async rules gate submission — `validateVisible()`, whole-form schema validation (`validateSchema`), plus the `validating` / `validation` / `validControl` / `invalidControl` / `validControls` / `invalidControls` events. A `validating` listener returning `false` aborts the run.
-
-**Value collection:** `values(names?)`, `value(name)`, `formData()`, `collectValues(names?)`, `shouldIgnoreEmptyValues()`. Dot-notation nesting, array indices, `multiple`, `ignoreEmptyValues`.
-
-**Hydration:** `fill()`, `setValues()`, `setDefaultValue()`, `getInitialValue()`, `hydrationValues`, `setErrors()` (§15).
-
-**State tracking:** `isDirty`, `dirtyControls[]`, `isSubmitting()`, `submitting(boolean)`, `isValid()`, `disable()`, `enable()`, `wasSubmitted`.
-
-**Event bus:** `on(event, cb)`, `trigger(...)`, `triggerAll(...)` over `@mongez/events`, typed by `FormEventType`.
-
-**Active-form registry:** `activate()` / `destroy()` (called by the host) register/unregister with `setActiveForm()` + `addToFormsList()`, so `getActiveForm()` / `getForm(id)` work.
-
-**Submit pipeline:** `handleSubmit(event?)` — sets `wasSubmitted`, awaits `validate()`, short-circuits on invalid/already-submitting, calls `onSubmit({ form, event, values, formData })` with lazy getters, and auto-clears submitting state for a Promise result (§18). `submit()` delegates to an injected `submitHandler` (the host knows how to dispatch web vs. native).
-
-### Custom renderers — subclass `FormEngine`, not `BaseForm`
-
-To support another React renderer (terminal UIs, `react-three-fiber`, a custom host), **subclass `FormEngine`** and render a thin function component that lazy-inits it. Do **not** subclass `BaseForm` (it's just the deprecated alias).
-
-```tsx
-import {
-  FormEngine, FormContext, type FormProps, type FormInterface,
-} from "@mongez/react-form";
-import { useRef, useEffect, useId } from "react";
-
-class HeadlessEngine extends FormEngine {}
-
-export function HeadlessForm(props: FormProps) {
-  const id = useId();
-  const ref = useRef<HeadlessEngine>();
-  if (!ref.current) ref.current = new HeadlessEngine({ ...props, id });
-  const engine = ref.current;
-
-  engine.setOptions({ ...props, id });
-  engine.submitHandler = () => engine.handleSubmit();
-
-  useEffect(() => {
-    engine.activate();
-    return () => engine.destroy();
-  }, [engine]);
-
-  return <FormContext.Provider value={engine}>{props.children}</FormContext.Provider>;
-}
-```
-
-In practice most cases need neither a subclass nor a custom component — use the **`component` prop** to swap the rendered element:
+If all you need is a different rendered element, **don't subclass — use the `component` prop:**
 
 ```tsx
 <Form component={MyStyledFormWrapper}>...</Form>
 <NativeForm component={View} style={{ padding: 16 }}>...</NativeForm>
 ```
 
-Subclass `FormEngine` only when submit semantics, value handling, or platform integration genuinely differ from both Web and Native.
-
-### `BaseForm` migration
-
-`BaseForm` is now `export const BaseForm = FormEngine` (plus a `type BaseForm = FormEngine`). Code that referenced the *type* of a form instance still works (it's assignable to `FormInterface`). Code that **subclassed** `BaseForm` as a `React.Component` (overriding `render()` / `submit()` as instance methods) must migrate to the function-component-over-engine pattern above — there is no `render()` on the engine. The alias is removed in v5.
+Subclass only when submit semantics, rendering rules, or platform integration genuinely differ from both Web and Native.
 
 ### DOM-guarded code in `useFormControl`
 
-The same `useFormControl` hook runs on Web and Native unchanged. DOM-specific code paths are guarded with `typeof document !== "undefined" && typeof window !== "undefined"`:
+The same `useFormControl` hook runs on Web and Native unchanged. DOM-specific code paths are guarded with `typeof document !== "undefined"`:
 
-- `formControl.isVisible()` walks the `parentElement` chain on Web; on Native it always returns `true`. Consequence: `form.validateVisible()` on Native is identical to `form.validate()`.
-- The auto-touch DOM `focus` event listener is a no-op on Native. Native input components must set `formControl.isTouched = true` manually in their own `onFocus` handler (or wire `onBlur` from the hook).
+- `formControl.isVisible()` walks `parentElement` chain on Web; on Native it always returns `true`. Consequence: `form.validateVisible()` on Native is identical to `form.validate()`.
+- The auto-touch DOM `focus` event listener is a no-op on Native. Native input components must set `formControl.isTouched = true` manually in their own `onFocus` handler if they want the flag tracked.
 - `inputRef.current.focus()` / `.blur()` work on both — React Native's `TextInput` ref exposes both methods natively.
 
-### Where the code lives
+### Where the platform-specific code lives
 
-- `src/engine/FormEngine.ts` — the React-free engine (all logic; implements `FormInterface`).
-- `src/components/useFormEngine.ts` — the shared `Form` / `NativeForm` wiring hook.
-- `src/components/Form.tsx` — Web FC (`forwardRef`).
-- `src/components/NativeForm.tsx` — Native FC (`forwardRef`).
-- `src/components/BaseForm.ts` — the deprecated `FormEngine` alias.
+When extending `BaseForm` or contributing back, these are the only files you need to read:
+
+- `src/components/BaseForm.ts` — the engine (≈400 lines, no rendering).
+- `src/components/Form.tsx` — Web concrete (≈55 lines).
+- `src/components/NativeForm.tsx` — Native concrete (≈45 lines).
 - `src/hooks/useFormControl.ts` — the hook, with DOM guards inline.
-- `src/standard-schema/` — `types.ts` (vendored spec) + `adapter.ts` (interop helpers).
 
 All other files (rules, hooks, contexts, configurations, active-form registry, types) are 100% platform-agnostic.
 
@@ -10058,6 +9814,8 @@ Catches typos, missing dirs, malformed config. Cheap as a pre-commit / CI step.
 | `--dry-run` | Print every step without writing to disk, git, or npm. Always run before real release |
 | `--no-publish` | Skip `npm publish`. Build + commit + tag still run |
 | `--no-git` | Skip git entirely, overriding per-package `commit` |
+| `--no-verify-publish` | Skip the post-publish registry read-back (on by default; disclosed in the final line) |
+| `--retries <n>` | Attempts per network operation including the first (default 3). Non-network failures are never retried |
 | `--bump <strategy>` | Per-run override of the config `version` (`patch` / `minor` / `major` / `auto` / explicit `x.y.z`); never edits the config |
 | `--commit [message]` | Per-run override of the config `commit`: a message string, or bare `--commit` for auto `Released <version>` |
 | `--concurrency <n>` | Override `settings.concurrency`. Use `1` to serialize for debugging |
@@ -10073,6 +9831,7 @@ Catches typos, missing dirs, malformed config. Cheap as a pre-commit / CI step.
 | Preview release | `pkgist build:all --dry-run` |
 | Real release everything | `pkgist build:all` |
 | Hot-fix one package | `pkgist build @scope/the-pkg` |
+| Finish ONE failed member of a family | `pkgist build @scope/member --bump <exact-version>` |
 | Hot-fix, version + message from CLI (no config edit) | `pkgist build @scope/the-pkg --bump patch --commit "fix: ..."` |
 | Release synchronized group | `pkgist build:family atom` |
 | Verify build but don't ship | `pkgist build:all --no-publish --no-git` |
@@ -10080,10 +9839,22 @@ Catches typos, missing dirs, malformed config. Cheap as a pre-commit / CI step.
 
 ## Exit codes
 
-- `0` — all targeted builds succeeded
-- non-zero — at least one package failed
+- `0` — every phase of every targeted package completed. The only case that prints "successfully".
+- `1` — at least one phase FAILED or could not be determined (UNRESOLVED), or the run matched no packages.
+
+An unresolved phase is not a success: if the registry or the git remote could not be reached, pkgist says so and exits non-zero rather than implying the package is fine.
 
 Builds run in parallel; one failure doesn't stop others.
+
+## Reading the summary
+
+Every run ends with a success line or a `Release problems` section naming each failure by package AND phase (`compile`, `git commit`, `git push`, `git tag`, `npm publish`, `registry verify`). A package that published while its commit is not on the remote is flagged explicitly.
+
+Three rules govern the last line:
+
+1. It never says "successfully" unless nothing failed — the word at the end carries the claim.
+2. A narrowed run (`--no-publish`, `--no-git`, `--no-verify-publish`, `--dry-run`, a package subset) says so in the line itself, not a footnote.
+3. A lockstep family missing a member reports as BROKEN, not "N of M succeeded" — siblings are pinned exactly, so one missing member can make every other member uninstallable.
 
 ---
 
@@ -10092,7 +9863,7 @@ Builds run in parallel; one failure doesn't stop others.
 > **Auto-trigger:** user asks "what does pkgist do step by step", "how does pkgist build a package", "what does the build output look like", "what's in the published package.json"; user wants to understand pipeline order; questions about source snapshots, generated `exports` map, why ESM-only gets `"type": "module"`; debugging build artifacts.
 > **Skip when:** per-package config (Package options); CLI (CLI); semver decisions (Versioning); git automation (Git workflow).
 
-## The 10 steps
+## The 11 steps
 
 ```
 1. Load source package.json → read current version
@@ -10104,9 +9875,11 @@ Builds run in parallel; one failure doesn't stop others.
 6. Clone extra files/directories listed in `clone`
 7. Write clean package.json for the build (no devDeps, no scripts)
 8. Update source package.json version in-place
-9. Git: add -A → commit → push → tag v<version> → push origin --tags
+9. Git: commit → push → tag v<version> → push tag   (push BEFORE publish)
    (only if commit resolves to a non-empty string)
 10. npm publish --access <public|restricted> from build directory
+    (only if the release commit is verifiably on the remote)
+11. Read the version back from the registry to confirm it is actually served
     (only if publish !== false)
 ```
 
@@ -10221,6 +9994,16 @@ Omit `sourcesDir` to skip.
 ## Publish step
 
 `npm publish --access <public|restricted>` from the **build directory**. The clean `package.json` + compiled output + cloned files is what ships.
+
+**Push before publish.** Git runs first and a push that cannot be confirmed on the remote blocks that package's publish. Publishing is irreversible outside npm's 72-hour window; a push is retryable forever. Doing the reversible step first and ignoring its failure produces published code whose source is not in version control. A package that is not a git repo (or a `--no-git` run) still publishes — that is a skipped push, not a failed one.
+
+**"Published" means the registry serves it.** After a publish reports success, pkgist runs `npm view <name>@<version> version`. A version the registry does not serve is a failed publish regardless of the publish command's exit code — npm has exited 0 for a package that never arrived.
+
+**Retries.** Network-class failures (push, tag push, publish) retry 3 times by default with 1s/2s/4s backoff, capped at 15s. `E409`/`EPUBLISHCONFLICT` and auth failures are never retried.
+
+**Idempotence.** Every step checks real remote state first and skips what is already done, so re-running a partially-completed release completes it instead of creating fresh half-states.
+
+**Three states, never two.** Remote probes answer PRESENT / ABSENT / COULD-NOT-ASK. `git ls-remote` prints nothing both when a ref is absent and when the network is down; a phase that could not be evaluated is reported UNKNOWN, never as success and never as a confident absence.
 
 `publish: false` → skip publish for that package. `--no-publish` → skip for the whole run.
 

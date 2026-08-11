@@ -3,7 +3,7 @@ title: "CLI"
 
 name: mongez-pkgist-cli
 description: |
-  pkgist CLI commands and flags: `init` (scaffold pkgist.config.ts), `build [pkg...]` (one or more standalone), `build:family <name>` (one synchronized family), `build:all` (every standalone + every family), `list` (show registered packages with current versions), `validate` (check config + paths). Common flags: `--dry-run`, `--no-publish`, `--no-git`, `--bump <strategy>` (per-run version override), `--commit [message]` (per-run commit-message override), `--concurrency <n>`, `--config <path>`, `--verbose`.
+  pkgist CLI commands and flags: `init` (scaffold pkgist.config.ts), `build [pkg...]` (standalone packages OR individual family members, for single-member recovery), `build:family <name>` (one synchronized family), `build:all` (every standalone + every family), `list` (show registered packages with current versions), `validate` (check config + paths). Common flags: `--dry-run`, `--no-publish`, `--no-git`, `--no-verify-publish` (skip the registry read-back), `--retries <n>` (attempts per network operation), `--bump <strategy>` (per-run version override), `--commit [message]` (per-run commit-message override), `--concurrency <n>`, `--config <path>`, `--verbose`. Exit codes: 0 only when every phase of every targeted package completed; 1 on any failed or unresolved phase, and on a run that matched no packages.
 sidebar:
   order: 50
 ---
@@ -27,7 +27,7 @@ Writes a starter config (`buildDir: "./builds"`, `sourcesDir: "./sources"`, one 
 
 ### `build [pkg...]`
 
-Build one or more standalone packages by name.
+Build packages by name — standalone packages, or **individual family members**.
 
 ```sh
 pkgist build @my-scope/utils
@@ -35,7 +35,17 @@ pkgist build @my-scope/utils @my-scope/cache @my-scope/events
 pkgist build --all                    # all standalone (alias for `build:all` without families)
 ```
 
-Family packages can't be targeted with `build` — use `build:family` for those.
+**Single-member recovery.** When one member of a family fails — a publish that timed out, a push that could not land — finish just that one instead of re-cutting the whole family:
+
+```sh
+pkgist build @warlock.js/cascade --bump 4.12.0
+```
+
+Pass the **exact version** with `--bump`. Without it, pkgist computes the version the family *would* bump to next and warns, because that is a new release rather than the completion of an existing one. The other members are not touched, and the final summary says the run was a single member of a family.
+
+Re-running is safe: each step checks the remote first and skips what is already done, so a member that is already published and pushed reports as skipped rather than failing as a duplicate.
+
+A name that matches nothing exits **1**. Before 1.6.0 this warned and exited 0, so a typo — or this very recovery command, which `build` used to reject — reported success having done nothing.
 
 ### `build:family <name>`
 
@@ -101,6 +111,8 @@ Available on every `build*` command:
 | `--dry-run` | Print every step (snapshot, compile, clone, git, npm publish) without writing to disk, git, or npm. **Always run this before a real release** to verify versions, commit messages, and clone lists |
 | `--no-publish` | Run everything except `npm publish`. Useful when you want to build + commit locally but defer publish |
 | `--no-git` | Skip git add/commit/push/tag entirely, regardless of per-package `commit` |
+| `--no-verify-publish` | Skip the post-publish registry read-back. On by default; the run's last line discloses when it was skipped |
+| `--retries <n>` | Attempts per network operation (push, tag push, publish), **including the first**. Default `3`. Non-network failures are never retried regardless |
 | `--bump <strategy>` | Override the configured `version` for this run only: `patch` / `minor` / `major` / `auto` / an explicit `x.y.z`. Never edits the config file. See [Per-run overrides](#per-run-overrides) |
 | `--commit [message]` | Override the configured `commit` for this run only: a message string, or a bare `--commit` to auto-generate `Released <version>`. See [Per-run overrides](#per-run-overrides) |
 | `--concurrency <n>` | Override `settings.concurrency`. Drop to 1 to serialize builds for debugging |
@@ -145,10 +157,33 @@ pkgist build:all --bump 3.0.0 --commit "chore: bump all to 3.0.0"
 
 ## Exit codes
 
-- `0` — all targeted builds succeeded (including publishes if not `--no-publish`)
-- non-zero — at least one package failed; the failing package(s) are logged with their wrapped error
+- `0` — **every phase of every targeted package completed.** This is the only case that prints the word "successfully".
+- `1` — at least one phase **failed** or could **not be determined**, or the run matched no packages at all.
 
-Builds run in parallel, so a failure in one package doesn't stop others. The final summary shows the count.
+An unresolved phase — the registry was unreachable, remote tags could not be read — is not a success. The run exits non-zero and the summary marks it `UNRESOLVED` rather than implying the package is fine.
+
+Builds run in parallel, so a failure in one package doesn't stop the others.
+
+## Reading the final summary
+
+Every run ends with either a success line or a `Release problems` section naming each failure **by package and by phase**:
+
+```
+Release problems
+  @warlock.js/cascade@4.12.0
+    FAILED  npm publish     ETIMEDOUT (3 attempts)
+  create-warlock@4.12.0
+    FAILED  git push        Pushing to github.com:warlockjs/create-warlock.git
+    ⚠ published to npm with its release commit NOT on the remote
+
+build:family warlock: release INCOMPLETE — 24 completed, 2 FAILED of 26
+```
+
+Three rules govern that last line:
+
+1. **It never says "successfully" unless nothing failed.** The word at the end carries the claim, and a run that ends in the same word as a clean one will be quoted as a clean one.
+2. **A narrowed run says so in the line itself**, not a footnote — `--no-publish`, `--no-git`, `--no-verify-publish`, `--dry-run`, or targeting a subset all appear in brackets. A shortened run reporting the same words as a full one is how a partial verification gets cited as a complete one.
+3. **A lockstep family that lost a member is reported as BROKEN**, not as "N of M succeeded". Members are pinned to each other at exact versions, so one missing member can make every other member uninstallable. The fraction invites the reader to think most of it landed; it didn't.
 
 ## `pkgist help`
 

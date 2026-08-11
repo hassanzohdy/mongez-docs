@@ -3,16 +3,16 @@ title: "Pipeline"
 
 name: mongez-pkgist-pipeline
 description: |
-  Per-package build pipeline: 1) load source package.json, 2) resolve new version, 3) create build dir, 4) snapshot source to sourcesDir (excludes .git/node_modules/dist), 5) compile via tsdown to esm/+cjs/, 6) clone extra files, 7) write clean build package.json, 8) update source package.json version in-place, 9) git add/commit/push/tag, 10) npm publish from build dir. Output structure with preserveModules true/false documented.
+  Per-package build pipeline: 1) load source package.json, 2) resolve new version, 3) create build dir, 4) snapshot source to sourcesDir (excludes .git/node_modules/dist), 5) compile via tsdown to esm/+cjs/, 6) clone extra files, 7) write clean build package.json, 8) update source package.json version in-place, 9) git commit → push → tag, 10) npm publish from build dir, 11) verify the version on the registry. Push happens BEFORE publish and a failed push blocks that package's publish. Every phase is reported separately and a failed phase fails the run.
 sidebar:
   order: 50
 ---
 
 # Build pipeline
 
-What pkgist does for each package, in order. Steps 4 and 9 are conditional; the rest run for every successful build.
+What pkgist does for each package, in order. Steps 4, 9, 10 and 11 are conditional; the rest run for every successful build.
 
-## The 10 steps
+## The 11 steps
 
 ```
 1. Load source package.json → read current version
@@ -24,13 +24,53 @@ What pkgist does for each package, in order. Steps 4 and 9 are conditional; the 
 6. Clone extra files/directories listed in `clone`
 7. Write clean package.json for the build (no devDeps, no scripts)
 8. Update source package.json version in-place
-9. Git: add -A → commit → push → tag v<version> → push tags
+9. Git: commit → push → tag v<version> → push tag
    (only if commit resolves to a non-empty string)
 10. npm publish --access <public|restricted> from build directory
-    (only if publish !== false)
+    (only if publish !== false AND the release commit is on the remote)
+11. Read the version back from the registry to confirm it is actually served
+    (unless --no-verify-publish)
 ```
 
 Build, clone, write, git, and publish each happen in parallel across packages up to `concurrency`. Within one package, the steps are strictly sequential.
+
+## Ordering rule: push before publish
+
+**Git runs before npm publish, and a push that cannot be confirmed on the remote blocks that package's publish.**
+
+Publishing is irreversible — a version cannot be unpublished outside npm's 72-hour window. A push is retryable forever. Doing the reversible thing first and ignoring its failure is how packages end up on npm with their source not in version control: the artifact exists and nobody can reproduce it from the tag history.
+
+The tag is created only after the push lands, so a tag never points at a commit that is not on the remote.
+
+Ordering alone does not close the window — a crash between push and publish leaves an unpublished pushed commit. That is the *recoverable* direction, which is why it is the right order. What closes the window is idempotence (below).
+
+## Every step is check-then-act
+
+Before acting, pkgist asks the remote what is already true, and skips what is done:
+
+| Step | Question | If already true |
+|---|---|---|
+| commit | is the working tree dirty? | skip — nothing to commit |
+| push | does the remote branch already point at this commit? | skip |
+| tag | does the remote tag exist, and at this commit? | skip (or fail if it points elsewhere) |
+| publish | does the registry already serve this version? | skip |
+
+This is what makes a re-run safe. A non-idempotent retry creates fresh half-states — most obviously a tag pushed against a commit that never landed.
+
+## Three states, never two
+
+Remote probes answer `PRESENT`, `ABSENT`, or **`COULD-NOT-ASK`**.
+
+`git ls-remote` prints nothing both when a ref is absent and when the network is unreachable, so any `grep -q` style check reports the second as the first. A sweep built that way once reported "0 of 26 tags present" when the true answer was "the network was down".
+
+A phase pkgist could not evaluate is reported as `UNKNOWN`, is never counted as success, and makes the run exit non-zero. A tool that cannot reach the registry says so — it does not claim the package is missing, and it does not claim it is fine.
+
+## Failure handling
+
+- **Network-class failures are retried** — 3 attempts by default (`--retries <n>`), exponential backoff 1s / 2s / 4s, capped at 15s. Applies to push, tag push, and publish.
+- **Non-network failures are never retried.** `E409` / `EPUBLISHCONFLICT` in particular usually means the previous attempt actually succeeded; the idempotence check above handles that, a retry would only produce a second confusing error. Auth failures are equally pointless to repeat.
+- **Every phase records its own outcome** — `compile`, `commit`, `push`, `tag`, `publish`, `verify` — so the end-of-run summary names the phase, not just the package. Before 1.6.0 the git step was excluded from the success flag entirely, so failed pushes were invisible in the summary.
+- **Any failed or unresolved phase fails the run** with a non-zero exit, and the word "successfully" is never printed.
 
 ## Build output structure
 
@@ -190,6 +230,14 @@ Omit `sourcesDir` to skip this step entirely.
 When `publish: false` is set on a package, the publish step is skipped (build + git still run). Use for internal-only packages.
 
 `--no-publish` on the CLI skips the publish step for every package, regardless of config.
+
+### "Published" means the registry serves it
+
+After a publish reports success, pkgist reads the version back with `npm view <name>@<version> version`. A version the registry does not serve is a **failed publish**, no matter what the publish command's exit code said.
+
+This is not belt-and-braces. `npm publish` has exited 0 for a package that never reached the registry; the run counted it as shipped, and because family members are pinned to each other at exact versions, the flagship package shipped declaring a dependency on a version that did not exist. Every internal signal agreed the release was fine. Only the registry told the truth.
+
+`--no-verify-publish` skips the read-back. The final summary then says so in its last line, because a run that verified nothing must not report the same words as one that did.
 
 ## What's NOT in the pipeline
 

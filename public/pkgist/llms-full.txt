@@ -523,6 +523,8 @@ Catches typos, missing dirs, malformed config. Cheap as a pre-commit / CI step.
 | `--dry-run` | Print every step without writing to disk, git, or npm. Always run before real release |
 | `--no-publish` | Skip `npm publish`. Build + commit + tag still run |
 | `--no-git` | Skip git entirely, overriding per-package `commit` |
+| `--no-verify-publish` | Skip the post-publish registry read-back (on by default; disclosed in the final line) |
+| `--retries <n>` | Attempts per network operation including the first (default 3). Non-network failures are never retried |
 | `--bump <strategy>` | Per-run override of the config `version` (`patch` / `minor` / `major` / `auto` / explicit `x.y.z`); never edits the config |
 | `--commit [message]` | Per-run override of the config `commit`: a message string, or bare `--commit` for auto `Released <version>` |
 | `--concurrency <n>` | Override `settings.concurrency`. Use `1` to serialize for debugging |
@@ -538,6 +540,7 @@ Catches typos, missing dirs, malformed config. Cheap as a pre-commit / CI step.
 | Preview release | `pkgist build:all --dry-run` |
 | Real release everything | `pkgist build:all` |
 | Hot-fix one package | `pkgist build @scope/the-pkg` |
+| Finish ONE failed member of a family | `pkgist build @scope/member --bump <exact-version>` |
 | Hot-fix, version + message from CLI (no config edit) | `pkgist build @scope/the-pkg --bump patch --commit "fix: ..."` |
 | Release synchronized group | `pkgist build:family atom` |
 | Verify build but don't ship | `pkgist build:all --no-publish --no-git` |
@@ -545,10 +548,22 @@ Catches typos, missing dirs, malformed config. Cheap as a pre-commit / CI step.
 
 ## Exit codes
 
-- `0` — all targeted builds succeeded
-- non-zero — at least one package failed
+- `0` — every phase of every targeted package completed. The only case that prints "successfully".
+- `1` — at least one phase FAILED or could not be determined (UNRESOLVED), or the run matched no packages.
+
+An unresolved phase is not a success: if the registry or the git remote could not be reached, pkgist says so and exits non-zero rather than implying the package is fine.
 
 Builds run in parallel; one failure doesn't stop others.
+
+## Reading the summary
+
+Every run ends with a success line or a `Release problems` section naming each failure by package AND phase (`compile`, `git commit`, `git push`, `git tag`, `npm publish`, `registry verify`). A package that published while its commit is not on the remote is flagged explicitly.
+
+Three rules govern the last line:
+
+1. It never says "successfully" unless nothing failed — the word at the end carries the claim.
+2. A narrowed run (`--no-publish`, `--no-git`, `--no-verify-publish`, `--dry-run`, a package subset) says so in the line itself, not a footnote.
+3. A lockstep family missing a member reports as BROKEN, not "N of M succeeded" — siblings are pinned exactly, so one missing member can make every other member uninstallable.
 
 ---
 
@@ -557,7 +572,7 @@ Builds run in parallel; one failure doesn't stop others.
 > **Auto-trigger:** user asks "what does pkgist do step by step", "how does pkgist build a package", "what does the build output look like", "what's in the published package.json"; user wants to understand pipeline order; questions about source snapshots, generated `exports` map, why ESM-only gets `"type": "module"`; debugging build artifacts.
 > **Skip when:** per-package config (Package options); CLI (CLI); semver decisions (Versioning); git automation (Git workflow).
 
-## The 10 steps
+## The 11 steps
 
 ```
 1. Load source package.json → read current version
@@ -569,9 +584,11 @@ Builds run in parallel; one failure doesn't stop others.
 6. Clone extra files/directories listed in `clone`
 7. Write clean package.json for the build (no devDeps, no scripts)
 8. Update source package.json version in-place
-9. Git: add -A → commit → push → tag v<version> → push origin --tags
+9. Git: commit → push → tag v<version> → push tag   (push BEFORE publish)
    (only if commit resolves to a non-empty string)
 10. npm publish --access <public|restricted> from build directory
+    (only if the release commit is verifiably on the remote)
+11. Read the version back from the registry to confirm it is actually served
     (only if publish !== false)
 ```
 
@@ -686,6 +703,16 @@ Omit `sourcesDir` to skip.
 ## Publish step
 
 `npm publish --access <public|restricted>` from the **build directory**. The clean `package.json` + compiled output + cloned files is what ships.
+
+**Push before publish.** Git runs first and a push that cannot be confirmed on the remote blocks that package's publish. Publishing is irreversible outside npm's 72-hour window; a push is retryable forever. Doing the reversible step first and ignoring its failure produces published code whose source is not in version control. A package that is not a git repo (or a `--no-git` run) still publishes — that is a skipped push, not a failed one.
+
+**"Published" means the registry serves it.** After a publish reports success, pkgist runs `npm view <name>@<version> version`. A version the registry does not serve is a failed publish regardless of the publish command's exit code — npm has exited 0 for a package that never arrived.
+
+**Retries.** Network-class failures (push, tag push, publish) retry 3 times by default with 1s/2s/4s backoff, capped at 15s. `E409`/`EPUBLISHCONFLICT` and auth failures are never retried.
+
+**Idempotence.** Every step checks real remote state first and skips what is already done, so re-running a partially-completed release completes it instead of creating fresh half-states.
+
+**Three states, never two.** Remote probes answer PRESENT / ABSENT / COULD-NOT-ASK. `git ls-remote` prints nothing both when a ref is absent and when the network is down; a phase that could not be evaluated is reported UNKNOWN, never as success and never as a confident absence.
 
 `publish: false` → skip publish for that package. `--no-publish` → skip for the whole run.
 

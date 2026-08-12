@@ -1,11 +1,14 @@
 ---
 title: "Listing"
+
 name: mongez-config-listing
 description: |
   Reference for `config.list` — what it returns, the live-reference caveat, how to snapshot the tree safely with `structuredClone`, and patterns like debug dumps and wholesale tree replacement.
 sidebar:
   order: 50
 ---
+
+# Listing — `config.list`
 
 ```ts
 config.list(): Record<string, any>
@@ -48,6 +51,8 @@ config.list();                               // {}
 ```
 
 The config tree starts as a plain empty object on every fresh module load.
+
+> **Don't remove keys by mutating this object.** `list()` returning the live tree is an implementation detail, not a contract. Use `config.unset(key)` (or `config.set(key, undefined)`) — added in 1.2.0 precisely so callers never have to reach in here.
 
 ## Patterns
 

@@ -706,7 +706,7 @@ Omit `sourcesDir` to skip.
 
 **Push before publish.** Git runs first and a push that cannot be confirmed on the remote blocks that package's publish. Publishing is irreversible outside npm's 72-hour window; a push is retryable forever. Doing the reversible step first and ignoring its failure produces published code whose source is not in version control. A package that is not a git repo (or a `--no-git` run) still publishes — that is a skipped push, not a failed one.
 
-**"Published" means the registry serves it.** After a publish reports success, pkgist runs `npm view <name>@<version> version`. A version the registry does not serve is a failed publish regardless of the publish command's exit code — npm has exited 0 for a package that never arrived.
+**"Published" means the registry serves it.** After a publish reports success, pkgist runs `npm view <name>@<version> version`. A version the registry does not serve is a failed publish regardless of the publish command's exit code — npm has exited 0 for a package that never arrived. The read-back tolerates propagation: up to 5 checks with 1.5s/3s/5s/8s backoff (~17s) before failing, separate from the `--retries` transport budget. Only the post-publish check retries.
 
 **Retries.** Network-class failures (push, tag push, publish) retry 3 times by default with 1s/2s/4s backoff, capped at 15s. `E409`/`EPUBLISHCONFLICT` and auth failures are never retried.
 

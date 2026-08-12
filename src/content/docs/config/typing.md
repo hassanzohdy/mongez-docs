@@ -1,11 +1,14 @@
 ---
 title: "Typing"
+
 name: mongez-config-typing
 description: |
   TypeScript patterns for `@mongez/config` — using `ConfigurationsList`, declaring a project `AppConfig` shape, typing boot-time `config.set` calls, narrowing `config.get` results at the call site, and building a thin `getConfig` wrapper for stronger inference.
 sidebar:
   order: 50
 ---
+
+# Typing
 
 The shipped `ConfigurationsList` type is permissive on purpose:
 

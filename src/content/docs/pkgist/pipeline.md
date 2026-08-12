@@ -237,6 +237,8 @@ After a publish reports success, pkgist reads the version back with `npm view <n
 
 This is not belt-and-braces. `npm publish` has exited 0 for a package that never reached the registry; the run counted it as shipped, and because family members are pinned to each other at exact versions, the flagship package shipped declaring a dependency on a version that did not exist. Every internal signal agreed the release was fine. Only the registry told the truth.
 
+The read-back allows for **propagation**: the registry does not always serve a version the instant `npm publish` returns. It is checked up to 5 times with 1.5s / 3s / 5s / 8s backoff (~17s) before being called a failure. That budget is separate from `--retries`, which covers transport failures — waiting for propagation is a different thing from retrying a timeout. Only the post-publish check retries; the pre-publish "already there?" probe asks once, because `absent` is its normal answer.
+
 `--no-verify-publish` skips the read-back. The final summary then says so in its last line, because a run that verified nothing must not report the same words as one that did.
 
 ## What's NOT in the pipeline

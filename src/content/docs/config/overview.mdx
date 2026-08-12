@@ -1,5 +1,6 @@
 ---
 title: "Config"
+
 name: mongez-config-overview
 description: |
   @mongez/config — a tiny, framework-agnostic configuration tree. Seed once at boot, read from anywhere by dotted path, with deep-merge writes and TypeScript-typed paths.
@@ -9,6 +10,8 @@ sidebar:
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+# @mongez/config — Overview
 
 A tiny configuration tree, the way every framework should ship one. Drop a tree of values in once at boot, then read them by **dotted path** from anywhere in your app. Think Laravel's `config(...)` helper — a 30-line module with one runtime dep. Deliberately minimal — for reactive subscriptions, layer on `@mongez/atom`.
 
@@ -68,6 +71,12 @@ pnpm add @mongez/config
 </TabItem>
 </Tabs>
 
+```sh
+npm install @mongez/config
+# or: yarn add @mongez/config
+# or: pnpm add @mongez/config
+```
+
 `@mongez/reinforcements` is bundled as a regular dep — no peer install needed.
 
 ## Quick peek
@@ -87,13 +96,16 @@ config.get("missing.path", "fallback");      // "fallback"
 
 Seed once at boot, read by dotted path with a fallback from anywhere.
 
-## The three methods
+`config.set(key, undefined)` **clears** a key so the fallback applies again; `config.set(key, null)` stores a real `null` that beats the fallback. "Configured to nothing" and "not configured" are different statements, and the package keeps both.
+
+## The four methods
 
 | Method | Purpose |
 |---|---|
 | `config.set(obj)` | **Deep-merge** a partial tree into existing data |
 | `config.set(path, value)` | Write one value at a dotted path; creates intermediate containers on demand |
-| `config.get(path, default?)` | Read by dotted path, substituting `default` for missing or `undefined` results |
+| `config.get(path, default?)` | Read by dotted path, substituting `default` only for an **absent** key |
+| `config.unset(key)` / `config.remove(key)` | Remove one key or an array of keys; dot notation leaves siblings intact |
 | `config.list()` | Return the entire data object by **live reference** |
 
 ## Scope boundaries

@@ -10,6 +10,26 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[1.6.2]</span> <span class="cl-date">2026-08-12</span> <span class="cl-counts">Fixed (1)</span></summary>
+
+### Fixed
+
+- **The post-publish registry read-back no longer fails a healthy release.** 1.6.0 queried the registry once, immediately after `npm publish` returned. The registry does not always serve a version that instant, so a successful publish could be reported as `verify FAILED`, marking the run `INCOMPLETE` and exiting 1 while the version appeared on npm seconds later. Caught on the first real release after the check shipped (`@mongez/config@1.2.0` — flagged as absent, present on the registry moments afterwards).
+
+  The read-back now retries while the answer is `absent` **or** `unknown`: 5 attempts with 1.5s / 3s / 5s / 8s backoff, roughly 17 seconds of tolerance before it declares a genuine failure. Only the **post**-publish check retries — the pre-publish "is this version already there?" probe still asks exactly once, because `absent` is its normal expected answer and retrying would add a pointless delay to every package in a release.
+
+  This mattered more than an ordinary false positive: a spurious failure here is indistinguishable from the real defect the check exists to catch, and the fastest way to make an operator ignore a genuine broken-release warning is to cry wolf on a good one.
+
+  The verification budget is deliberately separate from `--retries`, which governs transport failures. Waiting for propagation is a different thing from retrying a timeout.
+
+### Tests
+
+7 new assertions in `src/__tests__/settle-verification.test.ts` covering the production sequence (absent → absent → present), an unreachable registry that recovers, boundedness when the version never arrives, reporting the last unresolved answer rather than claiming success, and the backoff schedule. **61 passing.**
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[1.6.1]</span> <span class="cl-date">2026-08-11</span> <span class="cl-counts">Changed (2)</span></summary>
 
 ### Changed

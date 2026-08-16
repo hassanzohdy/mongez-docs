@@ -10,6 +10,26 @@ All notable changes to `@mongez/pkgist` are documented here. The format follows 
 
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[1.6.3]</span> <span class="cl-date">2026-08-16</span> <span class="cl-counts">Fixed (1)</span></summary>
+
+### Fixed
+
+- **Published manifests silently dropped `peerDependenciesMeta`, publishing every optional peer as required.** `src/files/package-json.ts` built the published `package.json` from a 13-field allow-list (`KEPT_FIELDS`). Any field not on that list — `peerDependenciesMeta`, `optionalDependencies`, `publishConfig`, `os`, `cpu`, `imports`, `browser`, `funding`, `contributors` — vanished from every build, silently. npm 7+ masked the damage for `peerDependenciesMeta` by auto-installing the peer anyway; pnpm strict mode and Yarn PnP do not, and error instead. `optionalDependencies` had the opposite, worse failure mode: the dependency disappeared entirely rather than installing-if-possible, so any code path requiring it threw `MODULE_NOT_FOUND` at runtime in the published package.
+
+  Reported by @Nova after a pnpm-strict consumer check against `@warlock.js/{core,ai,cache,herald}@4.14.0` found `peerDependenciesMeta` absent from all four published tarballs despite being present in source (14, 6, 2, and 1 entries respectively).
+
+  The allow-list is now a deny-list: every field in the source `package.json` is kept unless it's dev-time-only (`scripts`, `devDependencies`, `packageManager`), monorepo/root-only (`private`, `workspaces`, `overrides`, `resolutions`, `pnpm`), a tool config block (`eslintConfig`, `prettier`, `jest`, `nodemonConfig`, `husky`, `lint-staged`), or `files` — which pkgist must still deny outright, since it emits a purpose-built output directory and a source `files: ["src"]` would ship an empty tarball. `version`/`main`/`module`/`types`/`typings`/`exports`/`type` stay denied too, purely so the computed overrides below the copy loop don't have to clobber a pre-seeded value; `typings` in particular is denied so it can't leak alongside the computed `types`.
+
+  This is a deliberate reversal of a decision documented as intentional in the `pipeline` skill, `llms-full.txt`, and this README — an allow-list fails silently on every field npm invents next, while a deny-list's leak set is small, closed, and every member either inert or fails loudly (`private: true` makes `npm publish` refuse outright rather than ship a corrupt package). Already-published versions are not being republished — no consumer is currently blocked, and npm versions are immutable, so correcting them means a release across every affected package for manifest metadata alone. The fix rides forward from 1.6.3.
+
+### Tests
+
+New `src/__tests__/package-json.test.ts` covering: `peerDependenciesMeta` round-trips intact (the regression test); `optionalDependencies`, `publishConfig`, `os`, `cpu`, `imports`, `funding`, `contributors` survive; `scripts`/`devDependencies`/`private`/`workspaces`/`files` are absent from the output; `main`/`module`/`types`/`exports` are the computed values and `typings` does not leak; family version-pinning rewrites only intra-family specs and never mutates the source object; and a self-policing property guard asserting every key in a source manifest is either in the output or in the deny-list, so a future npm field cannot go missing silently even if nobody remembers to add a case for it.
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[1.6.2]</span> <span class="cl-date">2026-08-12</span> <span class="cl-counts">Fixed (1)</span></summary>
 
 ### Fixed

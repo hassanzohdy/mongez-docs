@@ -677,11 +677,13 @@ When `mainType: "esm"` or `formats: ["esm"]`:
 
 ## What's in the published package.json
 
-Clean generation — NOT a verbatim copy:
+Source-first generation — NOT an allow-list. Every field you wrote is kept unless it's on a small deny-list:
 
-- **Kept**: `name`, `description`, `keywords`, `author`, `license`, `repository`, `homepage`, `bugs`, `dependencies`, `peerDependencies`, `sideEffects`, `bin`, `engines`
-- **Replaced / set**: `name`, `version`, `main`, `module`, `types`, `exports`, `type` (set to `"module"` for ESM-only builds)
-- **Dropped**: everything else — `devDependencies`, `scripts`, `private`, `workspaces`, `optionalDependencies`, `peerDependenciesMeta`, `files`, `publishConfig`, etc.
+- **Kept**: everything — including `peerDependenciesMeta`, `optionalDependencies`, `publishConfig`, `os`, `cpu`, `imports`, `browser`, `funding`, `contributors` — except the fields below
+- **Replaced / set**: `name`, `version`, `main`, `module`, `types`, `exports`, `type` (set to `"module"` for ESM-only builds) — always recomputed, never inherited; `typings` is denied so it can't leak alongside the computed `types`
+- **Dropped**: `devDependencies`, `scripts`, `packageManager`, `private`, `workspaces`, `overrides`, `resolutions`, `pnpm`, `eslintConfig`, `prettier`, `jest`, `nodemonConfig`, `husky`, `lint-staged`, `files` (a source `files` list would ship an empty tarball — pkgist emits a purpose-built output directory)
+
+Before 1.6.3 this was an allow-list of 13 fields, which silently dropped `peerDependenciesMeta` — publishing every optional peer as required.
 
 ### Intra-family dependency pinning (family builds only)
 

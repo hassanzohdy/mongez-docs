@@ -197,13 +197,13 @@ Use for tools that only need to run in modern environments (Vite plugins, Node-o
 
 ## What ends up in the published `package.json`
 
-pkgist generates a clean `package.json` for the build — it does NOT copy yours verbatim. Specifically:
+pkgist generates a clean `package.json` for the build — it does NOT copy yours verbatim. It is **source-first**: every field you wrote is kept unless it's on a small deny-list. Specifically:
 
-- **Kept**: `name`, `description`, `keywords`, `author`, `license`, `repository`, `homepage`, `bugs`, `dependencies`, `peerDependencies`, `sideEffects`, `bin`, `engines`
-- **Replaced / set**: `name`, `version`, `main`, `module`, `types`, `exports`, and `type` (set to `"module"` for ESM-only builds)
-- **Dropped**: everything else (`devDependencies`, `scripts`, `private`, `workspaces`, `optionalDependencies`, `peerDependenciesMeta`, `files`, `publishConfig`, etc.)
+- **Kept**: everything in your source `package.json` — including `peerDependenciesMeta`, `optionalDependencies`, `publishConfig`, `os`, `cpu`, `imports`, `browser`, `funding`, `contributors` — except the fields below
+- **Dropped**: dev-time-only fields (`scripts`, `devDependencies`, `packageManager`), monorepo/root-only fields (`private`, `workspaces`, `overrides`, `resolutions`, `pnpm`), tool config blocks (`eslintConfig`, `prettier`, `jest`, `nodemonConfig`, `husky`, `lint-staged`), and `files` — pkgist emits a purpose-built output directory, so a source `files` list would ship an empty tarball
+- **Replaced / set**: `name`, `version`, `main`, `module`, `types`, `exports`, and `type` (set to `"module"` for ESM-only builds) — these are always recomputed from the build config, never inherited (and `typings` is denied outright so it can't leak alongside the computed `types`)
 
-This is intentional — the published package should not carry your build-time tooling or scripts.
+Before 1.6.3 this was inverted — a 13-field allow-list — which silently dropped `peerDependenciesMeta`, publishing every optional peer as required. A deny-list fails loudly instead (a stray `private` or `files` in source would break the build visibly) and doesn't need to be taught about every new field npm invents.
 
 ### Intra-family dependency pinning (family builds only)
 

@@ -6,6 +6,18 @@ sidebar:
 ---
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[1.2.0]</span> <span class="cl-date">2026-08-17</span> <span class="cl-counts">Security (1)</span></summary>
+
+### Security
+
+- **`..` and `.` segments are now resolved instead of being passed through** (`src/index.ts`). The function's whole job is to build a path from segments that frequently come from route params, locale codes or API values — and it previously treated `..` as an ordinary segment, so `concatRoute("/api/users", id)` with an `id` of `../../admin` produced `/admin`. Every consumer that feeds the result to a router or an HTTP client inherited that: the path escaped the prefix it was supposed to be confined to, taking any prefix-based authorization with it. Dot-segments are now collapsed, and `..` beyond the root is dropped rather than climbing above it, so the result always stays at or below `/`.
+
+  **Behaviour change:** paths that contained literal dot-segments are now normalized. `concatRoute("/a/b", "../c")` returns `/a/c` (was `/a/b/../c`) and `concatRoute("/a", "..", "..", "b")` returns `/b` (was `/a/../../b`). Single `.` segments are dropped. Normal segments are untouched.
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[1.1.4]</span> <span class="cl-date">2026-05-26</span> <span class="cl-counts">Added (5)</span></summary>
 
 ### Added

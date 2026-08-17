@@ -6,6 +6,18 @@ sidebar:
 ---
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[1.3.0]</span> <span class="cl-date">2026-08-17</span> <span class="cl-counts">Security (1)</span></summary>
+
+### Security
+
+- **`htmlAttributes` keys matching `on*` are now stripped before reaching the DOM** (`src/components/Helmet.tsx:33`). The prop's keys were applied straight to `<html>` via `setAttribute`, and an attribute named `onload` / `onerror` / `onclick` is not inert data — the browser compiles its value into a live inline event handler. So anywhere the *keys* of that object are not fully author-controlled — a CMS "custom `<html>` attributes" field, a settings record spread into the prop, a per-tenant theme config — an attacker who could add one key got script execution on every page the `<Helmet>` rendered. Any key beginning with `on` (case-insensitive) is now dropped; every other key behaves exactly as before, and cleanup on unmount is unchanged.
+
+  **Behaviour change:** if you were intentionally setting an inline handler through `htmlAttributes`, it no longer applies. Attach the listener with `addEventListener` in an effect instead — that path was always the correct one and is unaffected.
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[1.2.3]</span> <span class="cl-date">2026-05-26</span> <span class="cl-counts">Fixed (5) · Added (5) · Changed (1)</span></summary>
 
 ### Fixed

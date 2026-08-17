@@ -117,7 +117,9 @@ user.can("posts.delete");   // false
 user.can("missing");        // false
 ```
 
-`can(path)` returns `true` only when the value at the dot-notation path is truthy.
+`can(path)` returns `true` only when the value at the dot-notation path is exactly the boolean
+`true`. It fails closed: `1`, `"yes"`, a non-empty object or any other truthy value returns
+`false`. Normalize permissions to real booleans before calling `setPermissions`.
 
 ### Cache key access
 

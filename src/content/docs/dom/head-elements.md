@@ -1,11 +1,14 @@
 ---
 title: "Head elements"
+
 name: mongez-dom-head-elements
 description: |
   Lower-level helpers for creating and reusing `<meta>` and `<link>` tags in `<head>`, plus reading/writing HTML element attributes on `<html>` or any element.
 sidebar:
   order: 50
 ---
+
+# Head Elements & Attributes
 
 Lower-level helpers under the metadata API. Use these when the high-level `setPageMeta` doesn't fit — custom `og:*` tags, manifest links, app-specific meta names, or element-attribute writes on something other than `<head>`.
 

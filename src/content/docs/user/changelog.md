@@ -11,6 +11,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[1.2.0]</span> <span class="cl-date">2026-08-17</span> <span class="cl-counts">Security (1)</span></summary>
+
+Security release with a **behaviour change to `can()`**. Read the item below before upgrading — permission checks that used to pass may now fail, and that is the point.
+
+### Security
+
+- **`can()` now fails closed: only an explicit boolean `true` grants access** (`src/user-manager.ts:266`). The check was `get(this.permissions, permission)` evaluated for truthiness, so *any* truthy leaf granted the permission — including values that were never intended as a grant. `can("posts")` returned `true` when `permissions.posts` was the nested object `{ create: false, delete: false }` (a non-empty object is truthy), i.e. a permission map that denies everything granted the parent permission. The same held for `"0"`, `"false"`, `1`, a non-empty array, or any object a server happened to send in that slot. The comparison is now `=== true`.
+
+  **This is a behaviour change and it can deny users who were previously allowed.** If your permissions come from an API that sends `1`/`0`, `"true"`/`"false"`, or nested objects, normalize them to real booleans before `setUserData`/`update`, or override `can()` in your `User` subclass. The default is deliberately the strict one: an authorization check that guesses is worse than one that says no, because the failure is silent and grants access rather than withholding it.
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[1.1.6]</span> <span class="cl-date">2026-05-26</span> <span class="cl-counts">Added (7) · Fixed (4) · Changed (1)</span></summary>
 
 ### Added

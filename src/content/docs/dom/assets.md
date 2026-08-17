@@ -1,11 +1,14 @@
 ---
 title: "Assets"
+
 name: mongez-dom-assets
 description: |
   Helpers for injecting external stylesheets, Google Fonts, local fonts via the `FontFace` API, third-party scripts, and reading/writing CSS custom properties on `:root` or any element.
 sidebar:
   order: 50
 ---
+
+# Assets — Stylesheets, Fonts, Scripts, CSS Variables
 
 Helpers for loading external resources and reading/writing CSS variables. All side-effecting; all browser-only.
 

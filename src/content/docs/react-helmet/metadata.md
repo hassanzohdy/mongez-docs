@@ -90,6 +90,8 @@ Arrays are joined with a literal `,` (no space). If you want comma-and-space sep
 
 Each entry becomes `document.documentElement.setAttribute(key, value)`.
 
+Keys starting with `on` (case-insensitive) are **stripped** and never reach the DOM — `setAttribute("onclick", …)` would install a live inline event handler, so an attacker-influenced key would be script execution. Attach handlers with `addEventListener` in an effect instead.
+
 On unmount, the cleanup diffs the live `<html>` attribute set against the snapshot taken at mount and removes any attribute the render introduced before re-applying the snapshot.
 
 `lang` and `dir` are intentionally **not** restored from the snapshot, so localization layers that switch lang/dir outside `<Helmet>` keep their value.

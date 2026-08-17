@@ -329,7 +329,7 @@ function rewriteSiblingLinks(content: string): string {
  * Falls back to the input untouched when there is no `## [version]` heading
  * (so non-standard changelogs are never mangled).
  */
-function accordionizeChangelog(body: string): string {
+export function accordionizeChangelog(body: string): string {
   // Split on CRLF *or* LF — source CHANGELOG.md files may ship with Windows
   // line endings, and a stray trailing `\r` breaks the version/date regex in
   // renderVersionBlock (`.` won't cross `\r`, so the heading match fails and
@@ -363,6 +363,11 @@ function accordionizeChangelog(body: string): string {
   return out.join("\n");
 }
 
+/** Escape `&`, `<`, `>` so raw CHANGELOG.md text can't be interpreted as HTML markup. */
+export function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 /** Render a single `## [version]` block as a `<details>` accordion. */
 function renderVersionBlock(block: string[], isOpen: boolean): string[] {
   const m = block[0].match(/^##\s+(\[[^\]]+\])(.*)$/);
@@ -382,12 +387,12 @@ function renderVersionBlock(block: string[], isOpen: boolean): string[] {
   }
   const chips = counts
     .filter((c) => c.n > 0)
-    .map((c) => `${c.name} (${c.n})`)
+    .map((c) => `${escapeHtml(c.name)} (${c.n})`)
     .join(" · ");
 
-  const summary = [`<span class="cl-version">${version}</span>`];
-  if (date) summary.push(`<span class="cl-date">${date}</span>`);
-  if (label) summary.push(`<span class="cl-label">${label}</span>`);
+  const summary = [`<span class="cl-version">${escapeHtml(version)}</span>`];
+  if (date) summary.push(`<span class="cl-date">${escapeHtml(date)}</span>`);
+  if (label) summary.push(`<span class="cl-label">${escapeHtml(label)}</span>`);
   if (chips) summary.push(`<span class="cl-counts">${chips}</span>`);
 
   while (bodyLines.length && bodyLines[0].trim() === "") bodyLines.shift();
@@ -738,7 +743,11 @@ async function main() {
   console.log(`[sync] Done. ${total} files total.`);
 }
 
-main().catch(err => {
-  console.error("[sync] failed:", err);
-  process.exit(1);
-});
+// Guarded so the pure helper functions above can be imported by tests
+// without triggering a real filesystem sync of the whole workspace.
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  main().catch(err => {
+    console.error("[sync] failed:", err);
+    process.exit(1);
+  });
+}

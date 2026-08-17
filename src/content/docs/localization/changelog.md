@@ -6,6 +6,18 @@ sidebar:
 ---
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[3.4.7]</span> <span class="cl-date">2026-08-17</span> <span class="cl-counts">Added (1)</span></summary>
+
+Maintenance release. No code changes and no behaviour change — this pins an existing safety property so a future refactor can't quietly remove it.
+
+### Added
+
+- **Prototype-pollution regression test** (`src/__tests__/prototype-pollution.test.ts`). Translation keys are caller-supplied strings that get walked as nested paths, which is the exact shape that produces a prototype-pollution bug elsewhere in this family — so the property is worth asserting rather than assuming. The test covers the registry writers: a `JSON.parse`'d `__proto__` key passed to `extend()`, and `__proto__` / `constructor.prototype` keys passed to `groupedTranslations()`, each asserted to leave `Object.prototype` untouched. It passes against the current implementation; it exists so that if the key-walking logic is ever rewritten, the failure shows up here instead of in a consuming app.
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[3.4.6]</span> <span class="cl-date">2026-05-26</span> <span class="cl-counts">Added (7) · Changed (6) · Fixed (4)</span></summary>
 
 ### Added

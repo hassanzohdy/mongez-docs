@@ -1,51 +1,66 @@
 # @mongez/encryption
 
-> A thin convenience wrapper around `crypto-js` for symmetric encrypt/decrypt of JSON-encodable values and hex-encoded `md5`/`sha1`/`sha256`/`sha512` hashes.
+> Authenticated symmetric encryption for JSON-encodable values — WebCrypto AES-256-GCM under a PBKDF2-HMAC-SHA256 key, in one `await encrypt(value, key)` / `await decrypt(cipher, key)` pair — plus hex `md5`/`sha1`/`sha256`/`sha512` digests.
 
-This is a tiny utility layer, NOT a cryptography library. Understand the threat model before reaching for it.
-
-## Security boundary (read this first)
-
-| Concern | Status |
-|---|---|
-| Authenticated encryption (AEAD) | **No.** `crypto-js` `AES.encrypt(text, passphrase)` uses AES-CBC + OpenSSL-style MD5 KDF + random salt. Ciphertext can be tampered with undetectably. |
-| Modern KDF for passphrases | **No.** One round of MD5. Use PBKDF2/scrypt/argon2 for real password-derived keys. |
-| `md5` / `sha1` for integrity / signatures | **Broken.** Not collision-resistant. Fingerprints / ETags only. |
-| Constant-time hash comparisons | **No.** Output is a hex string; `===` is not timing-safe. |
-| Suitable for: query-string obfuscation, opaqued local-storage values, log masking, non-sensitive round-tripping | **Yes.** |
-| Suitable for: passwords, session tokens, PII at rest, anything under a compliance regime | **No — use libsodium / Node `crypto` AEAD / a KMS.** |
+**v2.0 is a breaking security release.** `encrypt`/`decrypt` are async, `decrypt` throws instead of returning `null`, the pluggable cipher `driver` is gone, and v1.x ciphertext is rejected unless explicitly enabled. v1.x used AES-CBC with no authentication tag and a one-round-MD5 KDF; anything it wrote is malleable and should be re-encrypted.
 
 Every export ships from the package root.
 
+## Security properties (read this first)
+
+| Property | v2 |
+|---|---|
+| Confidentiality | **Yes** — AES-256-GCM, 256-bit key. |
+| Integrity / tamper detection | **Yes** — 128-bit GCM tag over ciphertext *and* the envelope header (AAD). Any edit → `DecryptionError`. |
+| Key derivation | **Yes** — PBKDF2-HMAC-SHA256, 210,000 iterations default, fresh 16-byte salt per message. |
+| Nonce hygiene | **Yes** — fresh 96-bit CSPRNG nonce per message; never reused, never derived from the plaintext. |
+| Work-factor downgrade on existing ciphertext | **Prevented** — the iteration count is authenticated as AAD. |
+| CPU exhaustion via forged header | **Bounded** — a declared work factor outside `1…5,000,000` is rejected before key derivation. |
+| Weak passphrases | **No.** PBKDF2 raises the cost of an offline guess; it does not make a short secret safe. |
+| Key rotation / key IDs | **No.** The envelope carries no key identifier — rotation means re-encrypting. |
+| Binding a ciphertext to a record/user | **No.** Callers cannot supply their own AAD; put the context inside the value and check it after decrypting. |
+| Replay / freshness, length hiding | **No.** Add your own `exp`/nonce inside the payload; pad if length leaks. |
+| Secrets in a browser | **No.** A passphrase shipped to a page is readable by whoever controls the page. |
+| Password storage, FIPS validation, constant-time hash comparison | **No.** Use Argon2id / a validated module / `crypto.timingSafeEqual`. |
+| `md5` / `sha1` collision resistance | **Broken.** Fingerprints and cache keys only. |
+
+## Runtime requirement
+
+`encrypt`/`decrypt` need WebCrypto: **Node.js 20+**, or a browser in a **secure context** (HTTPS or `localhost`). Missing `crypto.subtle` or `crypto.getRandomValues` throws `UnsupportedRuntimeError` — there is no fallback, by design. The hash exports work anywhere.
+
 ## Docs
 
-- [Overview](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/overview.md): Pitch, install, mental model, security boundaries.
-  - *Auto-trigger:* First import from `@mongez/encryption`, or user asks what it does, whether it fits a use case, or about its security limits.
-- [README](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/README.md): Marketing-style index with the security notice.
-- [Changelog](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/CHANGELOG.md): Release notes.
+- [Overview](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/overview.md): Pitch, install, runtime floor, mental model, threat model.
+  - *Auto-trigger:* First import from `@mongez/encryption`, or user asks what it does, whether it fits a use case, or about its security guarantees and limits.
+- [README](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/README.md): Full index — API, envelope format, threat model, recipes.
+- [Migration v1 → v2](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/MIGRATION.md): The five breaking changes and the ordered plan for re-encrypting a store.
+- [Changelog](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/CHANGELOG.md): Release notes, including the 2.0 security rationale.
 
 ## Reference (by namespace)
 
-- [Encrypt / Decrypt](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/encrypt-decrypt.md): `encrypt(value, key?, driver?)`, `decrypt(cipher, key?, driver?)`, the JSON `{ data: value }` wrapper, the non-deterministic-cipher and `null`-on-failure semantics.
-  - *Auto-trigger:* Code imports `encrypt`/`decrypt`, or user asks how to round-trip a value, why decrypt returns `null`, or why ciphertexts differ.
-- [Hashes](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/hashes.md): `md5`, `sha1`, `sha256`, `sha512`. Where each is appropriate. Why NOT to use them for password storage or message auth.
+- [Encrypt / Decrypt](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/encrypt-decrypt.md): `await encrypt(value, key?, { iterations? })`, `await decrypt(cipher, key?, options?)`, `await tryDecrypt(...)`, the error hierarchy, the envelope layout, failure modes, the derived-key cache.
+  - *Auto-trigger:* Code imports `encrypt`/`decrypt`/`tryDecrypt`, or user asks how to round-trip a value, why decrypt throws, how to handle a wrong key, or why two ciphertexts of the same value differ.
+- [Hashes](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/hashes.md): `md5`, `sha1`, `sha256`, `sha512` — unchanged in v2, still synchronous. Where each is appropriate; why not for passwords or message auth.
   - *Auto-trigger:* Code imports `md5`/`sha1`/`sha256`/`sha512`, or user asks for a cache key, ETag, idempotency key, or whether a hash is safe for a use case.
-- [Configuration](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/configuration.md): `setEncryptionConfigurations`, `getEncryptionConfig`, the module-level defaults and how the per-call overload falls back to them.
-  - *Auto-trigger:* Code imports `setEncryptionConfigurations`/`getEncryptionConfig`, or user sets a default key/driver, configures at boot, or asks about fallback semantics.
-
-## Recipes
-
-- [Recipes](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/recipes.md): Opaqued URL tokens, content-addressed cache keys, switching drivers (AES → TripleDES), wrapping with HMAC when you need integrity.
-  - *Auto-trigger:* User wants a full pattern — opaqued URL token, cache key, boot-time setup, HMAC layering, or distinguishing `null` decrypt from `null` value.
+- [Configuration](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/configuration.md): `setEncryptionConfigurations`, `getEncryptionConfig`, `resetEncryptionConfigurations`, `clearKeyCache`; the `key` / `iterations` / `legacyDecryption` / `legacyDriver` options and the deprecated `driver`.
+  - *Auto-trigger:* Code imports `setEncryptionConfigurations`/`getEncryptionConfig`/`clearKeyCache`, or user sets a default key, tunes the PBKDF2 work factor, enables legacy decryption, or asks about fallback semantics.
+- [Recipes](https://raw.githubusercontent.com/hassanzohdy/mongez-encryption/main/skills/recipes.md): Boot-time setup, tamper-evident URL tokens, binding ciphertext to a user, field-level encryption, key rotation, migrating v1 data, content-addressed cache keys.
+  - *Auto-trigger:* User wants a full pattern — URL token, field encryption, rotation, v1 migration, cache key, or `@mongez/cache` integration.
 
 ## Quick rules
 
-1. **`encrypt`/`decrypt` are symmetric, passphrase-keyed, and NOT authenticated.** Use only for non-sensitive data.
-2. **`decrypt` returns `null` on any failure** (wrong key, malformed input, empty string). It cannot distinguish failure modes — by design, because the wrapper has no authentication tag to check.
-3. **The JSON `{ data: value }` wrapper is internal.** Don't bypass it by calling `crypto-js` directly on the cipher; you'll get a parse error from `decrypt`.
-4. **Ciphertext is non-deterministic** for AES with a passphrase key. Don't use `encrypt(x) === encrypt(x)` as an equality test.
-5. **`setEncryptionConfigurations` writes module-level globals.** In multi-tenant servers (per-request keys) pass `key` explicitly per call.
-6. **`md5`/`sha1` are broken for collision resistance.** Use only for fingerprints / cache keys, never integrity or signatures.
+1. **`await` everything.** `encrypt` and `decrypt` return promises in v2. A missed `await` silently stores `[object Promise]`.
+2. **`decrypt` throws `DecryptionError`** on a wrong key, tampered, malformed, or gated-legacy ciphertext. Use `tryDecrypt` for null-on-failure. Never catch-and-ignore: a failure means the value was wrong, not absent.
+3. **Wrong key and tampered ciphertext share one error message on purpose.** GCM cannot distinguish them, and exposing the distinction would be a decryption oracle. Don't try to reconstruct it.
+4. **No cipher `driver` on `encrypt`.** v2 always uses AES-256-GCM; passing one throws. `driver` in configuration is deprecated and only nominates the legacy decrypt driver.
+5. **v1 ciphertext is off by default.** Enable `legacyDecryption` only while migrating, treat anything read that way as unauthenticated, re-encrypt it, then turn it off.
+6. **Ciphertext is forward-only.** v2 can read v1; v1 cannot read v2. Deploy v2 to all readers before any writer emits v2.
+7. **Ciphertext is non-deterministic.** Fresh salt and nonce per call. Never compare ciphertexts, index them, or use one as a cache key — hash with `sha256` instead.
+8. **The passphrase is the whole security boundary.** PBKDF2 does not rescue a short secret, and a key shipped to a browser is not secret from the browser.
+9. **The envelope carries no key ID and no caller AAD.** Rotation = re-encrypt; if a ciphertext must belong to a specific record, put that identity inside the value and verify it after decrypting.
+10. **`md5`/`sha1` are collision-broken** and now `@deprecated` in JSDoc. Fingerprints and cache keys only; default to `sha256`.
+11. **Node 20+ or a secure browser context.** Otherwise `UnsupportedRuntimeError` — there is no insecure fallback.
+12. **`@mongez/cache`'s encrypted drivers are sync** and are incompatible with v2's async pair; see the migration guide.
 
 ## Optional
 

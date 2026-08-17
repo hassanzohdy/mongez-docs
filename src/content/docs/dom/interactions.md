@@ -1,11 +1,14 @@
 ---
 title: "Interactions"
+
 name: mongez-dom-interactions
 description: |
   Helpers for keyboard event detection, smooth scrolling, dark-mode detection, HTML-to-text conversion, and reading viewport/screen dimensions.
 sidebar:
   order: 50
 ---
+
+# Interactions — Keyboard, Scroll, Viewport, Dark Mode, HTML→Text
 
 Helpers that touch user input or read environment state. Stateless, pure where possible.
 
@@ -102,7 +105,7 @@ htmlToText("<p>One <strong>two</strong></p>");    // "One two"
 
 Useful for plain-text previews of rich content, search excerpts, or computing character counts.
 
-Note that `innerHTML` parses the string as HTML — it will not execute `<script>` tags (the browser blocks inline-script execution when set via `innerHTML`), but the function is still **not** a sanitizer. If you're displaying user input, use a real sanitizer (`DOMPurify`, server-side validation). `htmlToText` is for extracting visible text, not for safely rendering anything.
+The string is parsed inside an **inert document** (`document.implementation.createHTMLDocument`), which has no browsing context — so neither `<script>` nor resource-triggered handlers like `<img onerror>` / `<svg onload>` run while extracting the text. It is still **not** a sanitizer: it returns text, never HTML. If you're rendering user input as markup, use a real sanitizer (`DOMPurify`, server-side validation).
 
 ## Viewport dimensions
 

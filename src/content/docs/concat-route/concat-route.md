@@ -85,6 +85,6 @@ concatRoute(base, ...crumbs);
 
 ## Trivia
 
-- The function does NOT collapse `.` or `..` segments — `concatRoute(".", "..")` returns `"/./.."`.
+- Dot segments ARE resolved (since v1.2.0): `.` is dropped and `..` pops the previous segment, clamped at the root. `concatRoute("/a/b", "../c")` → `"/a/c"`; `concatRoute(".", "..")` → `"/"`. This keeps a segment coming from a route param or API value (`"../../admin"`) from escaping the prefix it was joined to.
 - It does NOT trim whitespace — `concatRoute(" ")` returns `"/ "`.
 - It does NOT case-fold or lowercase — `concatRoute("/Users")` returns `"/Users"`.

@@ -63,7 +63,7 @@ export default Helmet;
 | `keywords` | `meta[name="keywords"]` (array is `.join(",")`'d) |
 | `image` | `meta[property="image"]`, `meta[property="og:image"]`, `meta[property="twitter:image"]`, `meta[itemprop="image"]` |
 | `url` | `link[rel="canonical"]`, `meta[property="og:url"]`, `meta[property="twitter:url"]` |
-| `htmlAttributes` | each entry `.setAttribute`'d on `<html>` |
+| `htmlAttributes` | each entry `.setAttribute`'d on `<html>`; `on*` keys stripped |
 | `pageId` | `<html>.id` |
 | `className` | each space-separated token `classList.add`'d on `<html>` |
 
@@ -133,7 +133,7 @@ Concretely:
 
 ## `<html>` attributes / id / className
 
-- `htmlAttributes` — written via `setAttribute` on `document.documentElement`. The captured snapshot's `lang` and `dir` are intentionally **not** restored on unmount (so localization layers that mutate `lang`/`dir` outside `<Helmet>` keep their value).
+- `htmlAttributes` — written via `setAttribute` on `document.documentElement`. Keys matching `on*` are stripped (they would become live inline event handlers). The captured snapshot's `lang` and `dir` are intentionally **not** restored on unmount (so localization layers that mutate `lang`/`dir` outside `<Helmet>` keep their value).
 - `pageId` — sets `document.documentElement.id`. Restored on unmount to the value at mount.
 - `className` — split on whitespace; each token `classList.add`'d on `<html>`. Restored on unmount to the className string at mount.
 

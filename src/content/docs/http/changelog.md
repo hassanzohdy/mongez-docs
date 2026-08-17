@@ -10,6 +10,44 @@ All notable changes to `@mongez/http` are documented here. The format follows [K
 
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[3.5.0]</span> <span class="cl-date">2026-08-17</span> <span class="cl-counts">Security (2) · Added (1)</span></summary>
+
+Security release. Both items below are reachable in ordinary browser and server usage; the
+credential-redaction change alters the shape of `HttpError.request`, so read the note under
+`rawRequest` if you log errors.
+
+### Security
+
+- **Path traversal through `Resource` id / action segments.** `joinUrl` (`src/Http.ts`)
+  concatenated the resource path onto `baseURL` verbatim, so an id of `../../admin/users`
+  produced a request to a completely different endpoint than the one the resource
+  represents. Ids routinely come from route params, query strings or API payloads, which
+  makes this reachable without the calling code doing anything unusual — and it defeats any
+  authorization the server enforces per-resource-path. The joined URL is now resolved with
+  `URL` and confined to the configured `baseURL`: anything landing outside it **throws**
+  rather than being silently rewritten, because a request that escaped its base is a bug in
+  the caller, not something to quietly repoint. When no `baseURL` is configured there is
+  nothing to confine against, so instead the scheme is checked and unsafe ones
+  (`javascript:`, `data:`, …) are blocked.
+
+- **`Authorization` / `Cookie` values no longer leak through `HttpError`.** `HttpError.request`
+  carried the outgoing request with its live headers, so the standard
+  `console.error(error)` / `logger.error({ error })` / Sentry-style capture wrote a bearer
+  token or session cookie into logs — durably, and usually into a system with a much wider
+  read audience than the app itself. `HttpError.request` now returns a copy with sensitive
+  header values replaced by `"[redacted]"`. (`src/HttpError.ts`, `src/utils/redact.ts`)
+
+### Added
+
+- **`HttpError.rawRequest`** — the outgoing request with its original, unredacted headers,
+  for the narrow cases that genuinely need them (retry with the same credentials,
+  request signing). It is a separate property precisely so that reaching for the secret is
+  an explicit act and never happens by accident when something serializes the error.
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[3.4.0]</span> <span class="cl-date">2026-08-08</span> <span class="cl-counts">Fixed (1) · Added (3) · Changed (2) · Docs (1)</span></summary>
 
 Server-side safety and Next.js compatibility. **Browser behaviour is unchanged** — every

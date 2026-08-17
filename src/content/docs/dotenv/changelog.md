@@ -6,6 +6,18 @@ sidebar:
 ---
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[1.3.2]</span> <span class="cl-date">2026-08-17</span> <span class="cl-counts">Security (1)</span></summary>
+
+### Security
+
+- **`dir` and `envPath` are now rejected when they contain `..` segments** (`src/index.ts`). Both are fed straight to `readFileSync`, so a relative path carrying `..` read a file outside the directory the loader was pointed at — and every value it parsed was then written into `process.env`, where the rest of the process trusts it. That matters wherever either option is derived rather than hard-coded: a per-tenant config directory, a CLI flag, a build variable. Any path with a `..` segment now throws with the offending value named, instead of silently loading whatever it landed on.
+
+  Absolute paths are deliberately still allowed: passing one is the caller explicitly naming the exact file, which is the documented way to point this loader anywhere on disk. The guard closes the case where a *relative* path was expected and traversal changed the answer.
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[1.3.1]</span> <span class="cl-date">2026-08-10</span> <span class="cl-counts">Fixed (3) · Tests (2)</span></summary>
 
 Follow-up to the 1.3.0 review by @Ion. Narrows numeric coercion so it can no longer corrupt identifier-shaped values. Every value this stops converting was being **corrupted, not served**.

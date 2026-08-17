@@ -2,7 +2,7 @@
 title: "Encryption"
 name: mongez-encryption-overview
 description: |
-  @mongez/encryption — a thin convenience layer over crypto-js providing one consistent encrypt/decrypt pair plus md5/sha1/sha256/sha512 hashes for the rest of the Mongez ecosystem.
+  @mongez/encryption — authenticated symmetric encryption (WebCrypto AES-256-GCM + PBKDF2-HMAC-SHA256) for JSON-encodable values, plus md5/sha1/sha256/sha512 hashes, for the rest of the Mongez ecosystem.
 sidebar:
   order: 10
   label: "Overview"
@@ -10,9 +10,9 @@ sidebar:
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-A thin convenience layer over [`crypto-js`](https://www.npmjs.com/package/crypto-js). One consistent `encrypt(value, key)` / `decrypt(cipher, key)` pair so callers don't each re-invent the JSON wrapping, UTF-8 decoding, and "what does a wrong key look like" handling. Plus fast hex hashes (md5/sha1/sha256/sha512) for content fingerprinting.
+One authenticated `await encrypt(value, key)` / `await decrypt(cipher, key)` pair, so no caller has to assemble WebCrypto by hand — key import, KDF choice, work factor, a fresh nonce per message, tag handling, base64 both ways. Plus fast hex hashes (md5/sha1/sha256/sha512) for content fingerprinting.
 
-> **Read this before reaching for it.** Symmetric obfuscation + content fingerprinting only. **Not** for passwords, session tokens, PII at rest, or anything regulated. See [Security boundaries](#security-boundaries-read-this-before-reaching-for-the-helpers) below.
+> **v2.0 is a breaking security release.** `encrypt`/`decrypt` are now async, `decrypt` **throws** instead of returning `null`, the pluggable cipher `driver` is gone, and v1.x ciphertext is rejected by default. v1.x wrote AES-CBC with **no authentication tag** and a **one-round-MD5 key derivation** — anything it produced is malleable and should be re-encrypted. See [Migration](../recipes/SKILL.md#migrating-from-v1x) and `MIGRATION.md`.
 
 ## Highlighted features
 
@@ -20,26 +20,26 @@ A thin convenience layer over [`crypto-js`](https://www.npmjs.com/package/crypto
 
 <div class="mongez-highlight" data-accent="ice">
   <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-  <h3>Symmetric encrypt/decrypt</h3>
-  <p>One <code>encrypt(value, key)</code> / <code>decrypt(cipher, key)</code> pair. JSON wrapping + UTF-8 + base64 cipher handled for you. AES by default; pluggable driver.</p>
+  <h3>Authenticated encryption</h3>
+  <p>AES-256-GCM with a 128-bit tag. One flipped bit anywhere and <code>decrypt</code> throws instead of returning altered data.</p>
 </div>
 
 <div class="mongez-highlight" data-accent="ice">
   <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="10"/></svg>
-  <h3>Four hex hashes</h3>
-  <p><code>md5</code>, <code>sha1</code>, <code>sha256</code>, <code>sha512</code> — stable lowercase hex digests. Great for cache keys, content fingerprints, ETags.</p>
+  <h3>Real key derivation</h3>
+  <p>PBKDF2-HMAC-SHA256 at 210,000 iterations over a fresh 16-byte salt per message. Tunable, with a 100,000 floor.</p>
 </div>
 
 <div class="mongez-highlight" data-accent="fire">
   <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-  <h3>Module-level config</h3>
-  <p><code>setEncryptionConfigurations(&#123; key, driver &#125;)</code> once at boot — never thread <code>key</code> through every call site again.</p>
+  <h3>Self-describing envelope</h3>
+  <p>Version, suite, work factor, salt and nonce travel with the ciphertext — and are authenticated, so none of them can be downgraded in transit.</p>
 </div>
 
 <div class="mongez-highlight" data-accent="bolt">
   <svg class="mongez-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-  <h3>Browser + Node</h3>
-  <p>Same API in both — <code>crypto-js</code> is the only transitive dep, no separate install needed. Pairs with <code>@mongez/cache</code>'s encrypted drivers.</p>
+  <h3>No insecure fallback</h3>
+  <p>No <code>crypto.subtle</code> or no CSPRNG means <code>UnsupportedRuntimeError</code> — never a quiet downgrade to <code>Math.random</code> or an unauthenticated cipher.</p>
 </div>
 
 </div>
@@ -70,50 +70,64 @@ pnpm add @mongez/encryption
 </TabItem>
 </Tabs>
 
-`crypto-js` ships as a transitive dep — no separate install needed.
+`crypto-js` ships as a transitive dep — it backs the hash exports and the opt-in legacy decrypt path only. Nothing this package writes goes through it.
+
+## Runtime requirement
+
+`encrypt`/`decrypt` need WebCrypto: **Node.js 20+**, or a browser in a **secure context** (HTTPS or `localhost`). Plain-HTTP origins and Node ≤ 16 have no `crypto.subtle` and throw `UnsupportedRuntimeError`. React Native/Hermes needs a polyfill exposing both `subtle` and `getRandomValues`. Jest's default jsdom environment may need the `node` environment or an injected `require("node:crypto").webcrypto`.
+
+The hash exports have no such requirement.
 
 ## Quick peek
 
 ```ts
 import { encrypt, decrypt, sha256 } from "@mongez/encryption";
 
-const cipher = encrypt({ userId: 42 }, "my-key");      // AES by default
-const value  = decrypt(cipher, "my-key");              // { userId: 42 }
-const tag    = sha256(JSON.stringify({ q: "phones" })); // stable cache key
+const cipher = await encrypt({ userId: 42 }, "a long passphrase"); // AES-256-GCM
+const value  = await decrypt(cipher, "a long passphrase");         // { userId: 42 }
+const tag    = sha256(JSON.stringify({ q: "phones" }));            // stable cache key
 ```
 
-Symmetric encrypt/decrypt of any JSON-encodable value, plus stable hex digests for cache keys or content fingerprints.
-
-## Security boundaries — read this before reaching for the helpers
-
-Pick the right tool for the threat. The table below is the package's **actual capability surface**, not a marketing claim.
-
-| Concern | This package |
-|---|---|
-| Authenticated encryption (AEAD / tamper detection) | **No.** `crypto-js` `AES.encrypt(text, passphrase)` is AES-CBC + OpenSSL-style MD5 KDF + random salt. Ciphertext can be tampered with undetectably. |
-| Modern key derivation | **No.** OpenSSL-style KDF is one round of MD5. |
-| Salts / IVs | crypto-js picks a fresh salt per call → cipher is non-deterministic. No IV exposed to caller. |
-| Constant-time digest comparison | **No.** Outputs are hex strings; `===` is not timing-safe. |
-| `md5` / `sha1` collision resistance | **Broken.** Suitable for fingerprinting / ETags only. |
-| FIPS / regulated compliance | **No.** Pure-JS, not validated. |
-
-**Reach for it when**: opaquing query-string params, masking values in logs, signing-free local-storage payloads, non-sensitive round-trips through string form. Threat model: "casual reader," not "motivated attacker."
-
-**Do NOT reach for it when**: passwords, session tokens, PII at rest, payment data, secrets in transit, anything under a compliance regime, anywhere you need integrity. Use Node `crypto` AES-GCM, libsodium, or a managed KMS.
+Any JSON-encodable value round-trips — primitives, arrays, nested objects, unicode. Ciphertext is a base64 string using the standard alphabet (`+`, `/`, `=`), so URL-encode it before putting it in a URL.
 
 ## Mental model
 
 | Concept | Type | Mental model |
 |---|---|---|
-| `encrypt(value, ...)` | `(any, string?, driver?) => string` | JSON-stringify the value in `{ data: value }`, hand to `driver.encrypt`, return base64 cipher. |
-| `decrypt(cipher, ...)` | `(string, string?, driver?) => any \| null` | Driver-decrypt, UTF-8-decode, JSON-parse, return `.data`. Returns `null` on any failure. |
-| `driver` | a `crypto-js` cipher module | Anything with `.encrypt(text, key)` / `.decrypt(cipher, key)`. Default `AES`. |
-| Hash function | `(string) => string` | Stateless, no config. Returns lowercase hex. |
-| Module config | `{ key?, driver? }` | Module-level globals via `setEncryptionConfigurations`. |
+| `encrypt(value, key?, options?)` | `(any, string?, EncryptOptions?) => Promise<string>` | JSON-wrap as `{ data: value }`, derive a key with PBKDF2 over a fresh salt, seal with AES-256-GCM under a fresh nonce, return base64 `header ‖ ciphertext ‖ tag`. |
+| `decrypt(cipher, key?, options?)` | `(string, string?, DecryptOptions?) => Promise<any>` | Validate the header, re-derive from the envelope's own salt, verify the tag, JSON-parse, return `.data`. **Throws** on any failure. |
+| `tryDecrypt(...)` | same → `Promise<any \| null>` | `decrypt`, but `null` for a `DecryptionError`. Everything else still throws. |
+| Envelope | base64 string | Self-describing and authenticated: version, suite, work factor, salt, nonce. |
+| Legacy path | opt-in | v1.x AES-CBC ciphertext. Unauthenticated; off by default. |
+| Hash function | `(string) => string` | Stateless, **synchronous**, no config, lowercase hex. |
+| Module config | `{ key?, iterations?, legacyDecryption?, legacyDriver? }` | Process-global defaults via `setEncryptionConfigurations`. |
+
+## Threat model — read this before reaching for it
+
+| Property | v2 |
+|---|---|
+| Confidentiality | **Yes** — AES-256-GCM under a PBKDF2-derived 256-bit key. |
+| Integrity / tamper detection | **Yes** — 128-bit GCM tag over ciphertext *and* header. |
+| Nonce and salt hygiene | **Yes** — fresh CSPRNG values per message, never reused. |
+| Work-factor downgrade on existing ciphertext | **Prevented** — the iteration count is authenticated as AAD. |
+| CPU exhaustion via a forged header | **Bounded** — a declared work factor above 5,000,000 is rejected before key derivation. |
+| Format confusion (v1 blob swapped for a v2 envelope) | **Prevented by default** — the legacy path is opt-in. |
+| Weak passphrases | **No.** PBKDF2 raises the cost of an offline guess; it does not make a short secret safe. |
+| Key management / rotation | **No.** No key identifier in the envelope — rotation means re-encrypting. |
+| Binding ciphertext to a record or user | **No.** No caller-supplied AAD, so a ciphertext moved between rows still decrypts. Put the context inside the value. |
+| Replay / freshness, length hiding | **No.** Add your own `exp`; pad if length leaks. |
+| Secrets in a browser | **No.** A passphrase shipped to a page is readable by whoever controls the page. |
+| Constant-time digest comparison | **No.** Hex strings; `===` is not timing-safe. |
+| `md5` / `sha1` collision resistance | **Broken.** Fingerprinting only. |
+| FIPS / regulated compliance | **No.** Not a validated module. |
+
+**Reach for it when**: encrypting values at rest in browser storage, opaquing query-string parameters, field-level encryption of a database column, sealing payloads that pass through untrusted intermediaries — anywhere a wrong-key or tampered value must *fail* rather than degrade.
+
+**Do NOT reach for it when**: password storage (`bcrypt`/`scrypt`/**Argon2id**), session tokens (signed JWT/JWS or server-side sessions), key exchange or public-key work (libsodium, WebCrypto ECDH), streaming large files, or anywhere a compliance regime demands a validated module or a managed KMS.
 
 ## Where to go next
 
-- **[Configuration](../configuration/)** — `setEncryptionConfigurations`, swapping driver/key
-- **[Encrypt / decrypt](../encrypt-decrypt/)** — full signatures, failure modes, driver swapping
+- **[Configuration](../configuration/)** — `setEncryptionConfigurations`, work factor, legacy flags, key cache
+- **[Encrypt / decrypt](../encrypt-decrypt/)** — signatures, errors, envelope format, failure modes
 - **[Hashes](../hashes/)** — `md5` / `sha1` / `sha256` / `sha512`
-- **[Recipes](../recipes/)** — cache-key fingerprinting, query-string opaqueness
+- **[Recipes](../recipes/)** — URL tokens, field encryption, key rotation, migrating v1 data

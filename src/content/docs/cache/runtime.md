@@ -7,8 +7,6 @@ sidebar:
   order: 50
 ---
 
-# RunTimeDriver
-
 In-memory map. Forgets everything when the page unloads. Two instances on the same page have independent stores.
 
 ## Signature
@@ -17,11 +15,13 @@ In-memory map. Forgets everything when the page unloads. Two instances on the sa
 import { RunTimeDriver } from "@mongez/cache";
 
 class RunTimeDriver extends BaseCacheEngine implements CacheDriverInterface {
-  public data: Record<string, { value: any; expiresAt?: number }>;
+  public data: Map<string, { value: any; expiresAt?: number }>;
 }
 ```
 
 The driver overrides `getItem` / `setItem` / `removeItem` to talk to `this.data` directly, and overrides `convertValue` / `parseValue` to no-ops since the in-memory store doesn't need JSON.
+
+`data` is a `Map`, not a plain object: cache keys are caller-supplied, and on a plain object `__proto__` / `constructor` / `toString` resolve through the prototype chain instead of being treated as data. Reach into it with `data.get(key)` / `data.set(key, value)` / `data.delete(key)` — **it was a plain object before v1.4.0.**
 
 ## Usage
 

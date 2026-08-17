@@ -43,7 +43,7 @@ Every entry in `standalone[]` and `families[].packages[]` accepts these fields. 
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `clone` | `(string \| [string, string])[]` | `[]` | Files/dirs to copy from the package root into the build dir |
+| `clone` | `(string \| [string, string])[]` | `[]` | Files/dirs to copy from the package root into the build dir. Sources are confined to the package root and destinations to the build dir — an entry resolving outside either (`"../../secrets"`) is skipped. Symlinked entries are skipped rather than dereferenced |
 
 ```ts
 clone: [

@@ -72,7 +72,7 @@ readHydration(id?: string): Record<string, unknown> | null
 />
 ```
 
-- `serializeSnapshot` / `serializeStore` produce a string safe to embed in `<script type="application/json">`: `</script>` and U+2028/U+2029 are escaped.
+- `serializeSnapshot` / `serializeStore` produce a string safe to embed in `<script type="application/json">`: `</script>`, `<!--` and U+2028/U+2029 are escaped. (`<!--` matters because it flips the HTML parser into script-data-escaped state, which would make the real closing `</script>` be swallowed as data.)
 - `<HydrateAtomsScript>` renders an inline JSON script tag. Place it once per `<AtomStoreProvider>` you want to hydrate.
 - `readHydration()` is the client-side companion: parses the JSON out of the script tag. Returns `null` if missing or malformed.
 

@@ -36,7 +36,7 @@ collect([{ name: "Ada" }]).appendString("!", "name");
 
 ```ts
 c.replaceString(search: string | RegExp, replacement: string, key?)
-c.replaceAllString(search: string, replacement: string, key?)   // search is a string; promoted to `new RegExp(search, "g")`
+c.replaceAllString(search: string, replacement: string, key?)   // search is a LITERAL string (regex-escaped, global)
 c.removeString(search: string | RegExp, key?)                    // replace with ""
 c.removeAllString(search: string, key?)                          // replace all with ""
 ```
@@ -52,7 +52,7 @@ collect(["aaba"]).removeAllString("a");
 //  ["b"]
 ```
 
-> `replaceAllString` ALWAYS does a global regex replace (the first arg is forced into `new RegExp(s, "g")`). If you pass a regex, that's wrong — use `replaceString(/regex/g, ...)` instead.
+> `replaceAllString` / `removeAllString` always replace globally, and the search string is matched **literally**: it is regex-escaped before compilation, so `.`, `$1`, `(a+)+` and friends mean exactly those characters. (Before v1.4.0 it was compiled unescaped, which made it a regex — and a ReDoS risk on user input.) For real pattern matching use `replaceString(/regex/g, ...)`.
 
 ## Trim
 

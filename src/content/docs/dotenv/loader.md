@@ -59,6 +59,8 @@ loadEnv("/etc/secrets.env");    // explicit path skips the resolver,
 
 An explicitly-passed `envPath` that does not exist still throws — the caller named it, so a typo must be loud. Only the paths `loadEnv` derives for itself (steps 2–3 above) are optional.
 
+`dir` and `envPath` are also rejected outright when they contain a `..` segment, so a value derived from config or a CLI flag can't walk the loader outside its intended directory and pull an unrelated file into `process.env`. Absolute paths are still accepted — passing one is the caller explicitly naming that file.
+
 ## Precedence semantics — file vs. the real environment
 
 | Setting | A key in BOTH the file and `process.env` |

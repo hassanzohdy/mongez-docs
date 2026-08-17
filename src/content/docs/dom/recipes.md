@@ -1,11 +1,14 @@
 ---
 title: "Recipes"
+
 name: mongez-dom-recipes
 description: |
   Ready-to-copy cross-feature compositions for common `@mongez/dom` use cases — SPA route metadata, multi-weight font loading, dark-mode CSS-variable theming, stylesheet theme switching, smooth-scroll TOC, dialog keyboard shortcuts, consent-gated scripts, article Open Graph, viewport-driven decisions, and HTML excerpt previews.
 sidebar:
   order: 99
 ---
+
+# Recipes
 
 Cross-feature compositions for `@mongez/dom`.
 

@@ -72,7 +72,7 @@ The function applies these steps in order:
 - It does not parse or build query strings. See [`@mongez/query-string`](https://github.com/hassanzohdy/mongez-query-string).
 - It does not encode URL components. Use `encodeURIComponent`.
 - It does not handle absolute URLs. The protocol's `//` is destroyed by the slash-collapse step. Use the platform `URL` for that.
-- It does not validate that the result is a legal URL path. Reserved characters, encoded sequences, and dot segments (`.`, `..`) pass through unchanged.
+- It does not validate that the result is a legal URL path. Reserved characters and encoded sequences pass through unchanged. Dot segments do NOT pass through: since v1.2.0 `.` is dropped and `..` pops the previous segment, clamped at the root, so the result always stays at or below `/`. `concatRoute("/a/b", "../c")` → `"/a/c"`; `concatRoute("/a", "..", "..", "b")` → `"/b"`.
 - It does not generate route patterns or match parameters — that's the router's job.
 
 ## Patterns

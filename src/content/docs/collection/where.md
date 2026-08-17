@@ -37,6 +37,11 @@ The wrapper looks at `args.length` and at whether the first arg is a known opera
 | Less than or equal | `<=`, `lte` |
 | Substring (case-insensitive) | `like`, `%` |
 | Not substring | `not like`, `!%` |
+
+> `like` / `not like` treat a **string** value as a literal substring — it is regex-escaped
+> before matching, so `.`, `*`, `(a+)+` match those characters rather than acting as a
+> pattern. (Before v1.4.0 the value was compiled as a raw regex, which was a ReDoS risk when
+> it came from a search box.) Pass an actual `RegExp` as the value when you want a pattern.
 | Regex test | `regex` (and: passing a `RegExp` as the value with no operator) |
 | Set membership | `in` |
 | Not in set | `not in`, `!in` |
@@ -76,7 +81,7 @@ collect(users).where("age", ">", 25);
 collect(users).where("age", "between", [20, 30]);
 
 // String matching
-collect(users).where("name", "like", "ada");          // case-insensitive substring
+collect(users).where("name", "like", "ada");          // case-insensitive LITERAL substring
 collect(users).where("name", "starts with", "A");
 collect(users).where("name", "regex", /^A/);
 collect(users).where("name", /^A/);                    // RegExp as value also works

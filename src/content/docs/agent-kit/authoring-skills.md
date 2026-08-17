@@ -66,6 +66,8 @@ Without this, `npm publish` may omit the skills folder and downstream `agent-kit
 
 ## Where the consumer sees it
 
+Nesting is walked to a fixed depth cap, and any entry whose real path resolves outside the package (a symlink escaping it) is skipped rather than copied.
+
 Claude Code only discovers skills at the top level of `.claude/skills/` (no nested folders). `agent-kit` therefore exports every skill with a **flat folder name** derived from your package name and the skill's source folder path:
 
 ```

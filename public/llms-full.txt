@@ -5,7 +5,7 @@
 > per-package content, see each package's `/llms-full.txt` at
 > `https://mongez.js.org/<package>/llms-full.txt`.
 
-Generated: 2026-08-12T12:22:36.134Z
+Generated: 2026-08-17T13:57:01.453Z
 
 
 
@@ -343,6 +343,12 @@ set({}, "users.0.name", "Ada"); // { users: [{ name: "Ada" }] }
 set(obj, "a.b.c", 1);            // creates a.b.c chain
 ```
 
+**Prototype-pollution guard.** A path with a segment of `__proto__`, `constructor`, or `prototype` is rejected — the object is returned untouched. Matters whenever `path` comes from untrusted input (e.g. a JSON body walked into `set`).
+
+```ts
+set({}, "__proto__.polluted", 1); // {} — rejected, no throw
+```
+
 #### `has`
 
 ```ts
@@ -403,6 +409,8 @@ omit({ a: 1, b: 2 }, (_, k) => k === "a");      // { b: 2 }
 ```
 
 > `only` and `except` are kept as **`@deprecated` aliases** of `pick` and `omit` — prefer the new names.
+
+> `pick` and `omit` walk dot-notation paths through `set`/`get` internally and inherit the `__proto__`/`constructor`/`prototype` guard — a malicious path can't be used to read or reconstruct a polluted prototype.
 
 ## Cleanup — `compact`
 
@@ -488,6 +496,12 @@ merge({ list: [1, 2] }, { list: [2, 3] }, { arrays: "union" });
 
 Class instances are taken from the latest source rather than merged (cloning custom constructors is out of scope).
 
+**Prototype-pollution guard.** Source keys named `__proto__`, `constructor`, or `prototype` are silently skipped (not merged) at every recursion depth — merging untrusted JSON can never reach `Object.prototype`.
+
+```ts
+merge({}, JSON.parse('{"__proto__":{"polluted":1}}')); // {} — key skipped
+```
+
 #### `clone`
 
 ```ts
@@ -549,6 +563,8 @@ Mutating: fills only **`undefined`** keys on `target` from each source, left to 
 defaults({ a: 1 }, { a: 2, b: 3 });   // { a: 1, b: 3 }
 defaults({}, { a: 1 }, { a: 2 });     // { a: 1 }  (first source wins)
 ```
+
+Same prototype-pollution guard as `merge`: `__proto__` / `constructor` / `prototype` keys on any source are skipped.
 
 #### `invert`
 
@@ -742,6 +758,8 @@ repeatsOf(str: string, needle: string, caseSensitive?: boolean): number  // defa
 repeatsOf("abcabc", "a");       // 2
 repeatsOf("AbcAbc", "a", false); // 2
 ```
+
+`needle` is matched literally — internally escaped before being compiled into a `RegExp`, so regex metacharacters (`.`, `*`, `(`, `|`, …) in `needle` carry no special meaning and a long adversarial `needle` can't trigger catastrophic backtracking (ReDoS).
 
 ## Padding
 
@@ -1217,6 +1235,8 @@ beforeEach(() => Random.seed(123));
 afterEach(()  => Random.seed());
 ```
 
+`seed` only affects `int` / `float` / `bool` / `pick` / `sample` / `weighted` / `date` / `color`. **`string`, `id`, `nanoid`, `token`, and `uuid` are CSPRNG-backed and ignore the seed entirely** — see below.
+
 ## Primitives
 
 ```ts
@@ -1250,7 +1270,11 @@ Random.nanoid(10);         // "rH3kQ_pX7a"
 Random.token(16);          // 32-char hex
 ```
 
-`uuid` / `token` use `crypto.randomUUID` / `crypto.getRandomValues` when available, falling back to the internal PRNG otherwise. **Use for ids only**, not for cryptography.
+**`string`, `id`, `nanoid`, and `token` are always CSPRNG-backed** (`crypto.getRandomValues`) — never drawn from the seedable PRNG, even under `Random.seed(n)`. `uuid` uses `crypto.randomUUID` when available, otherwise `crypto.getRandomValues`. All five **throw `"No CSPRNG available: crypto.getRandomValues is required"`** on a runtime with no WebCrypto (pre-ES2020 browsers, Node < 15 without a `crypto` global) — they never silently degrade to a predictable generator.
+
+> **Breaking change (v4):** prior to v4, `string`/`id`/`nanoid`/`token`/`uuid` fell back to the internal PRNG and therefore *could* be seeded/reproduced under test. That fallback was a security bug — a predictable "random" identifier is exploitable wherever it's used as a token, invite code, or session-adjacent value. If you relied on seeded output from these five methods for fixtures, generate fixture values a different way (a fixed literal, a counter, or an explicitly-seeded UUID library) — do not reach for `Random.seed()` expecting them to comply.
+
+**Use for ids only**, not for cryptographic key/token material beyond opaque identifiers — for anything security-sensitive, prefer the Web Crypto API directly and document the derivation.
 
 ## Dates & colors
 
@@ -1291,7 +1315,8 @@ Random.weighted([
 
 - `Random` is **not instantiable** — `new Random()` is a TS error. Use the static methods directly.
 - The legacy aliases `Random.integer` / `Random.boolean` from v2 are **removed**. Use `Random.int` / `Random.bool`.
-- Seeded mode persists until cleared — call `Random.seed()` (no args) in `afterEach` to avoid cross-test contamination.
+- Seeded mode persists until cleared — call `Random.seed()` (no args) in `afterEach` to avoid cross-test contamination. Seeding has **no effect** on `string` / `id` / `nanoid` / `token` / `uuid`.
+- `Random.string` / `id` / `nanoid` / `token` / `uuid` **throw** on a runtime without `crypto.getRandomValues` — wrap calls in test environments that stub out WebCrypto, or polyfill it.
 
 ---
 
@@ -3593,7 +3618,7 @@ DEFAULT_HYDRATION_SCRIPT_ID = "__mongez_atom_state"
 />
 ```
 
-Serializer protections: `</script>` is escaped to `<\/script>`; U+2028/U+2029 are escaped to ` `/` `. The component uses `dangerouslySetInnerHTML` — safe because the serializer is the only path.
+Serializer protections: `</script>` is escaped to `<\/script>`; `<!--` is escaped to `<\!--` (it would otherwise flip the parser into script-data-escaped state and swallow the real closing tag); U+2028/U+2029 are escaped to ` `/` `. The component uses `dangerouslySetInnerHTML` — safe because the serializer is the only path.
 
 ## React version
 
@@ -4249,7 +4274,7 @@ c.countBy(key): Record<string, number>
 ## Strings
 
 > **Auto-trigger:** code calls `c.appendString`, `c.prependString`, `c.concatString`, `c.replaceString`, `c.replaceAllString`, `c.removeString`, `c.removeAllString`, `c.trim`, `c.string`, `c.number`, or `c.boolean` on an `ImmutableCollection`; user asks "how do I append / prepend / replace / strip / trim text on every item", "how to cast a collection of strings to numbers / booleans", "how to apply a string transform to one field of every object".
-> **Skip when:** ad-hoc string mapping where `c.map(item => ...)` is clearer — use `mongez-collection-builtins`; single-string formatting helpers — those live in `@mongez/reinforcements` (string slugify / kebab / camel / template) and are out of scope here; `replaceAllString` with a `RegExp` value — it forces `new RegExp(s, "g")`, use `replaceString(/regex/g, ...)` instead.
+> **Skip when:** ad-hoc string mapping where `c.map(item => ...)` is clearer — use `mongez-collection-builtins`; single-string formatting helpers — those live in `@mongez/reinforcements` (string slugify / kebab / camel / template) and are out of scope here; `replaceAllString` with a pattern — its search string is regex-escaped and matched literally, use `replaceString(/regex/g, ...)` instead.
 
 ```ts
 // All keyed forms mutate the source items via reinforcements `set`.
@@ -4257,7 +4282,7 @@ c.appendString(s, key?): ImmutableCollection<T>
 c.prependString(s, key?): ImmutableCollection<T>
 c.concatString(s, key?): ImmutableCollection<T>           // identical to appendString for strings
 c.replaceString(search: string | RegExp, repl: string, key?): ImmutableCollection<T>
-c.replaceAllString(search: string, repl: string, key?): ImmutableCollection<T>  // search is always promoted to global regex
+c.replaceAllString(search: string, repl: string, key?): ImmutableCollection<T>  // global; search matched literally (regex-escaped)
 c.removeString(search: string | RegExp, key?): ImmutableCollection<T>
 c.removeAllString(search: string, key?): ImmutableCollection<T>
 c.trim(chars?: string, key?): ImmutableCollection<T>     // default chars = " "
@@ -4808,7 +4833,7 @@ This is intentionally not in the core package — the cache is meant to be small
 - **`EncryptedLocalStorageDriver.set` ignores `expiresAfter`.** Encrypted entries never expire. (`drivers/EncryptedLocalStorageDriver.ts:12`)
 - **`RunTimeDriver.has(missingKey)` returns `true`.** The base engine's `has()` checks `!== null`, runtime returns `undefined`. (`drivers/RunTimeDriver.ts:24`)
 - **`valueParer` typo** (missing `s` in `Parser`). Both the configuration field and the typo are preserved for backward compatibility. (`types.ts:67`)
-- **`clear()` wipes the entire backend, not just keys under the prefix.** Use carefully on shared domains.
+- **`clear()` removes only keys under the configured prefix** (since v1.4.0). With no prefix configured it wipes the entire backend — set a prefix when sharing an origin with other apps.
 
 See the CHANGELOG for the full list.
 
@@ -5424,230 +5449,664 @@ env("APP_NAME");      // from .env — the platform does not set it
 
 # @mongez/encryption — full reference
 
-> A thin wrapper around `crypto-js` for symmetric encrypt/decrypt of JSON-encodable values and the common hash functions. This is the concatenated reference; load `llms.txt` for the structured index instead.
+> Complete API reference for `@mongez/encryption` v2.0 — authenticated symmetric encryption (WebCrypto AES-256-GCM + PBKDF2-HMAC-SHA256) for JSON-encodable values, plus hex `md5`/`sha1`/`sha256`/`sha512` digests. This file is the concatenation of every skill, intended for single-fetch loading by AI agents. Load `llms.txt` for the structured index instead.
 
-## Security boundary (read this first)
+Install: `yarn add @mongez/encryption` or `npm i @mongez/encryption`.
 
-> **Auto-trigger:** code first imports anything from `@mongez/encryption` (`encrypt`, `decrypt`, `md5`, `sha1`, `sha256`, `sha512`, `setEncryptionConfigurations`, `getEncryptionConfig`, `EncryptionConfigurations`); user asks "what does @mongez/encryption do", "is @mongez/encryption secure for X", "can I store passwords / tokens / PII with this", or "should I use this or Node `crypto`"; file evaluates whether to adopt the package or audits its threat model.
-> **Skip when:** deep API reference on a specific export — use `mongez-encryption-encrypt-decrypt`, `mongez-encryption-hashes`, or `mongez-encryption-configuration`; ready-made composition patterns — use `mongez-encryption-recipes`; `@mongez/cache` encrypted entries — its own skill wraps this layer; questions strictly about `crypto-js` itself, libsodium, or Node `crypto`.
-
-These helpers are **NOT a substitute for purpose-built cryptography**. Below is what they do and do not provide; mismatching the threat model to the tool is a defect, not a usage error.
-
-| Concern | This package |
-|---|---|
-| Authenticated encryption (AEAD) | No. `AES.encrypt(text, passphrase)` from `crypto-js` runs AES-CBC with an MD5-based OpenSSL-style key derivation and a random salt. There is no MAC/auth tag — ciphertext can be tampered with undetectably. |
-| Modern key derivation | No. The OpenSSL-style KDF is one round of MD5. Real passphrase-derived keys want PBKDF2 / scrypt / argon2 with tunable cost. |
-| Salts and IVs | crypto-js picks a fresh salt per call when the key is a string passphrase, so the cipher is non-deterministic. No IV is exposed to the caller. |
-| Constant-time comparison | No. Hash outputs are hex strings; comparing them with `===` is not timing-safe. |
-| `md5` / `sha1` collision resistance | Broken. Both algorithms are unsafe for integrity or signatures; suitable only for non-adversarial fingerprinting (ETags, cache keys). |
-| FIPS / regulated environments | No. Pure-JS primitives, no validation, uses MD5 and AES-CBC-without-MAC. Inappropriate for several compliance regimes. |
-
-**Use for:** opaquing query-string parameters, masking values in logs, signing-free local-storage payloads, non-sensitive round-trips through string form.
-
-**Do NOT use for:** passwords, session tokens, PII at rest, payment data, secrets in transit, anything under a compliance regime, anything where integrity or non-repudiation matters. Reach for Node `crypto` with AES-GCM, libsodium, or a managed KMS.
-
-## Install
-
-```sh
-yarn add @mongez/encryption
-```
-
-The runtime dependency is [`crypto-js`](https://www.npmjs.com/package/crypto-js).
+**v2.0 is a breaking security release.** `encrypt`/`decrypt` are now async, `decrypt` throws instead of returning `null`, the pluggable cipher `driver` is removed, v1.x ciphertext is rejected unless explicitly enabled, and there is a Node 20+/secure-context runtime floor. See "Migration" below.
 
 ## Public exports
 
 ```ts
 import {
+  // encryption
   encrypt,
   decrypt,
+  tryDecrypt,
+  // hashes
   md5,
   sha1,
   sha256,
   sha512,
+  // configuration
   setEncryptionConfigurations,
   getEncryptionConfig,
+  resetEncryptionConfigurations,
+  assertIterations,
+  // key cache
+  deriveKey,
+  clearKeyCache,
+  // envelope inspection + constants
+  isEncryptionEnvelope,
+  parseEnvelope,
+  buildHeader,
+  encodeEnvelope,
+  ENVELOPE_VERSION_1,
+  SUITE_PBKDF2_SHA256_AES_256_GCM,
+  SALT_LENGTH,
+  IV_LENGTH,
+  AUTH_TAG_LENGTH,
+  AUTH_TAG_LENGTH_BITS,
+  HEADER_LENGTH,
+  DEFAULT_ITERATIONS,
+  MIN_ITERATIONS,
+  MAX_ITERATIONS,
+  // legacy (v1.x) — decrypt only
+  isLegacyCipher,
+  isLegacyDriver,
+  legacyDecrypt,
+  LEGACY_CIPHER_PREFIX,
+  // errors
+  EncryptionError,
+  MissingEncryptionKeyError,
+  UnsupportedRuntimeError,
+  DecryptionError,
+  // types
   type EncryptionConfigurations,
+  type EncryptOptions,
+  type DecryptOptions,
+  type LegacyCipherDriver,
+  type EncryptionEnvelope,
 } from "@mongez/encryption";
 ```
 
-All exports ship from the package root — no subpath entry points.
+All exports ship from the package root — no subpath entry points. The WebCrypto plumbing (`getSubtle`, `randomBytes`, base64 helpers) is internal and not exported.
 
-## encrypt(value, key?, driver?)
+---
 
-> **Auto-trigger:** code imports `encrypt` or `decrypt` from `@mongez/encryption`; user asks "how do I encrypt/decrypt a value", "why does decrypt return null", "how do I round-trip a token through a URL", or "why are two encryptions of the same input different"; file constructs opaque tokens, masks values in logs, or swaps the `crypto-js` driver (AES, TripleDES).
-> **Skip when:** hashing/fingerprinting — use `mongez-encryption-hashes`; configuring module-level defaults — use `mongez-encryption-configuration`; recipe-style compositions (URL token, HMAC layering) — use `mongez-encryption-recipes`; authenticated encryption / AEAD (use Node `crypto` AES-GCM, libsodium, or JWE); password storage (use `bcrypt`/`scrypt`/`argon2`); `@mongez/cache` encrypted entries (its own skill).
+# Overview
+
+> **Auto-trigger:** code first imports anything from `@mongez/encryption`; user asks "what does @mongez/encryption do", "is it secure for X", "can I store tokens / PII with this", "why is decrypt async now", or "should I use this or Node crypto"; a file evaluates whether to adopt the package or audits its threat model.
+> **Skip when:** deep API reference on a specific export — use the Encrypt/Decrypt, Hashes or Configuration sections; ready-made patterns — use Recipes; questions strictly about `crypto-js`, libsodium, or Node `crypto` themselves.
+
+`@mongez/encryption` gives the Mongez family one authenticated `encrypt(value, key)` / `decrypt(cipher, key)` pair, so no caller has to assemble WebCrypto by hand — key import, KDF choice, work factor, per-message nonce, tag handling, base64 both ways. Getting any one of those wrong yields a cipher that looks like it works.
+
+## Runtime requirement
+
+`encrypt`/`decrypt` need `globalThis.crypto.subtle` and `crypto.getRandomValues`:
+
+- **Node.js 20+** — available as a global.
+- **Browser in a secure context** — HTTPS or `http://localhost`. Plain-HTTP origins do not expose `crypto.subtle`.
+- **Node.js ≤ 16, insecure browser contexts, bare React Native/Hermes** — throw `UnsupportedRuntimeError`. Upgrade, or install a WebCrypto polyfill providing both `subtle` and `getRandomValues`.
+- **Jest with the default jsdom environment** — older jsdom has no `crypto.subtle`; use the `node` environment or inject `require("node:crypto").webcrypto`.
+
+There is deliberately no fallback: silently degrading to a non-CSPRNG or a hand-rolled cipher would defeat the point of the AEAD migration. The hash exports have no such requirement.
+
+## Quick peek
 
 ```ts
-encrypt(value: any, key?: string, driver?: any): string
+import { encrypt, decrypt, sha256 } from "@mongez/encryption";
+
+const cipher = await encrypt({ userId: 42 }, "a long passphrase"); // AES-256-GCM
+const value = await decrypt(cipher, "a long passphrase");          // { userId: 42 }
+const tag = sha256(JSON.stringify({ q: "phones" }));               // stable cache key
 ```
+
+## Mental model
+
+| Concept | Type | Mental model |
+|---|---|---|
+| `encrypt(value, key?, options?)` | `(any, string?, EncryptOptions?) => Promise<string>` | JSON-wrap as `{ data: value }`, derive a key with PBKDF2 over a fresh salt, seal with AES-256-GCM under a fresh nonce, return base64 `header ‖ ciphertext ‖ tag`. |
+| `decrypt(cipher, key?, options?)` | `(string, string?, DecryptOptions?) => Promise<any>` | Parse and validate the header, re-derive the key from the envelope's own salt, verify the tag, JSON-parse, return `.data`. **Throws** `DecryptionError` on any failure. |
+| `tryDecrypt(...)` | same → `Promise<any \| null>` | `decrypt`, returning `null` for a `DecryptionError` and re-throwing everything else. |
+| Envelope | base64 string | Self-describing: version, suite, work factor, salt, nonce — all authenticated as AAD. |
+| Legacy path | opt-in | v1.x AES-CBC ciphertext, readable only with `legacyDecryption: true`. Unauthenticated. |
+| Hash function | `(string) => string` | Stateless, synchronous, no config, lowercase hex. |
+| Module config | `{ key?, iterations?, legacyDecryption?, legacyDriver? }` | Process-global defaults via `setEncryptionConfigurations`. |
+
+## Threat model
+
+| Property | v2 |
+|---|---|
+| Confidentiality of the payload | **Yes** — AES-256-GCM under a PBKDF2-derived 256-bit key. |
+| Integrity / tamper detection | **Yes** — 128-bit GCM tag over ciphertext *and* header. Any edit is rejected. |
+| Nonce and salt hygiene | **Yes** — fresh CSPRNG values per message, never reused, never plaintext-derived. |
+| Work-factor downgrade on existing ciphertext | **Prevented** — the iteration count is authenticated as AAD. |
+| CPU exhaustion via a forged header | **Bounded** — a declared work factor above 5,000,000 is rejected before key derivation. |
+| Format confusion (v1 blob swapped for a v2 envelope) | **Prevented by default** — the legacy path is off unless enabled; the formats differ in their first byte. |
+| Weak passphrases | **No.** PBKDF2 raises the cost of an offline guess; it does not make `"password123"` safe. PBKDF2 is GPU-friendly relative to scrypt/Argon2 — it is the strongest KDF WebCrypto exposes natively. |
+| Key management / rotation | **No.** No key identifier in the envelope; rotation means re-encrypting or trying keys in order. |
+| Binding ciphertext to a context | **No.** Callers cannot supply their own AAD, so a ciphertext moved from user A's row to user B's row still decrypts. Put the context inside the value and check it. |
+| Replay / freshness | **No.** No timestamp or counter; add your own `exp` inside the payload. |
+| Length hiding | **No.** Ciphertext length reveals plaintext length plus a constant. |
+| Secrets in a browser | **No.** A passphrase shipped to a page is readable by extensions, devtools and injected scripts. Encrypted `localStorage` raises the bar against passive disk inspection only. |
+| Constant-time hash comparison | **No.** Digests are hex strings; `===` is not timing-safe. |
+| `md5` / `sha1` collision resistance | **Broken.** Fingerprinting only. |
+| FIPS / regulated compliance | **No.** Not a validated module. |
+| Side-channel resistance | Inherited from the platform WebCrypto implementation; unaudited here. |
+
+**Reach for it when:** encrypting values at rest in browser storage, opaquing query-string parameters, sealing payloads that pass through untrusted intermediaries, field-level encryption of a database column, and anywhere a wrong-key or tampered value must *fail* rather than degrade.
+
+**Do not reach for it when:** password storage (`bcrypt`/`scrypt`/**Argon2id**), session tokens (signed JWT/JWS or server-side sessions), key exchange or public-key work (libsodium, WebCrypto ECDH), streaming large files, or where a compliance regime demands a validated module or a managed KMS.
+
+---
+
+# encrypt(value, key?, options?)
+
+> **Auto-trigger:** code imports `encrypt`, `decrypt` or `tryDecrypt`; user asks "how do I encrypt/decrypt a value", "why does decrypt throw now", "how do I handle a wrong key", "how do I round-trip a token through a URL", or "why are two encryptions of the same input different".
+> **Skip when:** hashing/fingerprinting — use the Hashes section; module defaults — use Configuration; recipe-style compositions — use Recipes; password storage (`bcrypt`/`argon2`); public-key crypto.
+
+```ts
+encrypt(value: any, key?: string, options?: EncryptOptions): Promise<string>
+
+type EncryptOptions = { iterations?: number };
+```
+
+`key` falls back to `getEncryptionConfig("key")`.
 
 Behavior:
 
-1. Wraps the input as `{ data: value }` so primitives (`0`, `false`, `null`) survive JSON encoding.
-2. `JSON.stringify`s the wrapper.
-3. Hands the result to `driver.encrypt(plaintext, key)` — typically `AES` from `crypto-js`. The `driver` defaults to whatever was passed to `setEncryptionConfigurations`; the import-time default is `AES`.
-4. Returns crypto-js's `CipherParams.toString()` — a base64 string with the OpenSSL `Salted__` prefix.
+1. Validates the key: falsy → `MissingEncryptionKeyError`; non-string → `EncryptionError`.
+2. Rejects a cipher-driver-shaped object in the options slot with `EncryptionError` (v1.x callers passed `AES` here).
+3. Validates the work factor: an integer in `100_000 … 5_000_000`, else `EncryptionError`.
+4. Wraps the value as `{ data: value }` and `JSON.stringify`s it — a circular value rejects here, before any randomness is drawn.
+5. Draws a fresh 16-byte salt and 12-byte nonce from the platform CSPRNG.
+6. Derives a 256-bit non-extractable AES-GCM key via PBKDF2-HMAC-SHA256.
+7. Seals with AES-256-GCM, passing the 34-byte header as additional authenticated data.
+8. Returns `base64(header ‖ ciphertext ‖ tag)`.
 
-Throws:
+Rejects with:
 
-- If `key` is falsy (no per-call key, no configured default).
-- If `JSON.stringify(value)` throws — e.g. circular references, BigInt outside Node's serializer, or objects whose `toJSON` throws.
+- `MissingEncryptionKeyError` — no per-call key and no configured default.
+- `EncryptionError` — non-string key, a cipher driver in the options slot, or an out-of-range `iterations`.
+- `UnsupportedRuntimeError` — no `crypto.subtle` or no `crypto.getRandomValues`.
+- `TypeError` from `JSON.stringify` — circular references, BigInt, a throwing `toJSON`.
 
 Edge cases:
 
-- **`undefined`**: `JSON.stringify({ data: undefined })` returns `"{}"`. Encrypts and round-trips to `undefined`.
-- **`function`**: dropped at JSON time, same as `undefined`.
-- **Empty string**: round-trips cleanly.
-- **Unicode**: round-trips via UTF-8.
-- **Ciphertext is non-deterministic** for AES with a passphrase key — each call uses a fresh salt.
+- **`undefined` / functions** — dropped by JSON; round-trip to `undefined`.
+- **Empty string, `0`, `false`, `null`** — round-trip exactly (that is what the `{ data: … }` wrapper is for).
+- **Unicode** — round-trips via UTF-8.
+- **Non-deterministic** — a fresh salt and nonce per call, so the same value under the same key never produces the same string. Never compare, index, or cache-key on ciphertext.
+- **Size** — 50 bytes of overhead (34 header + 16 tag) before base64's ~33% expansion.
+- **Encoding** — standard base64 alphabet (`+`, `/`, `=`). URL-encode before putting it in a URL.
 
-## decrypt(cipher, key?, driver?)
+# decrypt(cipher, key?, options?)
 
 ```ts
-decrypt(cipher: string, key?: string, driver?: any): any | null
+decrypt(cipher: string, key?: string, options?: DecryptOptions | LegacyCipherDriver): Promise<any>
+
+type DecryptOptions = {
+  legacyDecryption?: boolean;
+  legacyDriver?: LegacyCipherDriver;
+};
 ```
 
 Behavior:
 
-1. Calls `driver.decrypt(cipher, key)` and decodes the result to UTF-8.
-2. Returns `null` if the decoded plaintext is empty — crypto-js silently produces `""` when the key is wrong or the input is not a valid cipher.
-3. `JSON.parse`s the plaintext and returns the `.data` property of the wrapper.
-4. Catches any thrown error, logs it via `console.warn`, returns `null`.
+1. Validates the key, then rejects a non-string or empty `cipher`.
+2. Base64-decodes and inspects the leading byte. Not a version-1 envelope → the legacy path (below).
+3. Rejects, **before deriving any key**: a truncated envelope, an unknown cipher suite, or a declared work factor outside `1 … 5,000,000` (a CPU-exhaustion guard, since that number comes from attacker-reachable bytes).
+4. Re-derives the key from the passphrase and the envelope's own salt and iteration count.
+5. Verifies the GCM tag over header + ciphertext and decrypts.
+6. `JSON.parse`s the plaintext and returns `.data`.
 
-The function CANNOT distinguish:
+**`decrypt` throws — it does not return `null`.** In v1.x every failure was `null`, which could not be distinguished from a successfully decrypted `null`, and which hid wrong keys and tampering from the application.
 
-- "wrong key" from "tampered cipher" from "malformed input"
+| Situation | Error |
+|---|---|
+| Wrong key **or** tampered ciphertext | `DecryptionError` — *"Authentication failed: the ciphertext was modified, or the key is wrong."* One message for both, deliberately: GCM cannot distinguish them, and exposing the difference would be a decryption oracle. |
+| Truncated / short envelope | `DecryptionError` — *"shorter than its own header and authentication tag."* |
+| Unknown cipher suite byte | `DecryptionError` — produced by a newer version of the package. |
+| Work factor outside `1…5,000,000` | `DecryptionError` — *"outside the accepted range"*, raised before key derivation. |
+| Unknown envelope version / not base64 / no legacy prefix | `DecryptionError` — *"Unrecognised ciphertext."* |
+| v1.x ciphertext while the legacy path is disabled | `DecryptionError` naming `legacyDecryption: true`. |
+| Authenticated but not our payload shape | `DecryptionError` — *"not a @mongez/encryption envelope body."* |
+| Empty string or non-string cipher | `DecryptionError`. |
+| No key anywhere | `MissingEncryptionKeyError`. |
+| No WebCrypto | `UnsupportedRuntimeError`. |
 
-…because the wrapper provides no authentication tag. If you need that distinction, layer HMAC-SHA256 over the ciphertext yourself (sign-then-encrypt), or switch to a real AEAD construction.
+Nothing is written to `console` on failure. v1.x `console.warn`'d on every one, which let a probing attacker flood logs.
 
-Throws:
-
-- Only if `key` is falsy. Every other failure mode resolves to `null`.
-
-## md5 / sha1 / sha256 / sha512
-
-> **Auto-trigger:** code imports `md5`, `sha1`, `sha256`, or `sha512` from `@mongez/encryption`; user asks "how do I hash a string", "how do I make a stable cache key / ETag / idempotency key", "is md5/sha1 safe for X", or "how do I fingerprint a payload"; file derives a content-addressed key from JSON / a query / a request body.
-> **Skip when:** symmetric `encrypt`/`decrypt` — use `mongez-encryption-encrypt-decrypt`; module defaults — use `mongez-encryption-configuration`; password storage (use `bcrypt`/`scrypt`/`argon2`); message authentication (use HMAC — `CryptoJS.HmacSHA256`, or Node `crypto.createHmac`); constant-time secret comparison (use `crypto.timingSafeEqual`); `@mongez/cache` cache-key derivation that already wraps this; signatures over adversarial inputs.
+# tryDecrypt(cipher, key?, options?)
 
 ```ts
-md5(text: string): string
-sha1(text: string): string
-sha256(text: string): string
-sha512(text: string): string
+tryDecrypt(cipher: string, key?: string, options?: DecryptOptions | LegacyCipherDriver): Promise<any | null>
 ```
 
-All four return a lowercase hex string of the digest. Test vectors:
+`decrypt`, returning `null` when it raises a `DecryptionError`. `MissingEncryptionKeyError` and `UnsupportedRuntimeError` still throw — those are deployment bugs, not bad ciphertext, and swallowing them would hide the bug.
+
+This is the v1.x failure shape, provided for callers that genuinely do not care why a value failed. It carries the old ambiguity: `encrypt(null)` round-trips to `null`, so `null` means "no usable value", not "failure". Prefer `decrypt` where you can act on the difference.
+
+```ts
+const value = await tryDecrypt(cipher, key);
+if (value === null) return badRequest();
+```
+
+# Error hierarchy
 
 ```
-md5("123456")    === "e10adc3949ba59abbe56e057f20f883e"
-sha1("123456")   === "7c4a8d09ca3762af61e59520943dc26494f8941b"
-sha256("123456") === "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
-sha512("123456") === "ba3253876aed6bc22d4a6ff53d8406c6ad864195ed144ab5c87621b6c233b548baeae6956df346ec8c17f5ea10f35ee3cbc514797ed7ddd3145464e2a0bab413"
-md5("")          === "d41d8cd98f00b204e9800998ecf8427e"
+EncryptionError                 base class — catch for any failure from the package
+├─ MissingEncryptionKeyError    no key per call and none configured
+├─ UnsupportedRuntimeError      no crypto.subtle / no crypto.getRandomValues
+└─ DecryptionError              wrong key, tampered, malformed, or gated legacy ciphertext
 ```
 
-**Suitable uses**: content fingerprints, ETags, cache keys, deduplication.
+`instanceof` works after transpilation to ES5 (the constructors restore the prototype).
 
-**Unsuitable uses**:
+```ts
+import { decrypt, DecryptionError, UnsupportedRuntimeError } from "@mongez/encryption";
 
-- Password storage → use `bcrypt`, `scrypt`, or `argon2`. Plain hashes are too fast and lack per-record salts.
-- Message authentication → use HMAC. `crypto-js` ships `CryptoJS.HmacSHA256(message, key).toString()` if you want to stay in the same dep.
-- Equality checks on secret material → use a constant-time comparison.
-- Anywhere collision resistance matters and the input is attacker-controlled (signatures, certificates, deduplicating untrusted data) → `md5` and `sha1` are broken.
+try {
+  return await decrypt(cipher, key);
+} catch (error) {
+  if (error instanceof DecryptionError) return null;       // bad input
+  if (error instanceof UnsupportedRuntimeError) throw error; // deployment fault
+  throw error;
+}
+```
 
-## setEncryptionConfigurations(opts) / getEncryptionConfig(key)
+# Envelope format
 
-> **Auto-trigger:** code imports `setEncryptionConfigurations`, `getEncryptionConfig`, or type `EncryptionConfigurations` from `@mongez/encryption`; user asks "how do I set a default encryption key / driver", "how do I configure encryption at boot", or "how does the per-call fallback work"; file does process-wide encryption setup (e.g. `src/setup/encryption.ts`) or wires `process.env.ENCRYPTION_KEY`.
-> **Skip when:** per-call usage of `encrypt`/`decrypt` without touching defaults — use `mongez-encryption-encrypt-decrypt`; HMAC/AEAD/JWT setup; password hashing config; `@mongez/cache` encryption-driver config (its own skill — note `@mongez/cache` has its own encrypted cache layer that wraps this); multi-tenant per-request keys (pass key explicitly instead).
+```
+byte 0        envelope version   (0x01 = ENVELOPE_VERSION_1)
+byte 1        cipher suite       (0x01 = SUITE_PBKDF2_SHA256_AES_256_GCM)
+bytes 2–5     PBKDF2 iterations  (uint32, big-endian)
+bytes 6–21    salt               (SALT_LENGTH = 16)
+bytes 22–33   nonce / IV         (IV_LENGTH = 12)
+bytes 34–     ciphertext ‖ GCM tag (AUTH_TAG_LENGTH = 16, trailing)
+```
+
+`HEADER_LENGTH` is 34, and the **entire header is passed to AES-GCM as additional authenticated data**, so the declared work factor, salt and nonce are all tamper-evident. The leading version byte makes the format self-describing: a future algorithm change bumps the version or suite, and `decrypt` still recognises — and refuses or handles — every generation of ciphertext.
+
+Constants: `DEFAULT_ITERATIONS` (210,000), `MIN_ITERATIONS` (100,000, the encrypt-time floor), `MAX_ITERATIONS` (5,000,000, the decrypt-time ceiling).
+
+Inspection helpers, both pure string checks that never decrypt (so a migration script can classify a store without holding the key):
+
+```ts
+isEncryptionEnvelope(cipher: string): boolean   // a v2 AES-GCM envelope?
+isLegacyCipher(cipher: string): boolean         // a v1.x "U2FsdGVkX1…" ciphertext?
+parseEnvelope(cipher: string): EncryptionEnvelope | null  // null = not a v1 envelope; throws on a malformed one
+```
+
+# The derived-key cache
+
+PBKDF2 at 210,000 iterations costs on the order of 100 ms per call, so derived keys are memoised in-process, keyed by the exact `(passphrase, salt, iterations)` triple, capped at 64 entries with the oldest evicted. A failed derivation is never memoised.
+
+The cache cannot widen who can decrypt what — a hit requires the same passphrase *and* the same salt, and the cached `CryptoKey` is non-extractable. It does keep material resident for the life of the process.
+
+```ts
+import { clearKeyCache } from "@mongez/encryption";
+
+clearKeyCache(); // on logout, on key rotation, between tests
+```
+
+`deriveKey(password, salt, iterations)` is exported for advanced use; ordinary callers never need it.
+
+---
+
+# Configuration
+
+> **Auto-trigger:** code imports `setEncryptionConfigurations`, `getEncryptionConfig`, `resetEncryptionConfigurations`, `clearKeyCache` or the type `EncryptionConfigurations`; user asks how to set a default key, tune the PBKDF2 work factor, enable legacy decryption, or configure at boot.
+> **Skip when:** per-call usage that doesn't touch defaults — use the Encrypt/Decrypt section; password-hashing config; multi-tenant per-request keys (pass the key explicitly instead).
 
 ```ts
 type EncryptionConfigurations = {
   key?: string;
-  driver?: any;       // any crypto-js cipher module (.encrypt / .decrypt)
+  iterations?: number;
+  legacyDecryption?: boolean;
+  legacyDriver?: LegacyCipherDriver;
+  /** @deprecated v1.x pluggable cipher — now only nominates the legacy decrypt driver. */
+  driver?: LegacyCipherDriver;
 };
 
 setEncryptionConfigurations(opts: EncryptionConfigurations): void
 getEncryptionConfig(key: keyof EncryptionConfigurations): any
+resetEncryptionConfigurations(): void
+assertIterations(iterations: number): void   // throws EncryptionError if out of range
 ```
 
-`setEncryptionConfigurations` shallow-merges over the existing defaults. The import-time defaults are `{ key: null, driver: AES }`, so if you only need AES, you only need to set `key`.
-
-These are module-level globals; in multi-tenant servers (one key per request) prefer passing `key` explicitly per call to avoid leaking one tenant's key into another's flow.
-
-## Patterns
-
-> **Auto-trigger:** code composes `encrypt` + `decrypt` + `sha256` + `setEncryptionConfigurations` together; user asks "how do I build an opaqued URL token", "how do I add integrity / tamper detection on top of this", "how do I tell apart `decrypt → null` from `value was null`", or "what's the right pattern for boot-time encryption setup"; file layers `HmacSHA256` over a cipher (encrypt-then-MAC).
-> **Skip when:** single-function API lookups (use the per-export skills `mongez-encryption-encrypt-decrypt`, `mongez-encryption-hashes`, `mongez-encryption-configuration`); first-time evaluation of the package — use `mongez-encryption-overview`; full AEAD via Node `crypto.createCipheriv("aes-256-gcm", …)` or libsodium; signed JWT / JWS flows; `@mongez/cache` encrypted entries (its own skill).
-
-### Configured once, used everywhere
+Import-time defaults:
 
 ```ts
-import AES from "crypto-js/aes";
-import { encrypt, decrypt, setEncryptionConfigurations } from "@mongez/encryption";
+{ key: null, iterations: 210_000, legacyDecryption: false, legacyDriver: AES }
+```
 
-setEncryptionConfigurations({
-  key: process.env.ENCRYPTION_KEY!,
-  driver: AES,
+| Option | Effect |
+|---|---|
+| `key` | Default passphrase for `encrypt`/`decrypt`/`tryDecrypt`. Stretched with PBKDF2 — which does not rescue a short key. Use a long, high-entropy secret. |
+| `iterations` | PBKDF2 work factor used **when encrypting**. Integer in `100_000 … 5_000_000`; anything else throws `EncryptionError` at configuration time. |
+| `legacyDecryption` | Allow the v1.x AES-CBC fallback. Off by default — that format is unauthenticated, and leaving it silently readable would let an attacker who can write to your storage swap an authenticated envelope for a malleable legacy blob. |
+| `legacyDriver` | Cipher for the legacy fallback. Defaults to crypto-js `AES`, which is what v1.x defaulted to. |
+| `driver` | **Deprecated.** Cannot influence encryption; only nominates the legacy decrypt driver, and logs one deprecation warning per process. |
+
+## Merge semantics
+
+Shallow merge over the current state — partial updates keep everything else. `undefined` values ARE written through, so `{ key: undefined }` erases a previously set key.
+
+```ts
+setEncryptionConfigurations({ key: "k1" });              // iterations/legacy defaults kept
+setEncryptionConfigurations({ legacyDecryption: true }); // key preserved
+resetEncryptionConfigurations();                          // back to import-time defaults
+```
+
+## Work factor
+
+The count in force at encryption time is written into the envelope, so raising it later does not orphan older ciphertexts — they decrypt at the count they were sealed with, and the next `encrypt` uses the new value.
+
+Validation is asymmetric on purpose:
+
+- **Encrypting / configuring** — `100_000 … 5_000_000`, integer. Below the floor, PBKDF2 is decorative.
+- **Decrypting** — `1 … 5_000_000`. The count comes from attacker-reachable bytes: low values are accepted so old envelopes stay readable, and the ceiling stops a forged header claiming four billion iterations from pinning a core before the tag check runs.
+
+```ts
+setEncryptionConfigurations({ iterations: 600_000 }); // globally
+await encrypt(value, key, { iterations: 100_000 });   // per call
+```
+
+## Multi-tenant servers
+
+The configuration is process-global. Two concurrent requests with different tenant keys would race:
+
+```ts
+// DON'T:
+setEncryptionConfigurations({ key: req.user.tenantKey });
+return encrypt(payload);
+
+// DO:
+return encrypt(payload, req.user.tenantKey);
+```
+
+Treat `setEncryptionConfigurations` as boot-time setup, never request-time state.
+
+## Boot-time setup
+
+```ts
+// src/setup/encryption.ts
+import { setEncryptionConfigurations } from "@mongez/encryption";
+
+const key = process.env.ENCRYPTION_KEY;
+
+if (!key || key.length < 32) {
+  throw new Error("ENCRYPTION_KEY is required and must be at least 32 chars");
+}
+
+setEncryptionConfigurations({ key });
+```
+
+Crash loudly at boot rather than falling through to the throw inside `encrypt`, which surfaces at a random call site later.
+
+---
+
+# Legacy (v1.x) ciphertext
+
+> **Auto-trigger:** user is upgrading from v1.x, sees *"legacy (v1.x) ciphertext"* in an error, or asks how to read old data / migrate a store.
+> **Skip when:** greenfield use with no v1 data.
+
+v2 never writes the v1.x format and refuses to read it unless told to.
+
+```ts
+import { setEncryptionConfigurations, decrypt } from "@mongez/encryption";
+
+setEncryptionConfigurations({ legacyDecryption: true });        // for the migration window
+await decrypt(oldCipher, key, { legacyDecryption: true });      // or per call
+
+import TripleDES from "crypto-js/tripledes";
+await decrypt(oldCipher, key, { legacyDecryption: true, legacyDriver: TripleDES });
+await decrypt(oldCipher, key, TripleDES);  // v1-shaped third argument; implies legacyDecryption
+```
+
+Two properties to be explicit about:
+
+- **Values read through this path are not authenticated.** v1.x had no MAC, so if an attacker could write to that storage, what you just read may have been altered. Re-encrypt and stop trusting the old copy.
+- **The format is forward-only.** v2 envelopes are not readable by v1.x. Deploy v2 to every reader of a store *before* anything starts writing v2 into it.
+
+Helpers: `isLegacyCipher(cipher)`, `LEGACY_CIPHER_PREFIX` (`"U2FsdGVkX1"` — base64 of the OpenSSL `Salted__` header), `isLegacyDriver(value)`, `legacyDecrypt(cipher, key, driver?)`.
+
+---
+
+# md5 / sha1 / sha256 / sha512
+
+> **Auto-trigger:** code imports `md5`, `sha1`, `sha256` or `sha512`; user asks how to hash a string, build a stable cache key / ETag / idempotency key, or whether md5/sha1 is safe for a use case.
+> **Skip when:** symmetric encryption — use the Encrypt/Decrypt section; password storage (`bcrypt`/`scrypt`/`argon2`); message authentication (HMAC); constant-time comparison (`crypto.timingSafeEqual`).
+
+```ts
+md5(text: string):    string  // @deprecated — legacy interop only
+sha1(text: string):   string  // @deprecated — legacy interop only
+sha256(text: string): string
+sha512(text: string): string
+```
+
+Unchanged in v2: stateless, synchronous, no configuration, no WebCrypto requirement. Direct passthroughs to `CryptoJS.MD5/SHA1/SHA256/SHA512` with `.toString()`, returning lowercase hex. Input is encoded as UTF-8 first, so outputs match the standard vectors for that scheme.
+
+`md5` and `sha1` carry `@deprecated` JSDoc so editors flag them at the call site. They still work — they exist for legacy interop (old cache keys, gravatar-style identifiers). Do not add new uses.
+
+Test vectors:
+
+```
+md5("")          === "d41d8cd98f00b204e9800998ecf8427e"
+md5("123456")    === "e10adc3949ba59abbe56e057f20f883e"
+sha1("")         === "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+sha1("123456")   === "7c4a8d09ca3762af61e59520943dc26494f8941b"
+sha256("")       === "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+sha256("123456") === "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+sha512("123456") === "ba3253876aed6bc22d4a6ff53d8406c6ad864195ed144ab5c87621b6c233b548baeae6956df346ec8c17f5ea10f35ee3cbc514797ed7ddd3145464e2a0bab413"
+```
+
+**Suitable uses:** content fingerprints, ETags, cache keys, idempotency keys, deduplication, probabilistic structures.
+
+**Unsuitable uses:**
+
+- Password storage → `bcrypt`, `scrypt`, **Argon2id**. Plain hashes are too fast and lack per-record salts.
+- Message authentication → HMAC (`crypto-js/hmac-sha256`, or `crypto.subtle.sign` with HMAC). A plain hash binds no secret.
+- Signatures over attacker-controlled input → `sha256` plus a signing primitive (RSA-PSS, Ed25519) or JWS. `md5` and `sha1` are collision-broken.
+- Equality checks on secret material → a constant-time compare (`crypto.timingSafeEqual`).
+- FIPS / regulatory validation → a vetted library or a KMS.
+
+Hash for keys; encrypt for secrecy. Never use a ciphertext as a cache key — it changes on every call.
+
+---
+
+# Migration: v1.x → v2.0
+
+> **Auto-trigger:** user upgrades the package and hits `[object Promise]` in storage, a `Promise` where a string was expected, a thrown `DecryptionError` where `null` used to be returned, *"no longer takes a cipher driver"*, *"legacy (v1.x) ciphertext"*, or `UnsupportedRuntimeError`.
+
+Five breaking changes. Full guide in `MIGRATION.md`.
+
+**1. `encrypt`/`decrypt` are async.** WebCrypto is promise-based and PBKDF2 is too slow to block on.
+
+```diff
+- const cipher = encrypt({ userId: 42 }, KEY);
+- const value = decrypt(cipher, KEY);
++ const cipher = await encrypt({ userId: 42 }, KEY);
++ const value = await decrypt(cipher, KEY);
+```
+
+A missed `await` is not always a type error — it silently stores `[object Promise]`. Grep every call site.
+
+**2. `decrypt` throws instead of returning `null`.**
+
+```diff
+- const value = decrypt(cipher, KEY);
+- if (value === null) return badRequest();
++ const value = await tryDecrypt(cipher, KEY);
++ if (value === null) return badRequest();
+```
+
+…or catch `DecryptionError` and act on it. Code that treated `null` as "no value yet" and wrote a default over it was silently destroying data on a wrong key.
+
+**3. No cipher `driver` on `encrypt`.** Passing one throws; the third argument is `{ iterations? }`. In configuration, `driver` is deprecated and only nominates the legacy decrypt driver.
+
+**4. v1 ciphertext is off by default.** Enable `legacyDecryption` for the migration window only; treat what you read as unauthenticated; re-encrypt; turn it off.
+
+**5. Node 20+ or a secure browser context**, else `UnsupportedRuntimeError`.
+
+## Ordered rollout
+
+1. Deploy v2 to everything that **reads** the store, with `legacyDecryption: true`.
+2. Only then let writes switch to v2 (v1 readers cannot parse v2 envelopes).
+3. Re-encrypt at rest — lazily on read, or with a batch walk.
+4. Turn `legacyDecryption` off and delete the fallback config.
+
+```ts
+import { decrypt, encrypt, isEncryptionEnvelope, isLegacyCipher } from "@mongez/encryption";
+
+async function migrate(stored: string, key: string) {
+  if (isEncryptionEnvelope(stored)) return stored; // already v2
+  if (!isLegacyCipher(stored)) throw new Error("unrecognised ciphertext");
+
+  const value = await decrypt(stored, key, { legacyDecryption: true });
+
+  return encrypt(value, key);
+}
+```
+
+Expect some rows to fail: v1 returned `null` for corrupt data, so stores can carry damage nobody ever saw. Log and count the failures before deleting anything — a spike may mean tampering, not corruption.
+
+## Unchanged
+
+`md5`/`sha1`/`sha256`/`sha512`; the `{ data: value }` wrapper (`0`, `false`, `null` round-trip; `undefined`/functions become `undefined`); `setEncryptionConfigurations`/`getEncryptionConfig` names and shallow-merge semantics; the key fallback chain; non-deterministic ciphertext.
+
+## Known incompatibility
+
+`@mongez/cache`'s `EncryptedLocalStorageDriver`/`EncryptedSessionStorageDriver` call `encrypt(...)` **synchronously** and write the result straight to storage — handed v2's promise they store `"[object Promise]"`. Pin `@mongez/encryption@^1` for that integration, or encrypt outside the cache and store the finished string through a plain driver.
+
+---
+
+# Recipes
+
+> **Auto-trigger:** user wants a full pattern — boot-time setup, URL tokens, binding ciphertext to a user, field-level encryption, key rotation, migrating v1 data, or cache keys.
+> **Skip when:** single-function lookups — use the reference sections above.
+
+## Boot-time setup, used everywhere
+
+```ts
+// src/setup/encryption.ts
+import { setEncryptionConfigurations } from "@mongez/encryption";
+
+const key = process.env.ENCRYPTION_KEY;
+if (!key || key.length < 32) throw new Error("ENCRYPTION_KEY missing or too short");
+
+setEncryptionConfigurations({ key });
+
+// src/anywhere.ts
+const cipher = await encrypt({ a: 1 });
+const value = await decrypt(cipher);
+```
+
+## Tamper-evident URL token
+
+```ts
+import { encrypt, tryDecrypt } from "@mongez/encryption";
+
+async function makeToken(payload: { orderId: number; exp: number }) {
+  // Standard base64 contains + and / — always URL-encode.
+  return encodeURIComponent(await encrypt(payload, KEY));
+}
+
+async function readToken(raw: string) {
+  const payload = await tryDecrypt(decodeURIComponent(raw), KEY);
+
+  if (!payload) return null;                 // wrong key, garbage, or tampered
+  if (payload.exp < Date.now()) return null; // freshness is still yours to enforce
+  return payload;
+}
+```
+
+Unlike v1, an edited token now fails instead of decoding to something else. It is still a bearer token — anyone who copies it can replay it until `exp` — and it is not a substitute for a signed JWT when a third party must verify without your key.
+
+## Bind a ciphertext to its context
+
+The package exposes no caller-supplied AAD, so a ciphertext lifted from one record and dropped into another still decrypts. Put the binding in the plaintext:
+
+```ts
+async function sealFor(userId: string, value: unknown, key: string) {
+  return encrypt({ userId, value }, key);
+}
+
+async function openFor(userId: string, cipher: string, key: string) {
+  const payload = await decrypt(cipher, key);
+  if (payload?.userId !== userId) throw new Error("ciphertext does not belong to this user");
+  return payload.value;
+}
+```
+
+## Field-level encryption
+
+```ts
+import { encrypt, decrypt, DecryptionError } from "@mongez/encryption";
+
+await db.users.update(id, { ssn: await encrypt(ssn, process.env.FIELD_KEY!) });
+
+try {
+  const ssn = await decrypt(row.ssn, process.env.FIELD_KEY!);
+} catch (error) {
+  if (error instanceof DecryptionError) {
+    // Not "missing" — tampered, or the key rotated. Alert; do not fall back.
+    throw new Error(`unreadable ssn for ${id}`);
+  }
+  throw error;
+}
+```
+
+Keeps the value out of backups, logs and read replicas in plaintext. Does not protect against an attacker holding both database and key.
+
+## Key rotation
+
+```ts
+import { encrypt, tryDecrypt, clearKeyCache } from "@mongez/encryption";
+
+async function rotate(cipher: string, oldKey: string, newKey: string) {
+  const value = await tryDecrypt(cipher, oldKey);
+  if (value === null) return null; // not ours, or already rotated
+  return encrypt(value, newKey);
+}
+
+clearKeyCache(); // once the old key is retired
+```
+
+The envelope carries no key identifier, so mid-rotation stores need a try-new-then-old ladder.
+
+## Content-addressed cache key
+
+```ts
+import { sha256 } from "@mongez/encryption";
+
+function cacheKey(query: unknown) {
+  // Property order can vary across engines — sort keys for a canonical form.
+  return `q:${sha256(JSON.stringify(query))}`;
+}
+```
+
+## Test setup
+
+```ts
+import { beforeEach, afterEach } from "vitest";
+import {
+  resetEncryptionConfigurations,
+  setEncryptionConfigurations,
+  clearKeyCache,
+  MIN_ITERATIONS,
+} from "@mongez/encryption";
+
+beforeEach(() => {
+  resetEncryptionConfigurations();
+  // The work factor is a number in the envelope, not a behavioural switch —
+  // running at the floor keeps a suite fast without changing what's tested.
+  setEncryptionConfigurations({ key: "a-long-test-passphrase", iterations: MIN_ITERATIONS });
 });
 
-const c = encrypt({ userId: 42 });
-const v = decrypt(c);                  // { userId: 42 }
+afterEach(() => {
+  resetEncryptionConfigurations();
+  clearKeyCache();
+});
 ```
 
-### Explicit per-call key
+Use the `node` environment (or a jsdom with WebCrypto), and never assert on an exact ciphertext — it changes every call.
 
-```ts
-import AES from "crypto-js/aes";
-import { encrypt, decrypt } from "@mongez/encryption";
+---
 
-const c = encrypt({ a: 1 }, tenantKey, AES);
-const v = decrypt(c, tenantKey, AES);
-```
+# What this package does NOT do
 
-### Switching driver
-
-```ts
-import TripleDES from "crypto-js/tripledes";
-import { setEncryptionConfigurations, encrypt, decrypt } from "@mongez/encryption";
-
-setEncryptionConfigurations({ driver: TripleDES });   // key already set
-```
-
-Any `crypto-js` cipher module with `.encrypt(text, key)` / `.decrypt(cipher, key)` works. Prefer `AES`.
-
-### Adding integrity with HMAC (for when you need it)
-
-This pattern is OUTSIDE the package because the package intentionally does not provide it; if your threat model requires tamper-detection, build it explicitly:
-
-```ts
-import AES from "crypto-js/aes";
-import HmacSHA256 from "crypto-js/hmac-sha256";
-import { encrypt, decrypt } from "@mongez/encryption";
-
-function seal(value: unknown, encKey: string, macKey: string) {
-  const cipher = encrypt(value, encKey, AES);
-  const tag = HmacSHA256(cipher, macKey).toString();
-  return `${cipher}.${tag}`;
-}
-
-function open(sealed: string, encKey: string, macKey: string) {
-  const [cipher, tag] = sealed.split(".");
-  const expected = HmacSHA256(cipher, macKey).toString();
-  if (tag !== expected) return null;     // (non-constant-time; see notes)
-  return decrypt(cipher, encKey, AES);
-}
-```
-
-Note: the string-equality MAC check is NOT constant-time. For real use, swap in a constant-time compare or use a JWT/JWS library.
-
-## What this package does NOT do
-
-- Authenticated encryption / AEAD → Node `crypto.createCipheriv("aes-256-gcm", …)`, libsodium, or JWE.
-- Password hashing → `bcrypt`, `scrypt`, `argon2`.
-- Key derivation from passphrases → `crypto.scryptSync`, PBKDF2 with high cost, argon2.
-- Random IDs / UUIDs → `crypto.randomUUID`, `nanoid`.
-- Public-key crypto → Node `crypto.generateKeyPair`, libsodium.
-- Streaming or chunked encryption → use Node `crypto` streams.
+- Password hashing → `bcrypt`, `scrypt`, **Argon2id**.
+- Key management, rotation metadata, or key IDs in the ciphertext → a KMS.
+- Caller-supplied AAD / ciphertext-to-record binding → put the context in the payload.
+- Replay protection or freshness → add `exp`/nonce inside the value.
+- Public-key crypto, key exchange, signatures → libsodium, WebCrypto ECDH/ECDSA, JWS.
+- Streaming or chunked encryption → Node `crypto` streams.
+- Constant-time comparison → `crypto.timingSafeEqual`.
+- Random IDs / UUIDs → `crypto.randomUUID`, `nanoid`, `@mongez/reinforcements`' `Random.token`.
+- FIPS-validated primitives → a vetted, validated module.
 
 
 ---
@@ -5728,7 +6187,7 @@ The function applies these steps in order:
 - It does not parse or build query strings. See [`@mongez/query-string`](https://github.com/hassanzohdy/mongez-query-string).
 - It does not encode URL components. Use `encodeURIComponent`.
 - It does not handle absolute URLs. The protocol's `//` is destroyed by the slash-collapse step. Use the platform `URL` for that.
-- It does not validate that the result is a legal URL path. Reserved characters, encoded sequences, and dot segments (`.`, `..`) pass through unchanged.
+- It does not validate that the result is a legal URL path. Reserved characters and encoded sequences pass through unchanged. Dot segments do NOT pass through: since v1.2.0 `.` is dropped and `..` pops the previous segment, clamped at the root, so the result always stays at or below `/`. `concatRoute("/a/b", "../c")` → `"/a/c"`; `concatRoute("/a", "..", "..", "b")` → `"/b"`.
 - It does not generate route patterns or match parameters — that's the router's job.
 
 ## Patterns
@@ -7383,7 +7842,7 @@ export default Helmet;
 | `keywords` | `meta[name="keywords"]` (array is `.join(",")`'d) |
 | `image` | `meta[property="image"]`, `meta[property="og:image"]`, `meta[property="twitter:image"]`, `meta[itemprop="image"]` |
 | `url` | `link[rel="canonical"]`, `meta[property="og:url"]`, `meta[property="twitter:url"]` |
-| `htmlAttributes` | each entry `.setAttribute`'d on `<html>` |
+| `htmlAttributes` | each entry `.setAttribute`'d on `<html>`; `on*` keys stripped |
 | `pageId` | `<html>.id` |
 | `className` | each space-separated token `classList.add`'d on `<html>` |
 
@@ -7453,7 +7912,7 @@ Concretely:
 
 ## `<html>` attributes / id / className
 
-- `htmlAttributes` — written via `setAttribute` on `document.documentElement`. The captured snapshot's `lang` and `dir` are intentionally **not** restored on unmount (so localization layers that mutate `lang`/`dir` outside `<Helmet>` keep their value).
+- `htmlAttributes` — written via `setAttribute` on `document.documentElement`. Keys matching `on*` are stripped (they would become live inline event handlers). The captured snapshot's `lang` and `dir` are intentionally **not** restored on unmount (so localization layers that mutate `lang`/`dir` outside `<Helmet>` keep their value).
 - `pageId` — sets `document.documentElement.id`. Restored on unmount to the value at mount.
 - `className` — split on whitespace; each token `classList.add`'d on `<html>`. Restored on unmount to the className string at mount.
 
@@ -7483,6 +7942,26 @@ Concretely:
 A headless React form handler for Web and React Native. The library owns state, validation, and value collection; the consumer owns rendering.
 
 This file is structured for LLM consumption: each section is self-contained, canonical patterns appear once, and the API reference is at the end. For tutorial-style human-readable docs, see README.md.
+
+---
+
+## 0. What's new in v4 (major rewrite)
+
+v4 keeps the public surface (`useFormControl`, the rules system, value collection) largely compatible but rebuilds the core:
+
+- **`Form` / `NativeForm` are now function components** (`forwardRef`). They lazily instantiate a single **`FormEngine`** and expose it via `ref`. The engine is the thing your `ref` and `useForm()` return — it implements `FormInterface`.
+- **`FormEngine` is a plain class** (not a `React.Component`). It is React-free, unit-testable in isolation, and the home of all form logic.
+- **`BaseForm` is a deprecated alias for `FormEngine`** (`export const BaseForm = FormEngine`), kept for one major. To support a custom renderer, subclass `FormEngine` and render a thin function component over it instead of subclassing `BaseForm`.
+- **SSR-safe id via React `useId()`** — the auto-generated form id (`form-<react-id>`) is now stable across server/client, fixing the old `Math.random()` hydration mismatch. No `id` prop is required for SSR.
+- **Async validation genuinely gates submission.** `formControl.validate()` returns `ReactNode | Promise<ReactNode>`. Sync rules stay synchronous (no extra microtask); the path goes async only when a rule returns a Promise. New per-control `isValidating` flag (on `FormControl` and the hook return). Stale async results are discarded via a per-control sequence token.
+- **Standard Schema support** (`@warlock.js/seal`, `zod`, `valibot`, …) with **zero runtime dependency** — whole-form (`<Form schema>`) and per-field (`useFormControl({ schema })`), plus type inference.
+- **Reactive hydration**: the `values` prop re-hydrates mounted controls and seeds later-mounting ones; `form.fill()`, `form.setValues()`, `form.setDefaultValue()`. `defaultValue` stays the reset baseline.
+- **Bulk server errors**: `form.setErrors({ "dot.name": message })` (HTTP 422 mapping).
+- **Awaited submit**: if `onSubmit` returns a Promise, submitting state auto-clears when it settles.
+- **`validateOn: "change" | "blur" | "submit"`** — per-control prop > `<Form validateOn>` > global config > `"change"`.
+- **New hooks**: `useFieldArray`, `useWatch`. **New a11y helpers** on the `useFormControl` return: `getInputProps`, `getErrorProps`, `errorId`, `onBlur`.
+
+Each topic has a full section below. Migration is mostly a no-op for consumers; only code that subclassed `BaseForm` or relied on a class-component instance shape needs review.
 
 ---
 
@@ -7523,29 +8002,54 @@ Without this, error messages render as raw keys like `validation.required`.
 
 ## 3. Form components
 
-> **Auto-trigger:** code imports `NativeForm` from `@mongez/react-form`, or imports `useFormControl` / `useForm` / `useSubmitButton` in a file that also imports from `react-native` (e.g. `TextInput`, `Pressable`, `View`, `Text` from `"react-native"`); user asks "how do I use @mongez/react-form on React Native or Expo", "why doesn't my form submit fire on RN", "how do I wire `onChangeText` / `onFocus` / `Pressable` into a form control", or "how do I make a checkbox on React Native"; `import { NativeForm } from "@mongez/react-form"`.
+> **Auto-trigger:** code imports `Form`, `NativeForm`, `FormEngine`, `useFormEngine`, or `BaseForm` from `@mongez/react-form`, attaches a `ref` to `<Form>` / `<NativeForm>`, or imports `useFormControl` / `useForm` / `useSubmitButton` in a file that also imports from `react-native` (e.g. `TextInput`, `Pressable`, `View`, `Text` from `"react-native"`); user asks "how do I use @mongez/react-form on React Native or Expo", "why doesn't my form submit fire on RN", "how do I get the form engine via ref", "what replaced BaseForm in v4", "how do I wire `onChangeText` / `onFocus` / `Pressable` into a form control", or "how do I make a checkbox on React Native"; `import { NativeForm } from "@mongez/react-form"`.
 > **Skip when:** `mongez-react-form-getting-started` once install and locale registration are done; `mongez-react-form-create-form-control` for the platform-agnostic hook contract; `mongez-react-form-submit-button` for non-RN button patterns; Web-only `Form` component usage; `react-hook-form`/`formik` on RN.
 
-Two components, same API, different platforms:
+Two components, same API, different platforms — **both are function components (`forwardRef`)** built over the React-free `FormEngine`:
 
 - **`Form`** — Web. Renders an HTML `<form>` element. Browser submit event drives the submission.
 - **`NativeForm`** — React Native. Renders a Fragment by default (or any component passed via `component` prop). Submission is always programmatic via `form.submit()`.
 
-Both implement `FormInterface` and share the abstract `BaseForm` engine.
+Both lazily instantiate one `FormEngine` (which implements `FormInterface`) and expose it via `ref`. That same engine is what `useForm()` returns to descendants.
+
+### Accessing the engine via `ref`
+
+```tsx
+import { Form, type FormInterface } from "@mongez/react-form";
+import { useRef } from "react";
+
+const formRef = useRef<FormInterface>(null);
+
+<Form ref={formRef} onSubmit={handle}>{/* ... */}</Form>;
+
+// later, imperatively:
+formRef.current?.fill({ user: { firstName: "Jane" } });
+formRef.current?.submit();
+```
+
+The ref resolves to the `FormEngine` instance — every method on `FormInterface` (`values()`, `validate()`, `fill()`, `setErrors()`, `reset()`, …) is available.
 
 ### Form props (both Web and Native)
 
+`FormProps` extends `React.FormHTMLAttributes<HTMLFormElement>` (minus the overridden keys), so any standard `<form>` attribute (`className`, `style`, `noValidate`, …) flows through to the rendered element.
+
 ```ts
-type FormProps = {
-  onSubmit?: (options: FormSubmitOptions) => void;
+type FormProps<Schema extends StandardSchemaV1 | undefined = undefined> = {
+  onSubmit?: (options: FormSubmitOptions<Schema>) => void | Promise<any>;
   onError?: (invalidControls: FormControl[]) => void;
   component?: React.ComponentType<any>;        // override the rendered element
-  defaultValue?: Record<string, any>;          // default values for every control by name (dot-notation supported)
+  defaultValue?: Record<string, any>;          // RESET BASELINE for every control by name (dot-notation supported)
+  values?: Record<string, any>;                // REACTIVE current values — re-hydrates on identity change (see §15)
+  schema?: Schema;                             // whole-form Standard Schema validator (see §16)
+  validateOn?: "change" | "blur" | "submit";  // default validation trigger for all controls (see §17)
   ignoreEmptyValues?: boolean;                 // omit empty values from form.values()
-  id?: string;                                 // form id; pass a static, unique value in SSR apps (auto-generated via Math.random() when absent — see §3 SSR)
+  id?: string;                                 // form id — OPTIONAL; auto-derived from React useId() and SSR-safe
   children: React.ReactNode;
 };
 ```
+
+- **`onSubmit` may return a `Promise`** — when it does, the engine auto-clears submitting state once it settles (§18). Sync `onSubmit` behaves as before.
+- **`schema` drives `onSubmit` value typing**: `FormProps<Schema>` types `values` as `InferFormValues<Schema>` (§16).
 
 ### `FormSubmitOptions` (the argument to `onSubmit`)
 
@@ -7553,7 +8057,7 @@ type FormProps = {
 {
   form: FormInterface;
   event?: React.FormEvent;        // undefined when programmatically submitted (and always on Native)
-  values: Record<string, any>;    // getter — calls form.values() each access
+  values: FormValues<Schema>;     // getter — calls form.values() each access; typed from schema when present
   formData: FormData;             // getter — calls form.formData() each access
 }
 ```
@@ -7584,9 +8088,11 @@ import { View } from "react-native";
 </NativeForm>
 ```
 
-### SSR — pass a static `id` to every `<Form>`
+### SSR — the form id is now SSR-safe automatically
 
-In server-rendered apps (Next.js, Remix, Astro, TanStack Start, …), always give each `<Form>` an explicit, static `id`:
+In v4 the form id is derived from React's `useId()` when no `id` prop is passed (`useFormEngine` computes `props.id ? String(props.id) : "form-" + useId()`). `useId()` returns the same value on the server render and the client hydration, so the rendered `<form id="form-…">` attribute is **deterministic on both sides** — the old `Math.random()` hydration mismatch is gone. **No `id` prop is required for SSR correctness.**
+
+You may still pass an explicit, static `id`:
 
 ```tsx
 <Form id="signup" onSubmit={({ values }) => api.signup(values)}>
@@ -7594,17 +8100,17 @@ In server-rendered apps (Next.js, Remix, Astro, TanStack Start, …), always giv
 </Form>
 ```
 
-When `id` is omitted, the form generates one at construction with `Math.random()` (`frm-<random>`) and renders it as the `<form id="form-frm-…">` attribute. The server render and the client hydration each run that generation independently and produce **different** ids — React reports a hydration mismatch and discards the server markup for that subtree. A static `id` makes the rendered attribute deterministic (`form-signup`) and identical on both sides.
+- A static `id` makes the `<form>` easy to target in tests and styles, and it sets the event prefix (`form.<id>`) explicitly.
+- Keep each form's `id` unique on the page — the id drives the internal event prefix, so duplicate ids cross-wire events.
+- Inputs derive their id from `name` (`input-<name>`), which is already deterministic.
 
-- Keep each form's `id` unique on the page — it also drives the internal form id and its event prefix (`form.<id>`), so duplicate ids cross-wire events.
-- Inputs don't need this: a control's id derives from its `name` (`input-<name>`), which is already deterministic. Only the `<Form>` wrapper falls back to a random id.
-- Client-only apps (plain SPA, React Native `NativeForm`) never hydrate server markup, so the random id is harmless there — but a static `id` is still a good habit and makes the `<form>` easier to target in tests and styles.
+> Note on the internal engine id: when constructed without options, `FormEngine` falls back to a counter-based id (`frm-<base36 counter>`), not `Math.random()`. In practice `Form` / `NativeForm` always pass the `useId()`-derived id, so the rendered attribute is the SSR-safe `form-<react-id>`.
 
 ---
 
 ## 4. Form controls — the canonical pattern
 
-> **Auto-trigger:** code imports `useFormControl`, `useRadioInput`, `RadioGroupContext`, `HiddenInput`, `FormControlProps`, `FormControlHook`, or `FormControl` from `@mongez/react-form`; user asks "how do I build a custom text input / checkbox / radio / multi-select for @mongez/react-form", "how do I wire `inputRef` / `otherProps` / `checked` / `setChecked`", or "how do I make a multi-value input"; `import { useFormControl } from "@mongez/react-form"` in a component file.
+> **Auto-trigger:** code imports `useFormControl`, `useRadioInput`, `useFieldArray`, `useWatch`, `RadioGroupContext`, `HiddenInput`, `FormControlProps`, `FormControlHook`, or `FormControl` from `@mongez/react-form`; calls `getInputProps` / `getErrorProps` or reads `isValidating` / `errorId` / `onBlur` from the hook; user asks "how do I build a custom text input / checkbox / radio / multi-select for @mongez/react-form", "how do I wire `inputRef` / `otherProps` / `checked` / `setChecked` / `getInputProps`", "how do I build a dynamic list of fields", "how do I watch a field's value", or "how do I make a multi-value input"; `import { useFormControl } from "@mongez/react-form"` in a component file.
 > **Skip when:** `mongez-react-form-validation-rules` for choosing or writing rules (rules go into the `rules` array, but the rules system itself is a separate skill); `mongez-react-form-submit-button` for submit-button wiring; `mongez-react-form-form-events` for subscribing to lifecycle events; raw React `useState` form inputs unrelated to `@mongez/react-form`; `react-hook-form`'s `useController` or `Controller`.
 
 Every input is built around `useFormControl`. The hook registers the input with the surrounding form and returns a state bundle.
@@ -7726,6 +8232,7 @@ import { HiddenInput } from "@mongez/react-form";
   value: any;
   changeValue: (value, options?: FormControlChangeOptions) => void;
   error: ReactNode;
+  errorId: string;                 // stable id for the error element (input's aria-describedby)
   errorsList: { [ruleName: string]: ReactNode };
   setError: (error: ReactNode) => void;
   checked: boolean;
@@ -7736,11 +8243,17 @@ import { HiddenInput } from "@mongez/react-form";
   disabled: boolean;
   disable: () => void;
   enable: () => void;
-  isInvalid: boolean;              // touched AND failing validation
-  otherProps: object;              // pass-through props (excludes hook + rule-preserved keys)
-  validate: () => void;
+  isInvalid: boolean;              // touched AND failing validation (getter)
+  isValidating: boolean;           // an async validation rule is in-flight (see §14)
+  onBlur: () => void;              // blur handler — validates when validateOn === "blur" (see §17)
+  otherProps: object;              // pass-through props (excludes hook + rule-preserved keys; validateOn + schema are stripped out)
+  getInputProps: (overrides?) => object;   // a11y-complete prop bag for the host input (see §19)
+  getErrorProps: () => { id, role, "aria-live" }; // prop bag for the error element (see §19)
+  validate: () => ReactNode | Promise<ReactNode>;
 }
 ```
+
+> **`otherProps` no longer leaks `validateOn` or `schema`.** Both are destructured out before the rest props are assembled, so spreading `otherProps` onto a DOM element won't emit invalid attributes.
 
 ---
 
@@ -7777,7 +8290,7 @@ useFormControl({ ...props, rules: [requiredRule, minLengthRule, emailRule] });
 | `floatRule` | — | `type="float"` | |
 | `urlRule` | — | `type="url"` | |
 | `alphabetRule` | — | `type="alphabet"` | |
-| `patternRule` | `pattern` (RegExp) | — | |
+| `patternRule` | `pattern` (RegExp) | — | Patterns cached by source+flags; source capped at 200 chars and the value truncated to 2000 before matching (ReDoS guard). An oversized/invalid pattern skips validation instead of failing the field |
 | `matchRule` | `match` (other input name) | — | Subscribes to the other input's changes |
 | `strongRule` | `strong` (boolean or object) | `type="password"` | Composite: 5 criteria, per-criterion errors in `errorsList["strong.<key>"]` |
 
@@ -7805,7 +8318,7 @@ useFormControl({ ...props, rules: [requiredRule, minLengthRule, emailRule] });
 />
 ```
 
-The `validate` prop accepts sync or async functions. Async returns block downstream rules until resolved.
+The `validate` prop accepts sync or async functions. An async (`Promise`-returning) `validate` flips the control's `isValidating` flag and **genuinely gates submission** — `form.validate()` awaits it before the submit pipeline proceeds (§14). The per-instance `validate` runs **first** in the rule list (before the passed `rules`, then any per-field `schema` last).
 
 ### Writing a custom rule
 
@@ -7979,7 +8492,7 @@ getForm("form-id");         // module-level — returns by id
 
 ```ts
 form.submit();                                   // trigger validation + submission
-form.validate(controls?);                        // Promise<FormControl[]>
+form.validate(controls?);                        // Promise<FormControl[]> — awaits async rules
 form.validateVisible();                          // validate only visible controls (Web only; on RN it's identical to validate())
 form.values(names?);                             // collect values as nested object
 form.value(name);                                // single control value by name
@@ -7987,6 +8500,11 @@ form.formData();                                 // FormData object (for multipa
 form.controls(names?);                           // array of FormControl
 form.control(name, getBy?);                      // single FormControl by name or id
 form.change(name, value);                        // mutate a control's value programmatically
+form.fill(values, options?);                     // bulk-write values + seed late controls (§15)
+form.setValues(values, options?);                // alias of fill
+form.setDefaultValue(defaultValue);              // update reset baseline; re-hydrate pristine controls (§15)
+form.setErrors({ "dot.name": message });         // bulk server-error (422) mapping (§15)
+form.getInitialValue(name);                      // seed value from hydration snapshot then baseline
 form.reset();                                    // reset all to initial values
 form.resetErrors();                              // clear errors only
 form.disable(isDisabled);                        // disable/enable all controls
@@ -7994,9 +8512,12 @@ form.enable();                                   // shorthand for disable(false)
 form.isValid();                                  // boolean
 form.isSubmitting();                             // boolean
 form.submitting(true | false);                   // toggle in-flight state
+form.wasSubmitted;                               // boolean — true after the first submit attempt (§17)
 form.on(event, callback);                        // event subscription
 form.id;                                         // string
 form.formElement;                                // HTMLFormElement (Web) | any (Native)
+form.schema;                                      // the whole-form Standard Schema, if provided
+form.validateOn;                                 // form-level default validation trigger
 ```
 
 ### Default values
@@ -8031,6 +8552,7 @@ import { setFormConfigurations } from "@mongez/react-form";
 setFormConfigurations({
   ignoreEmptyValues: true,        // default false
   formComponent: MyCustomForm,    // default "form" — replaces the rendered element for ALL Web Forms
+  validateOn: "blur",             // default "change" — global validation trigger for all controls (§17)
 });
 ```
 
@@ -8101,6 +8623,7 @@ The "active form" tracks the most recently mounted form globally — when forms 
   initialChecked: boolean;
   isDirty: boolean;
   isTouched: boolean;
+  isValidating: boolean;       // an async validation rule is in-flight (§14)
   isValid: boolean | null;     // null = not yet validated
   error: ReactNode;
   errorsList: { [ruleName: string]: ReactNode };
@@ -8118,7 +8641,7 @@ The "active form" tracks the most recently mounted form globally — when forms 
   change(value, opts?): void;
   setChecked(checked): void;
   setError(error): void;
-  validate(): ReactNode;
+  validate(): Promise<ReactNode>;   // awaited by form.validate() so async rules gate submit (§14)
   isCollectable(): boolean;
   collectValue(): any;
   isVisible(): boolean;
@@ -8152,15 +8675,18 @@ The "active form" tracks the most recently mounted form globally — when forms 
   placeholder?: string;
   label?: ReactNode;
   rules?: InputRule[];
-  validate?: InputRule["validate"];              // per-instance custom validation
+  validate?: InputRule["validate"];              // per-instance custom validation (sync or async)
+  schema?: StandardSchemaV1;                     // per-field Standard Schema — wrapped as a rule, appended last (§16)
   errors?: { [ruleName: string]: ReactNode };    // override messages per rule
   errorKeys?: { [placeholder: string]: ReactNode }; // override message placeholders
   onChange?: (value, options) => void;
   onError?: (error: ReactNode) => void;
-  validateOn?: "change" | "blur";
+  validateOn?: "change" | "blur" | "submit";     // per-control validation trigger (§17)
   [key: string]: any;                            // anything else flows to otherProps
 }
 ```
+
+`FormControlOptions` (the 2nd `useFormControl` argument) also accepts a `schema` field — equivalent to the `schema` prop, handy when authoring a reusable input wrapper.
 
 ### `InputRule`
 
@@ -8196,8 +8722,8 @@ The "active form" tracks the most recently mounted form globally — when forms 
 - Listing `requiredRule` after value-dependent rules — they skip empty values and won't run.
 - Returning `false` from a `validate` function — must return a `ReactNode` or `undefined`. `false` is treated as truthy.
 - Spreading raw `props` (not `otherProps`) onto the host element — leaks hook-internal props.
-- Forgetting `form.submitting(false)` in the API-failure path — button stays disabled.
-- Omitting a static `id` on `<Form>` in SSR apps — the auto-generated `Math.random()` id differs between server and client and triggers a React hydration mismatch. Pass a stable, unique `id` per form.
+- Forgetting `form.submitting(false)` in the API-failure path **when `onSubmit` is synchronous** — button stays disabled. (If `onSubmit` returns a Promise, the engine auto-clears submitting state on settle; see §18.)
+- Calling `form.submitting(false)` manually after an awaited (Promise-returning) `onSubmit` — redundant; the engine already clears it. Harmless but unnecessary.
 - Subscribing to events without unsubscribing — leaks on remount, duplicate handlers.
 - Mixing `Form` (Web) and `NativeForm` (Native) in the same code path — pick the one matching the platform.
 - Using `<button onClick={() => form.submit()}>` on Web inside `<Form>` — works, but `<button type="submit">` is simpler and lets the browser handle the event natively.
@@ -8205,154 +8731,414 @@ The "active form" tracks the most recently mounted form globally — when forms 
 
 ---
 
-## 14. Architecture & extending `BaseForm`
+## 14. Async validation gating & `isValidating`
 
-### Class hierarchy
+> **Auto-trigger:** code reads `isValidating` from `useFormControl` / `formControl`; user asks "how do I show a spinner while async validation runs", "does async validation block submit in @mongez/react-form", "why does my submit fire before the async username check finishes", or "how does the async validation gating work"; a `validate` / rule that returns a `Promise`.
 
-```
-BaseForm<P extends FormProps>   (abstract — engine, no rendering)
-  ├── Form          (Web — renders <form>, DOM submit handling)
-  └── NativeForm    (React Native — Fragment default, programmatic submit)
-```
+In v4 a control's `validate()` returns `ReactNode | Promise<ReactNode>` and the form **awaits each control** during `form.validate()`, so async rules genuinely gate submission — the submit pipeline does not proceed until every control's async validation resolves.
 
-`BaseForm` is exported from the package root. Subclass it to support any other React renderer (`react-three-fiber`, terminal UIs, server-rendered validation, custom hosts).
+### Sync-fast-path
 
-### What `BaseForm` provides out of the box
+The rule pipeline runs synchronously and returns a plain `ReactNode` when **every** rule resolves synchronously — no extra microtask, identical timing to v3. It returns a `Promise` only once a rule's `validate` returns a `Promise`. So the common all-sync case stays sync; only forms with a genuinely async rule pay the async cost.
 
-Inheriting from `BaseForm` gives you the full `FormInterface` for free:
+### `isValidating`
 
-**Control registry:** `register(formControl)`, `unregister(formControl)`, `control(value, getBy?)`, `controls(names?)`, internal `formControls[]` array. Automatically wires per-control `onChange` subscriptions to maintain `dirtyControls`.
-
-**Validation pipeline:** `validate(controls?)`, `validateVisible()`, plus the events `validating`, `validation`, `validControl`, `invalidControl`, `validControls`, `invalidControls`. Listener returning `false` from `validating` aborts the run.
-
-**Value collection:** `values(names?)`, `value(name)`, `formData()`, `collectValues(names?)`, `shouldIgnoreEmptyValues()`. Honors dot-notation names (`user.firstName` → nested objects), array indices (`tags.0`), `multiple: true` controls, and `ignoreEmptyValues`.
-
-**State tracking:** `isDirty`, `dirtyControls[]`, `setIsDirty()`, `isSubmitting()`, `submitting(boolean)`, `isValid()`, `disable(isDisabled?)`, `enable()`. Each transition fires the matching event.
-
-**Event bus:** `on(event, cb)`, `trigger(event, ...args)`, `triggerAll(event, ...args)`. Built on `@mongez/events`. Event names are typed via `FormEventType`.
-
-**Active-form registry:** Constructor auto-registers via `setActiveForm()` + `addToFormsList()`. `componentWillUnmount` auto-unregisters. So `getActiveForm()` and `getForm(id)` work without any subclass setup.
-
-**Reset:** `reset()`, `resetErrors()`. `reset()` fires `resetting` → calls each control's `reset()` → resets internal flags → fires `reset`.
-
-**Default-value resolution:** `props.defaultValue` is exposed as `this.defaultValue` and consumed by `useFormControl` via the `FormContext` lookup chain.
-
-**Shared submit pipeline:** Protected `handleSubmit(event?)` method — runs `validate()`, short-circuits on invalid form / already-submitting, calls `props.onSubmit({ form, event, values, formData })` with `values` and `formData` as getters (lazy), then fires the `submit` event.
-
-### What you must implement
-
-Two abstract surfaces:
-
-1. **`submit(): void`** — programmatic submit. Typical implementation calls `this.handleSubmit()`.
-2. **`render(): ReactNode`** — must wrap children in `<FormContext.Provider value={this}>` so descendants' `useFormControl` calls find the form. Beyond that, render whatever fits the platform.
-
-### Canonical subclass templates
-
-**Headless (no host element):**
+When an async rule is in-flight, the control flips `isValidating` to `true` (exposed both on `FormControl.isValidating` and on the `useFormControl` return), then back to `false` when it resolves. Use it for per-field spinners:
 
 ```tsx
-import { BaseForm, FormContext, type FormProps, type FormInterface } from "@mongez/react-form";
+const { value, changeValue, error, isValidating } = useFormControl(props);
 
-export class HeadlessForm extends BaseForm implements FormInterface {
-  public formElement = null;
+return (
+  <>
+    <input value={value} onChange={(e) => changeValue(e.target.value)} />
+    {isValidating && <Spinner />}
+    {error && <span className="error">{error}</span>}
+  </>
+);
+```
 
-  public submit() {
-    if (this.isSubmitting()) return;
-    this.handleSubmit();
+### Stale-result discarding
+
+Each validation run captures a monotonic per-control sequence token (`validationSeq`). If a newer run starts before an earlier async rule resolves, the **stale** result is discarded — only the latest run commits its error/validity. This prevents a slow earlier request (e.g. a username check for "jo") from overwriting the result of a newer one ("john").
+
+### Async per-field schema / custom validate
+
+Both a per-field Standard `schema` (§16) and a `validate` prop that returns a Promise participate in the same gating and `isValidating` flag. The per-field schema rule is appended **last** in the pipeline.
+
+---
+
+## 15. Reactive hydration — `values`, `fill`, `setValues`, `setDefaultValue`, `setErrors`
+
+> **Auto-trigger:** code passes a `values` prop to `<Form>`, or calls `form.fill(...)`, `form.setValues(...)`, `form.setDefaultValue(...)`, `form.setErrors(...)`, or `form.getInitialValue(...)`; user asks "how do I load an edit form whose record arrives after mount", "how do I bulk-set form values", "how do I map a 422 server error response onto fields", or "what's the difference between defaultValue and values".
+
+### `defaultValue` vs `values`
+
+- **`defaultValue`** is the **reset baseline**. `form.reset()` restores every control to it. It is read once when a control mounts (per-control `defaultValue`/`value` props still win over the form-level lookup).
+- **`values`** is the **reactive current data**. Changing the *identity* of the `values` object **re-hydrates already-mounted controls** and **seeds controls that mount later** (via `engine.hydrationValues`, read through `form.getInitialValue(name)`). Ideal for edit forms whose record loads asynchronously.
+
+```tsx
+const { data: user } = useUser(id);   // arrives after mount
+
+<Form values={user} onSubmit={save}>
+  <TextInput name="firstName" />
+  <TextInput name="email" />
+</Form>;
+```
+
+When `user` resolves and its object identity changes, both already-mounted controls receive the new values and any control mounting afterward seeds from the latest snapshot.
+
+### `form.fill(values, options?)` / `form.setValues(values, options?)`
+
+Bulk-write values onto mounted controls and merge them into the hydration snapshot for later-mounting controls. `setValues` is an alias of `fill`. **Does not change the reset baseline.**
+
+```ts
+form.fill(
+  { user: { firstName: "Jane" }, country: "EG" },
+  { dirty: false, validate: false }  // both default to false
+);
+```
+
+`FillOptions`: `{ dirty?: boolean (default false); validate?: boolean (default false) }`. `dirty: false` writes without marking controls dirty (so the form stays pristine); `validate: false` skips revalidation on write.
+
+### `form.setDefaultValue(defaultValue)`
+
+Update the reset baseline. **Pristine (non-dirty) controls re-hydrate** to the new baseline; dirty controls keep the user's edits. (`Form` calls this automatically when the `defaultValue` prop identity changes.)
+
+### `form.getInitialValue(name)`
+
+Resolve a control's seed value: the reactive hydration snapshot first, then the reset baseline; returns `undefined` when neither has it. Used internally by `useFormControl` (and `useFieldArray`) when a control mounts.
+
+### `form.setErrors({ "dot.name": message })`
+
+Bulk-assign errors keyed by dot-notation control name — the canonical way to map a server validation response (HTTP 422) back onto controls. Names with no matching control are ignored. Triggers `invalidControls` so submit buttons re-disable.
+
+```ts
+onSubmit={async ({ values, form }) => {
+  try {
+    await api.save(values);
+  } catch (e) {
+    if (e.status === 422) form.setErrors(e.data.errors); // { "user.email": "Already taken" }
   }
+}}
+```
 
-  public render() {
-    return (
-      <FormContext.Provider value={this}>
-        {(this.props as FormProps).children}
-      </FormContext.Provider>
-    );
-  }
+---
+
+## 16. Standard Schema interop (seal / zod / valibot)
+
+> **Auto-trigger:** code passes a `schema` prop to `<Form>` or `useFormControl`, imports `isStandardSchema`, `standardSchemaToRule`, `runStandardSchema`, `issuePathToName`, `StandardSchemaV1`, `InferFormValues`, or `InferFormInput`; user asks "how do I validate a @mongez/react-form with zod / valibot / @warlock.js/seal", "how do I infer onSubmit value types from my schema", or "how do I run a whole-form schema on submit".
+> **Skip when:** `mongez-react-form-validation-rules` for the built-in `InputRule` system (the schema is wrapped as a rule but rule authoring is a separate topic).
+
+v4 consumes any [Standard Schema](https://standardschema.dev) validator (`@warlock.js/seal`, `zod`, `valibot`, `arktype`, …) **with zero runtime dependency** — it only duck-types the `~standard` property (`isStandardSchema`). The spec's `~standard.validate` may be sync or async; the adapter awaits uniformly.
+
+### Whole-form validation
+
+```tsx
+import { Form } from "@mongez/react-form";
+import { z } from "zod";
+
+const schema = z.object({
+  email: z.string().email(),
+  age: z.coerce.number().min(18),
+});
+
+<Form
+  schema={schema}
+  onSubmit={({ values }) => api.save(values)}  // values typed as { email: string; age: number }
+>
+  <TextInput name="email" />
+  <TextInput name="age" type="number" />
+</Form>;
+```
+
+On submit the engine collects the form's values, runs the schema, and **maps each issue back to its control** by `issue.path` → dot-notation name (`issuePathToName`) → `control.setError`. **Issues whose control is not in the validated subset are ignored**, so `form.validateVisible()` (steppers) won't fail on hidden fields. Whole-form schema validation runs **after** per-control rules, inside `form.validate()`.
+
+### Per-field schema
+
+```tsx
+useFormControl({ ...props, schema: z.string().email() });
+// or the prop form:
+<TextInput name="email" schema={z.string().email()} />
+```
+
+The schema is wrapped as an `InputRule` (`standardSchemaToRule`) appended **last** in that control's pipeline. `requiresValue` is `false`, so empty values are still handed to the schema (its own `optional`/`required` semantics decide). The first issue's message becomes the rendered error. Async-capable — participates in the §14 gating + `isValidating`.
+
+### Type inference helpers
+
+```ts
+import type { InferFormValues, InferFormInput, StandardSchemaV1 } from "@mongez/react-form";
+
+type Values = InferFormValues<typeof schema>;  // post-validation OUTPUT shape (used for onSubmit)
+type Input  = InferFormInput<typeof schema>;   // pre-validation INPUT shape
+```
+
+`FormProps<Schema>` threads the schema type through so `onSubmit`'s `values` is `InferFormValues<Schema>`.
+
+### Adapter exports
+
+| Export | Purpose |
+|---|---|
+| `isStandardSchema(value)` | Duck-type guard for the `~standard` property |
+| `runStandardSchema(schema, value)` | Run a schema; returns `Promise<{ value } \| { issues }>` |
+| `issuePathToName(path)` | Issue path (`["user", { key: "addr" }, 0]`) → dot name (`user.addr.0`) |
+| `standardSchemaToRule(schema, name?)` | Wrap a single-field schema as an async `InputRule` |
+| `StandardSchemaV1` | The spec interface (+ `InferInput` / `InferOutput` namespace types) |
+| `InferFormValues` / `InferFormInput` | Output / input shape aliases |
+
+---
+
+## 17. `validateOn` — change / blur / submit
+
+> **Auto-trigger:** code passes `validateOn` to `<Form>` or an input, or sets `setFormConfigurations({ validateOn })`, or reads `onBlur` / `wasSubmitted`; user asks "how do I validate on blur instead of on every keystroke", "how do I only validate on submit", or "how do I set the validation trigger globally".
+
+Each control resolves its trigger with this precedence: **per-control `validateOn` prop > `<Form validateOn>` > `setFormConfigurations({ validateOn })` global > `"change"`** (default).
+
+| Mode | Behavior |
+|---|---|
+| `"change"` | Validate on every value change (the v3 behavior). |
+| `"blur"` | Validate when the field blurs. Wire `onBlur` (or use `getInputProps`, §19). |
+| `"submit"` | Validate only when the form is submitted. |
+
+**Revalidate-on-change after error/submit:** for `"blur"` and `"submit"`, once the field has **already errored** (`formControl.isValid === false`) or the form **has been submitted** (`form.wasSubmitted === true`), subsequent value changes revalidate live — so a cleared error updates immediately instead of staying stale until the next blur/submit. The engine sets `wasSubmitted = true` at the start of `handleSubmit`.
+
+```tsx
+<Form validateOn="blur">
+  <TextInput name="email" />                      {/* inherits "blur" */}
+  <TextInput name="coupon" validateOn="submit" /> {/* overrides to "submit" */}
+</Form>
+```
+
+```ts
+import { setFormConfigurations } from "@mongez/react-form";
+setFormConfigurations({ validateOn: "blur" });    // global default
+```
+
+The `useFormControl` return exposes **`onBlur`** — a handler that marks the control touched and validates when the resolved mode is `"blur"`. Spread it directly or via `getInputProps`.
+
+---
+
+## 18. Awaited submit
+
+> **Auto-trigger:** `onSubmit` returns a Promise / is `async`; user asks "do I still need form.submitting(false) after an async submit", "why is my submit button stuck disabled / not stuck disabled", or "how does awaited submit work".
+
+If `onSubmit` returns a `Promise`, the engine **auto-clears the submitting state when the promise settles — success OR failure** — so you no longer call `form.submitting(false)` manually in that case:
+
+```tsx
+<Form onSubmit={async ({ values }) => {
+  await api.save(values);   // submitting(false) fires automatically on resolve/reject
+}} />
+```
+
+- **Sync `onSubmit`** behaves exactly as before: the button is your responsibility, and the API-failure path must still call `form.submitting(false)` to re-enable it.
+- A throw from a sync `onSubmit` clears submitting state and re-throws.
+- Internally: `handleSubmit` sets `wasSubmitted = true`, validates (awaited), short-circuits on invalid/already-submitting, calls `submitting(true)`, then `onSubmit`; if the result is thenable it attaches `.then(clear, clear)`.
+
+---
+
+## 19. Accessibility — `getInputProps` / `getErrorProps`
+
+> **Auto-trigger:** code calls `getInputProps(...)` or `getErrorProps()`, or reads `errorId`; user asks "how do I make my form inputs accessible", "how do I wire aria-invalid / aria-describedby", or "what's the recommended way to spread props onto my input".
+
+`useFormControl` returns two prop-bag builders that wire correct ARIA without boilerplate.
+
+### `getInputProps(overrides?)`
+
+Returns an accessibility-complete bag to spread onto the host input. It includes:
+
+- `id`, `name`, `ref` (the `inputRef`), `disabled`
+- `value` + `onChange` for text inputs, or `checked` + `onChange` for `type="checkbox"`/`"radio"`
+- `onBlur` (the §17 blur handler)
+- `aria-invalid` (when touched-and-invalid), `aria-required` (from the `required` prop), `aria-describedby` (the `errorId` when an error is present)
+- all `otherProps`, then your `overrides` merged last
+
+```tsx
+export function TextInput(props: FormControlProps) {
+  const { getInputProps, getErrorProps, error } = useFormControl(props);
+
+  return (
+    <>
+      <input {...getInputProps()} />
+      {error && <span {...getErrorProps()}>{error}</span>}
+    </>
+  );
 }
 ```
 
-**Web (mirrors what `Form.tsx` does):**
+`overrides` win over the computed values, so `getInputProps({ className: "input", onBlur: myHandler })` works.
+
+### `getErrorProps()`
+
+Returns `{ id: errorId, role: "alert", "aria-live": "polite" }` for the error element so screen readers announce it. `errorId` (also returned directly) is `` `${id}-error` `` and is referenced by the input's `aria-describedby` automatically.
+
+---
+
+## 20. `useFieldArray` — dynamic repeated rows
+
+> **Auto-trigger:** code imports/calls `useFieldArray`; user asks "how do I build a repeating/dynamic list of fields", "how do I add/remove address rows in @mongez/react-form", or "how do I keep field rows stable when reordering".
+
+`useFieldArray(name)` manages a dynamic list of repeated field rows with **stable keys** that survive reordering and removal. Each row's input names derive from its current index (`addresses.0.city`, `addresses.1.city`, …), so the form's dot-notation collection nests them into an array automatically.
 
 ```tsx
-import { BaseForm, FormContext } from "@mongez/react-form";
+import { useFieldArray } from "@mongez/react-form";
 
-export class CustomWebForm extends BaseForm {
-  public formElement!: HTMLFormElement;
+function Addresses() {
+  const { fields, append, remove } = useFieldArray("addresses");
 
-  public submit() {
-    if (!this.formElement || this.isSubmitting()) return;
-    this.formElement.requestSubmit();
-  }
-
-  protected async triggerSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    await this.handleSubmit(e);
-  }
-
-  public render() {
-    return (
-      <FormContext.Provider value={this}>
-        <form
-          ref={(el) => (this.formElement = el!)}
-          onSubmit={this.triggerSubmit.bind(this)}
-          noValidate
-        >
-          {(this.props as any).children}
-        </form>
-      </FormContext.Provider>
-    );
-  }
+  return (
+    <>
+      {fields.map((field) => (
+        <div key={field.key}>
+          <TextInput name={`${field.name}.city`} />
+          <TextInput name={`${field.name}.zip`} />
+          <button type="button" onClick={() => remove(field.index)}>Remove</button>
+        </div>
+      ))}
+      <button type="button" onClick={() => append()}>Add address</button>
+    </>
+  );
 }
 ```
 
-### Generic prop type
+### Return shape (`FieldArrayHelpers`)
 
-`BaseForm<P extends FormProps = FormProps>` — pass a wider prop type to your subclass when it needs platform-specific props:
-
-```tsx
-type MyFormProps = FormProps & { view: "modal" | "inline" };
-
-export class MyForm extends BaseForm<MyFormProps> {
-  public submit() { this.handleSubmit(); }
-  public render() {
-    const { view, children } = this.props;
-    return (
-      <FormContext.Provider value={this}>
-        <div className={`form form-${view}`}>{children}</div>
-      </FormContext.Provider>
-    );
-  }
+```ts
+{
+  fields: { key: string; index: number; name: string }[];  // map with key={key}, name prefix={name}
+  append: (count = 1) => void;       // add rows at the end
+  prepend: (count = 1) => void;      // add rows at the start
+  remove: (index?) => void;          // remove at index, or the last row when omitted
+  insert: (index) => void;           // insert one row at index
+  move: (from, to) => void;          // move a row
+  swap: (a, b) => void;              // swap two rows
+  replace: (count) => void;          // replace all rows with `count` fresh rows
 }
 ```
 
-### When NOT to subclass
+- **`field.key`** is a stable React key — always use it, never the index. **`field.name`** is the dot-notation prefix; compose child names as `` `${field.name}.city` ``.
+- The initial row count seeds from `form.getInitialValue(name)` (so a hydrated array renders its rows). On `form.reset()`, the list returns to its initial row count.
 
-If all you need is a different rendered element, **don't subclass — use the `component` prop:**
+---
+
+## 21. `useWatch` — reactive value reads
+
+> **Auto-trigger:** code imports/calls `useWatch`; user asks "how do I read another field's value reactively", "how do I build a dependent/conditional field", or "how do I watch the whole form's values".
+
+`useWatch` reactively reads form values from any descendant and re-renders the calling component whenever **any** control changes (the engine now emits a form-level `change` event on every control change) or the form resets.
+
+```tsx
+import { useWatch } from "@mongez/react-form";
+
+const all = useWatch();                 // whole collected values object
+const email = useWatch("user.email");   // single control value
+const [first, last] = useWatch(["firstName", "lastName"]); // array of values
+```
+
+Overloads: `useWatch()` → `Record<string, any>`; `useWatch(name)` → that value; `useWatch(names[])` → an array of values. Outside a form it returns `{}`, `undefined`, or an array of `undefined` respectively.
+
+Use it for dependent fields (show a "state" select only when `country === "US"`), live summaries, or character counters — without subscribing to events manually.
+
+---
+
+## 22. Architecture & extending `FormEngine`
+
+### Component model (v4)
+
+```
+FormEngine        (plain class — implements FormInterface, React-free, no rendering)
+  ├── Form        (Web FC — forwardRef; renders <form>, DOM submit, exposes engine via ref)
+  └── NativeForm  (React Native FC — forwardRef; Fragment default, programmatic submit)
+
+BaseForm = FormEngine   (deprecated alias, kept for one major — removed in v5)
+```
+
+`Form` / `NativeForm` are **function components** that lazily instantiate one `FormEngine` (held in a `useRef`) and wrap children in `<FormContext.Provider value={engine}>`. The shared wiring lives in `useFormEngine(props, submitHandler)`:
+
+- lazy single-engine instantiation (stable identity for context + the event bus)
+- SSR-safe id from `useId()`
+- `engine.setOptions(...)` synced every render (no React state mutated)
+- reactive `values` → `engine.fill(...)` on identity change; reactive `defaultValue` → `engine.setDefaultValue(...)`
+- `engine.activate()` / `engine.destroy()` for the active-form registry on mount/unmount
+
+### What `FormEngine` provides
+
+`FormEngine` implements the full `FormInterface`:
+
+**Control registry:** `register(formControl)`, `unregister(formControl)`, `control(value, getBy?)`, `controls(names?)`. Wires per-control `onChange` to maintain `dirtyControls` and emit the form-level `change` event (consumed by `useWatch`).
+
+**Validation pipeline (async-aware):** `validate(controls?)` — `await`s each control's `validate()` so async rules gate submission — `validateVisible()`, whole-form schema validation (`validateSchema`), plus the `validating` / `validation` / `validControl` / `invalidControl` / `validControls` / `invalidControls` events. A `validating` listener returning `false` aborts the run.
+
+**Value collection:** `values(names?)`, `value(name)`, `formData()`, `collectValues(names?)`, `shouldIgnoreEmptyValues()`. Dot-notation nesting, array indices, `multiple`, `ignoreEmptyValues`.
+
+**Hydration:** `fill()`, `setValues()`, `setDefaultValue()`, `getInitialValue()`, `hydrationValues`, `setErrors()` (§15).
+
+**State tracking:** `isDirty`, `dirtyControls[]`, `isSubmitting()`, `submitting(boolean)`, `isValid()`, `disable()`, `enable()`, `wasSubmitted`.
+
+**Event bus:** `on(event, cb)`, `trigger(...)`, `triggerAll(...)` over `@mongez/events`, typed by `FormEventType`.
+
+**Active-form registry:** `activate()` / `destroy()` (called by the host) register/unregister with `setActiveForm()` + `addToFormsList()`, so `getActiveForm()` / `getForm(id)` work.
+
+**Submit pipeline:** `handleSubmit(event?)` — sets `wasSubmitted`, awaits `validate()`, short-circuits on invalid/already-submitting, calls `onSubmit({ form, event, values, formData })` with lazy getters, and auto-clears submitting state for a Promise result (§18). `submit()` delegates to an injected `submitHandler` (the host knows how to dispatch web vs. native).
+
+### Custom renderers — subclass `FormEngine`, not `BaseForm`
+
+To support another React renderer (terminal UIs, `react-three-fiber`, a custom host), **subclass `FormEngine`** and render a thin function component that lazy-inits it. Do **not** subclass `BaseForm` (it's just the deprecated alias).
+
+```tsx
+import {
+  FormEngine, FormContext, type FormProps, type FormInterface,
+} from "@mongez/react-form";
+import { useRef, useEffect, useId } from "react";
+
+class HeadlessEngine extends FormEngine {}
+
+export function HeadlessForm(props: FormProps) {
+  const id = useId();
+  const ref = useRef<HeadlessEngine>();
+  if (!ref.current) ref.current = new HeadlessEngine({ ...props, id });
+  const engine = ref.current;
+
+  engine.setOptions({ ...props, id });
+  engine.submitHandler = () => engine.handleSubmit();
+
+  useEffect(() => {
+    engine.activate();
+    return () => engine.destroy();
+  }, [engine]);
+
+  return <FormContext.Provider value={engine}>{props.children}</FormContext.Provider>;
+}
+```
+
+In practice most cases need neither a subclass nor a custom component — use the **`component` prop** to swap the rendered element:
 
 ```tsx
 <Form component={MyStyledFormWrapper}>...</Form>
 <NativeForm component={View} style={{ padding: 16 }}>...</NativeForm>
 ```
 
-Subclass only when submit semantics, rendering rules, or platform integration genuinely differ from both Web and Native.
+Subclass `FormEngine` only when submit semantics, value handling, or platform integration genuinely differ from both Web and Native.
+
+### `BaseForm` migration
+
+`BaseForm` is now `export const BaseForm = FormEngine` (plus a `type BaseForm = FormEngine`). Code that referenced the *type* of a form instance still works (it's assignable to `FormInterface`). Code that **subclassed** `BaseForm` as a `React.Component` (overriding `render()` / `submit()` as instance methods) must migrate to the function-component-over-engine pattern above — there is no `render()` on the engine. The alias is removed in v5.
 
 ### DOM-guarded code in `useFormControl`
 
-The same `useFormControl` hook runs on Web and Native unchanged. DOM-specific code paths are guarded with `typeof document !== "undefined"`:
+The same `useFormControl` hook runs on Web and Native unchanged. DOM-specific code paths are guarded with `typeof document !== "undefined" && typeof window !== "undefined"`:
 
-- `formControl.isVisible()` walks `parentElement` chain on Web; on Native it always returns `true`. Consequence: `form.validateVisible()` on Native is identical to `form.validate()`.
-- The auto-touch DOM `focus` event listener is a no-op on Native. Native input components must set `formControl.isTouched = true` manually in their own `onFocus` handler if they want the flag tracked.
+- `formControl.isVisible()` walks the `parentElement` chain on Web; on Native it always returns `true`. Consequence: `form.validateVisible()` on Native is identical to `form.validate()`.
+- The auto-touch DOM `focus` event listener is a no-op on Native. Native input components must set `formControl.isTouched = true` manually in their own `onFocus` handler (or wire `onBlur` from the hook).
 - `inputRef.current.focus()` / `.blur()` work on both — React Native's `TextInput` ref exposes both methods natively.
 
-### Where the platform-specific code lives
+### Where the code lives
 
-When extending `BaseForm` or contributing back, these are the only files you need to read:
-
-- `src/components/BaseForm.ts` — the engine (≈400 lines, no rendering).
-- `src/components/Form.tsx` — Web concrete (≈55 lines).
-- `src/components/NativeForm.tsx` — Native concrete (≈45 lines).
+- `src/engine/FormEngine.ts` — the React-free engine (all logic; implements `FormInterface`).
+- `src/components/useFormEngine.ts` — the shared `Form` / `NativeForm` wiring hook.
+- `src/components/Form.tsx` — Web FC (`forwardRef`).
+- `src/components/NativeForm.tsx` — Native FC (`forwardRef`).
+- `src/components/BaseForm.ts` — the deprecated `FormEngine` alias.
 - `src/hooks/useFormControl.ts` — the hook, with DOM guards inline.
+- `src/standard-schema/` — `types.ts` (vendored spec) + `adapter.ts` (interop helpers).
 
 All other files (rules, hooks, contexts, configurations, active-form registry, types) are 100% platform-agnostic.
 
@@ -8480,7 +9266,9 @@ user.can("posts.delete");   // false
 user.can("missing");        // false
 ```
 
-`can(path)` returns `true` only when the value at the dot-notation path is truthy.
+`can(path)` returns `true` only when the value at the dot-notation path is exactly the boolean
+`true`. It fails closed: `1`, `"yes"`, a non-empty object or any other truthy value returns
+`false`. Normalize permissions to real booleans before calling `setPermissions`.
 
 ### Cache key access
 
@@ -8812,7 +9600,8 @@ class HttpError extends Error {
   body: unknown                // parsed response body
   response: Response | null
   headers: Record<string, string> | null
-  request: OutgoingRequest | null
+  request: OutgoingRequest | null      // sensitive headers redacted ("[redacted]")
+  rawRequest: OutgoingRequest | null   // original, unredacted headers — never log this
   isAborted: boolean
   isTimeout: boolean
   isNetwork: boolean
@@ -8826,7 +9615,7 @@ class HttpError extends Error {
   get isValidationError(): boolean // 422
   get isRateLimited(): boolean     // 429
 
-  toJSON(): Record<string, unknown>   // omits `request`
+  toJSON(): Record<string, unknown>   // omits `request` / `rawRequest`
 }
 ```
 
@@ -9193,7 +9982,7 @@ During `vite build`, the plugin sets `config.base` from `env(envBaseUrlKey)` (de
 > **Auto-trigger:** code passes `htmlEnvPrefix` or `htmlEnvSuffix` to `mongezVite({...})` in `vite.config.ts` / `vite.config.js`; `index.html` contains `__KEY__`-style tokens (or custom-delimited `{{KEY}}` / `<!--KEY-->` shapes) paired with `mongezVite()` in `plugins: []`; user asks "how do I inject env values into index.html", "why are my `__APP_NAME__` tokens not being replaced", "how do I change the env token delimiters in HTML".
 > **Skip when:** env file resolution / `productionEnvName` (use `mongez-vite-env-loading`); reading env values at runtime in the browser (that's Vite's `import.meta.env.VITE_*`, not `@mongez/vite`); HTML transforms unrelated to env tokens; generic templating engines (EJS, Handlebars) not driven by `mongezVite`.
 
-Every occurrence of `<prefix><KEY><suffix>` in `index.html` is replaced with the typed env value (coerced to string via JS template substitution). Default delimiters are `__`...`__`. Override via `htmlEnvPrefix` / `htmlEnvSuffix`. Tokens for keys not loaded into the env store pass through unchanged.
+Every occurrence of `<prefix><KEY><suffix>` in `index.html` is replaced with the typed env value (coerced to string, then **HTML-escaped** — `&`, `<`, `>`, `"`, `'` — and inserted literally, so markup in an env value renders as text and `$&`/`$1` are not treated as replacement patterns). Default delimiters are `__`...`__`. Override via `htmlEnvPrefix` / `htmlEnvSuffix`. Tokens for keys not loaded into the env store pass through unchanged.
 
 ```html
 <title>__APP_NAME__</title>
@@ -9264,7 +10053,7 @@ If `preRender` is set, a `RewriteCond` + `RewriteRule` block is spliced into the
 `preRender: { url, crawlers, delay, cache }`:
 
 - `url` — the prerender service to POST to. Default in the README is `https://render.mentoor.io`. **Required if `preRender` is set as an object.** No safe default in code.
-- `crawlers` — pipe-separated regex alternation of user agents. Default in the README is `Google-Site-Verification|Googlebot|facebook|crawl|WhatsApp|bot|Slack|Twitter|bot`. The duplicate trailing `bot` is intentional in the source.
+- `crawlers` — pipe-separated regex alternation of user agents. Newlines and `.htaccess` metacharacters are stripped from the value (a newline could otherwise append arbitrary Apache directives); an empty result falls back to the default list. Default in the README is `Google-Site-Verification|Googlebot|facebook|crawl|WhatsApp|bot|Slack|Twitter|bot`. The duplicate trailing `bot` is intentional in the source.
 - `delay` — milliseconds to wait before rendering. Default `5000`.
 - `cache` — when truthy, the generated PHP caches each render under `<outDir>/cache/<sha1(url)>.html`.
 
@@ -10005,11 +10794,13 @@ When `mainType: "esm"` or `formats: ["esm"]`:
 
 ## What's in the published package.json
 
-Clean generation — NOT a verbatim copy:
+Source-first generation — NOT an allow-list. Every field you wrote is kept unless it's on a small deny-list:
 
-- **Kept**: `name`, `description`, `keywords`, `author`, `license`, `repository`, `homepage`, `bugs`, `dependencies`, `peerDependencies`, `sideEffects`, `bin`, `engines`
-- **Replaced / set**: `name`, `version`, `main`, `module`, `types`, `exports`, `type` (set to `"module"` for ESM-only builds)
-- **Dropped**: everything else — `devDependencies`, `scripts`, `private`, `workspaces`, `optionalDependencies`, `peerDependenciesMeta`, `files`, `publishConfig`, etc.
+- **Kept**: everything — including `peerDependenciesMeta`, `optionalDependencies`, `publishConfig`, `os`, `cpu`, `imports`, `browser`, `funding`, `contributors` — except the fields below
+- **Replaced / set**: `name`, `version`, `main`, `module`, `types`, `exports`, `type` (set to `"module"` for ESM-only builds) — always recomputed, never inherited; `typings` is denied so it can't leak alongside the computed `types`
+- **Dropped**: `devDependencies`, `scripts`, `packageManager`, `private`, `workspaces`, `overrides`, `resolutions`, `pnpm`, `eslintConfig`, `prettier`, `jest`, `nodemonConfig`, `husky`, `lint-staged`, `files` (a source `files` list would ship an empty tarball — pkgist emits a purpose-built output directory)
+
+Before 1.6.3 this was an allow-list of 13 fields, which silently dropped `peerDependenciesMeta` — publishing every optional peer as required.
 
 ### Intra-family dependency pinning (family builds only)
 

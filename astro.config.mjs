@@ -395,7 +395,21 @@ export default defineConfig({
                 { slug: "react-form/submit-button" },
               ],
             },
-            { slug: "react-form/validation-rules" },
+            {
+              label: "Validation",
+              items: [
+                { slug: "react-form/validation-rules" },
+                { slug: "react-form/standard-schema-validation" },
+              ],
+            },
+            {
+              label: "Values & state",
+              items: [
+                { slug: "react-form/form-hydration" },
+                { slug: "react-form/field-arrays" },
+                { slug: "react-form/watching-values" },
+              ],
+            },
             { slug: "react-form/react-native-usage" },
             { slug: "react-form/recipes" },
             { slug: "react-form/changelog" },

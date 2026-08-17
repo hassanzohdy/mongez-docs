@@ -10,6 +10,16 @@ All notable changes to `@mongez/events` are documented here. The format follows 
 
 
 <details class="changelog-version" open>
+<summary><span class="cl-version">[2.2.7]</span> <span class="cl-date">2026-08-17</span> <span class="cl-counts">Security (1)</span></summary>
+
+### Security
+
+- **The listener registry is now a `Map` instead of a plain object.** Event names are caller-supplied strings, and on a plain object the names `__proto__`, `constructor` and `toString` resolve through the prototype chain rather than being treated as data. Subscribing to `toString` found `Object.prototype.toString` where the code expected an array of callbacks, subscribing to `__proto__` wrote into the registry's prototype instead of the registry, and either could make `trigger` throw or silently drop every listener for an unrelated event. Where event names are derived from user or server data — a common pattern for per-record or per-channel topics — this was a denial-of-service on the bus itself. A `Map` has no prototype-chain lookup, so every event name is plain data. The public API (`subscribe` / `trigger` / `unsubscribe`, namespace cleanup, `EventSubscription`) is unchanged.
+
+</details>
+
+
+<details class="changelog-version">
 <summary><span class="cl-version">[2.2.6]</span> <span class="cl-counts">Added (1)</span></summary>
 
 ### Added

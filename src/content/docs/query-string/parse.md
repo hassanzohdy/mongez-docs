@@ -109,6 +109,11 @@ queryString.parse("user[name]=alice&meta[role]=admin");
 // { user: { name: "alice" }, meta: { role: "admin" } }
 ```
 
+`__proto__`, `constructor` and `prototype` are refused as key segments — `?__proto__[x]=1` is
+dropped rather than written through to `Object.prototype`. The returned object and every nested object it builds
+have a `null` prototype, so they carry no inherited keys (`result.toString` is `undefined`);
+spread into a literal (`{ ...result }`) if you need a normal object.
+
 ## Single-key reads via `get`
 
 ```ts

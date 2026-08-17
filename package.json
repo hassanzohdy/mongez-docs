@@ -11,7 +11,9 @@
     "prebuild": "yarn sync && yarn build:llms",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.0",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "tsx": "^4.0.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^3.0.0"
   }
 }

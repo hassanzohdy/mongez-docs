@@ -43,7 +43,9 @@ import { Link } from "@mongez/react-router";
 
 `<Link>` intercepts the click and calls `router.goTo(path)` **only** when:
 
-- the resolved path starts with `/`, AND
+- the resolved path is internal — it starts with `/`, is not protocol-relative (`//host`),
+  and contains no backslash. `/\evil.com` and `//evil.com` both start with `/` but resolve
+  to a foreign origin, so they are treated as external and left to the browser, AND
 - no modifier key is held (Ctrl / Meta / Shift / Alt), AND
 - it isn't a middle-click (`e.button === 1`), AND
 - `target` is not `"_blank"`.

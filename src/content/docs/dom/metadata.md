@@ -1,11 +1,14 @@
 ---
 title: "Metadata"
+
 name: mongez-dom-metadata
 description: |
   API reference for managing page metadata — title, description, Open Graph, Twitter Card, canonical URL, favicon, and theme color — via `setPageMeta` and its per-field helpers.
 sidebar:
   order: 50
 ---
+
+# Page Metadata
 
 The high-level API for managing `<head>` tags. One call sets the title, social meta, canonical URL, favicon, theme color, and Open Graph type.
 

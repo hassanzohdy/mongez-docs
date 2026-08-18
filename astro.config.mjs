@@ -264,6 +264,7 @@ export default defineConfig({
             { slug: "cache/local-storage" },
             { slug: "cache/session-storage" },
             { slug: "cache/runtime" },
+            { slug: "cache/indexeddb" },
             { slug: "cache/custom-drivers" },
             { slug: "cache/encrypted-cache" },
             { slug: "cache/recipes" },

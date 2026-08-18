@@ -9,20 +9,7 @@ All notable changes to `@mongez/react-form` are documented here. The format foll
 
 
 <details class="changelog-version" open>
-<summary><span class="cl-version">[4.0.1]</span> <span class="cl-date">2026-08-17</span> <span class="cl-counts">Security (2)</span></summary>
-
-Security patch. No API changes.
-
-### Security
-
-- **Prototype pollution through dot-notation field names** (`src/engine/FormEngine.ts:1048`). Collecting values expanded a control's dot-notation `name` into nested objects by assigning into plain `{}` accumulators, so a control named `__proto__.isAdmin` (or `constructor.prototype.isAdmin`) wrote through to `Object.prototype` the moment the form's values were gathered. Field names are usually author-written, but not always: schema-driven and CMS-driven forms build them from server data, and a rendered form is exactly the kind of surface where "just data" becomes a name. Those key segments are now rejected, and the partial branch built before the rejected segment is discarded rather than left behind on the result.
-- **ReDoS in the `pattern` rule** (`src/rules/pattern.ts`). The pattern was compiled to a fresh `RegExp` on **every keystroke** (no caching), and both the pattern and the value it ran against were unbounded — a catastrophically-backtracking pattern from server- or CMS-driven field config would pin the browser's main thread on a long input. Compiled patterns are now cached by source+flags, the pattern source is capped at 200 characters, the value is truncated to 2000 characters before matching, and an oversized or syntactically-invalid pattern **fails safe**: validation is skipped rather than blocking the user on what is a configuration problem, not their input.
-
-</details>
-
-
-<details class="changelog-version">
-<summary><span class="cl-version">[4.0.0]</span> <span class="cl-date">2026-06-20</span> <span class="cl-counts">Added (25) · Fixed (4) · Changed / BREAKING (4)</span></summary>
+<summary><span class="cl-version">[4.0.0]</span> <span class="cl-date">2026-08-18</span> <span class="cl-counts">Added (25) · Fixed (4) · Security (3) · Changed / BREAKING (6)</span></summary>
 
 Major rewrite. The form's logic now lives in a **React-free `FormEngine` class**, and `Form` / `NativeForm` are **function components** built over it. Most apps upgrade with no code changes; the breaking items below are narrow. A migration guide follows the change lists.
 
@@ -61,12 +48,20 @@ Major rewrite. The form's logic now lives in a **React-free `FormEngine` class**
 - **SSR form-id hydration mismatch fixed.** The id now comes from `useId()` (`form-<id>`) instead of a construction-time `Math.random()` (`frm-<random>`), so the server and client render the same `id` attribute.
 - **`removeFromFormsList` leak fixed.** Unmounting a form now removes it from the active-forms registry (`FormEngine.destroy()` calls both `removeActiveForm` and `removeFromFormsList`), so torn-down forms no longer linger in the global map.
 
+### Security
+
+- **Prototype pollution through dot-notation field names** (`src/engine/FormEngine.ts:1048`). Collecting values expanded a control's dot-notation `name` into nested objects by assigning into plain `{}` accumulators, so a control named `__proto__.isAdmin` (or `constructor.prototype.isAdmin`) wrote through to `Object.prototype` the moment the form's values were gathered. Field names are usually author-written, but not always: schema-driven and CMS-driven forms build them from server data, and a rendered form is exactly the kind of surface where "just data" becomes a name. Those key segments are now rejected, and the partial branch built before the rejected segment is discarded rather than left behind on the result.
+- **ReDoS in the `pattern` rule** (`src/rules/pattern.ts`). The pattern was compiled to a fresh `RegExp` on **every keystroke** (no caching), and both the pattern and the value it ran against were unbounded — a catastrophically-backtracking pattern from server- or CMS-driven field config would pin the browser's main thread on a long input. Compiled patterns are now cached by source+flags, the pattern source is capped at 200 characters, a value over 2000 characters **fails the rule** rather than being truncated and matched (truncating first would let an anchored pattern like `^[0-9a-f]+$` pass on a valid prefix with an arbitrary tail), and an oversized or syntactically-invalid pattern **fails safe**: validation is skipped rather than blocking the user on what is a configuration problem, not their input.
+- **Sparse-array memory blow-up via numeric field-name segments** (`src/engine/FormEngine.ts`, `createNestedObjectFromDotNotation`). A control named e.g. `items.4000000000.x` produced an array with `length` in the billions, which could exhaust memory or pin the main thread the first time the collected values were iterated or serialized. Numeric name segments above 10,000 are now treated as a plain object key instead of an array index.
+
 ### Changed / BREAKING
 
 - **`Form` and `NativeForm` are now function components.** A `ref` on either yields the `FormEngine` (still assignable to `FormInterface`) rather than a class-component instance. If you relied on class-component semantics (e.g. subclassing the rendered component, calling React lifecycle methods on the ref), see the migration guide.
 - **`BaseForm` is deprecated** and is now a type/value alias for `FormEngine`, kept for one major version (removed in v5). Custom renderers should subclass / compose `FormEngine` instead of subclassing `BaseForm`.
 - **`formControl.validate()` now returns `ReactNode | Promise<ReactNode>`** (the engine's `FormControl.validate()` is typed `Promise<ReactNode>`). Code that treated the old return value as a synchronous error must `await` it (or handle the union) when an async rule or schema is in play.
 - **`defaultValue` clarified as the reset baseline.** It seeds controls and is what `form.reset()` restores to. For data that arrives after mount (edit forms), use the reactive `values` prop or `form.fill()` instead — `defaultValue` is no longer the right tool for late-arriving values.
+- **`useId` renamed to `useControlId`**, to stop shadowing React 18's own `useId`. `import { useId } from "@mongez/react-form"` no longer resolves.
+- **`useValue`, `useError`, and `useChecked` hooks removed** with no alias. Use `useFormControl` (or `useWatch` for reactive reads) instead.
 
 ### Migration guide
 
@@ -78,6 +73,8 @@ Most apps need **no changes**. Review these only if they apply:
 4. **Async submit handlers.** If your `onSubmit` is async, you can delete manual `form.submitting(false)` calls — the engine clears the submitting state when the returned Promise settles. (Keep them only if `onSubmit` is synchronous and you toggle submitting yourself.)
 5. **Late-arriving form data (edit forms).** If you were stuffing fetched records into `defaultValue` after mount and expecting controls to update, switch to the reactive `values` prop (or call `form.fill(record)`). `defaultValue` is now strictly the reset baseline.
 6. **Custom inputs forwarding all props to the DOM.** `validateOn` and `schema` are now stripped before forwarding, so if you previously filtered them yourself you can drop that workaround.
+7. **`import { useId } from "@mongez/react-form"`.** Rename the import to `useControlId`; the return value and usage are unchanged.
+8. **`useValue` / `useError` / `useChecked` imports.** These hooks are gone. Replace them with `useFormControl(props)` (destructure `value`, `error`, `checked` from its return) or `useWatch(name)` for a reactive read outside a control.
 
 </details>
 

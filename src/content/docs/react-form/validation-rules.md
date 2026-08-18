@@ -38,7 +38,7 @@ All exported from `@mongez/react-form`. Each requires a corresponding prop on th
 | `integerRule` | `type="integer"` | |
 | `floatRule` | `type="float"` | |
 | `urlRule` | `type="url"` | |
-| `patternRule` | `pattern` (RegExp) | Compiled patterns are cached; source capped at 200 chars, value truncated to 2000 before matching. An oversized or invalid pattern skips validation (fails safe) rather than blocking submit |
+| `patternRule` | `pattern` (RegExp) | Compiled patterns are cached; source capped at 200 chars. A value over 2000 chars **fails the rule** (ReDoS guard — not truncated and matched). An oversized or invalid pattern skips validation (fails safe) rather than blocking submit |
 | `alphabetRule` | `type="alphabet"` | Letters only |
 | `matchRule` | `match` (other input name) | Must equal that input's value |
 | `strongRule` | `strong` (boolean or `StrongPasswordCriteria`); `type="password"` | Five composable criteria, per-criterion errors via `errorsList["strong.<key>"]` |

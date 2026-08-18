@@ -8,7 +8,7 @@ This file is structured for LLM consumption: each section is self-contained, can
 
 ## 0. What's new in v4 (major rewrite)
 
-v4 keeps the public surface (`useFormControl`, the rules system, value collection) largely compatible but rebuilds the core:
+v4 keeps the shape of the everyday API (`useFormControl`, the rules system, value collection) compatible but rebuilds the core, and carries **three breaking changes** — see "Breaking changes" below before assuming a no-op upgrade.
 
 - **`Form` / `NativeForm` are now function components** (`forwardRef`). They lazily instantiate a single **`FormEngine`** and expose it via `ref`. The engine is the thing your `ref` and `useForm()` return — it implements `FormInterface`.
 - **`FormEngine` is a plain class** (not a `React.Component`). It is React-free, unit-testable in isolation, and the home of all form logic.
@@ -21,8 +21,15 @@ v4 keeps the public surface (`useFormControl`, the rules system, value collectio
 - **Awaited submit**: if `onSubmit` returns a Promise, submitting state auto-clears when it settles.
 - **`validateOn: "change" | "blur" | "submit"`** — per-control prop > `<Form validateOn>` > global config > `"change"`.
 - **New hooks**: `useFieldArray`, `useWatch`. **New a11y helpers** on the `useFormControl` return: `getInputProps`, `getErrorProps`, `errorId`, `onBlur`.
+- **Security hardening**: dot-notation name collection rejects `__proto__` / `constructor` / `prototype` segments (prototype-pollution guard) and caps numeric segments at 10,000 before treating them as an array index (sparse-array memory guard); `patternRule` caches compiled patterns, caps the source at 200 chars, and fails closed on values over 2000 chars (ReDoS guard). See §9 and §5.
 
-Each topic has a full section below. Migration is mostly a no-op for consumers; only code that subclassed `BaseForm` or relied on a class-component instance shape needs review.
+### Breaking changes
+
+- **`useId` renamed to `useControlId`.** `import { useId } from "@mongez/react-form"` no longer resolves — the rename stops the package from shadowing React 18's own `useId`. Same signature (`{ id?, name }`) and behavior.
+- **`useValue`, `useError`, and `useChecked` hooks removed with no alias.** Use `useFormControl` (destructure `value` / `error` / `checked` from its return) or `useWatch(name)` for a reactive read outside a control.
+- **`Form` / `NativeForm` refs now yield a `FormEngine`**, not a class-component instance. Only code that subclassed `BaseForm` or relied on class-component lifecycle methods on the ref needs review — the `FormInterface` method surface (`validate`, `values`, `submit`, `reset`, `on`, `control`, …) is unchanged.
+
+Each topic has a full section below.
 
 ---
 
@@ -163,7 +170,7 @@ You may still pass an explicit, static `id`:
 
 - A static `id` makes the `<form>` easy to target in tests and styles, and it sets the event prefix (`form.<id>`) explicitly.
 - Keep each form's `id` unique on the page — the id drives the internal event prefix, so duplicate ids cross-wire events.
-- Inputs derive their id from `name` (`input-<name>`), which is already deterministic.
+- Inputs derive their id from `name` (`input-<name>`), which is already deterministic. This is implemented by the exported `useControlId({ id?, name })` hook — call it yourself if you need the same id outside `useFormControl`. **Renamed from `useId` in v4** (see "Breaking changes" in §0) so importing it no longer shadows React 18's own `useId`.
 
 > Note on the internal engine id: when constructed without options, `FormEngine` falls back to a counter-based id (`frm-<base36 counter>`), not `Math.random()`. In practice `Form` / `NativeForm` always pass the `useId()`-derived id, so the rendered attribute is the SSR-safe `form-<react-id>`.
 
@@ -351,7 +358,7 @@ useFormControl({ ...props, rules: [requiredRule, minLengthRule, emailRule] });
 | `floatRule` | — | `type="float"` | |
 | `urlRule` | — | `type="url"` | |
 | `alphabetRule` | — | `type="alphabet"` | |
-| `patternRule` | `pattern` (RegExp) | — | Patterns cached by source+flags; source capped at 200 chars and the value truncated to 2000 before matching (ReDoS guard). An oversized/invalid pattern skips validation instead of failing the field |
+| `patternRule` | `pattern` (RegExp) | — | Patterns cached by source+flags; source capped at 200 chars. A value over 2000 chars **fails the rule** (fails closed — it is not truncated and matched, which would let an anchored pattern pass on a valid prefix) (ReDoS guard). An oversized/invalid pattern skips validation instead of failing the field |
 | `matchRule` | `match` (other input name) | — | Subscribes to the other input's changes |
 | `strongRule` | `strong` (boolean or object) | `type="password"` | Composite: 5 criteria, per-criterion errors in `errorsList["strong.<key>"]` |
 
@@ -632,6 +639,15 @@ The `name` prop supports **dot notation** and is mapped into nested objects:
 
 - `{ user: { firstName: "X" } }` → `user[firstName]=X`
 - `{ tags: ["a", "b"] }` → `tags[]=a&tags[]=b`
+
+### Security hardening on dot-notation expansion (v4)
+
+Field names are usually author-written, but schema-driven and CMS-driven forms build them from server data — treat a rendered form's field names as a potential input boundary:
+
+- **Prototype-pollution guard.** A name segment of `__proto__`, `constructor`, or `prototype` (e.g. `__proto__.isAdmin`) is rejected rather than written through to `Object.prototype`; the partial branch built before the rejected segment is discarded, not left on the result.
+- **Sparse-array memory guard.** A numeric segment above `10,000` (e.g. `items.4000000000.x`) is treated as a plain object key instead of an array index, so it can't force-allocate a multi-billion-length array.
+
+Both guards live in `createNestedObjectFromDotNotation` in `src/engine/FormEngine.ts`, run on every `form.values()` / `form.collectValues()` call.
 
 ---
 

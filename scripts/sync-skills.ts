@@ -171,6 +171,7 @@ const TITLE_OVERRIDES: Record<string, string> = {
   "htaccess.md":            ".htaccess generation",
   "http-client.md":         "HTTP client",
   "jsx-converter.md":       "JSX converter",
+  "indexeddb.md":           "IndexedDB",
   "env-in-html.md":         "Env in HTML",
   "production-base-url.md": "Production base URL",
   "tsconfig-aliases.md":    "tsconfig aliases",

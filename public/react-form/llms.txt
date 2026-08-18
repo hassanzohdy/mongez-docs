@@ -6,6 +6,8 @@ Mongez React Form is unopinionated about UI — you build the input components, 
 
 **v4 is a major rewrite.** `Form` and `NativeForm` are now **function components** (`forwardRef`) built over a plain, React-free engine class — `FormEngine` (which implements `FormInterface`). `FormEngine` replaces the old abstract `React.Component` base; `BaseForm` is now a **deprecated alias** for `FormEngine`, kept for one major. The form id is derived from React's `useId()`, so the old `Math.random()` SSR hydration mismatch is gone. v4 also adds genuine async-validation gating (`isValidating`), Standard Schema support (seal/zod/valibot, zero runtime dep), reactive hydration (`values` prop, `form.fill`, `form.setValues`, `form.setDefaultValue`), bulk server errors (`form.setErrors`), `validateOn: "change" | "blur" | "submit"`, awaited submit, and three new hooks: `useFieldArray`, `useWatch`, and accessibility helpers (`getInputProps` / `getErrorProps`).
 
+**Breaking in v4:** `useId` was renamed to `useControlId` (stops shadowing React 18's own `useId`); `useValue`, `useError`, and `useChecked` were removed with no alias — use `useFormControl` or `useWatch` instead. v4 also hardens dot-notation name collection: `__proto__` / `constructor` / `prototype` name segments are rejected (prototype-pollution guard), numeric segments above 10,000 are treated as object keys instead of array indices (sparse-array memory guard), and `patternRule` caches compiled patterns, caps the pattern source at 200 chars, and fails closed on values over 2000 chars (ReDoS guard). See `CHANGELOG.md`'s `[4.0.0]` entry for the full migration guide.
+
 ## Documentation
 
 - [Full documentation (LLM-optimized)](./llms-full.txt): single-file canonical reference covering installation, all hooks, all components, validation rules, events, and the React Native usage path.
@@ -20,6 +22,8 @@ Mongez React Form is unopinionated about UI — you build the input components, 
 - [`useFieldArray` hook](./src/hooks/useFieldArray.ts): manage a dynamic list of repeated field rows with stable keys — `{ fields, append, prepend, remove, insert, move, swap, replace }`.
 - [`useWatch` hook](./src/hooks/useWatch.ts): reactively read form values — `useWatch()`, `useWatch(name)`, or `useWatch(names[])`.
 - [`useForm` hook](./src/hooks/useForm.ts): access the current form instance from any descendant.
+- [`useControlId` hook](./src/hooks/form-hooks.ts): derive the same stable DOM id `useFormControl` uses internally (`input-<sanitized-name>`). Renamed from `useId` in v4 to stop shadowing React 18's own `useId`.
+- [`useFormState` hook](./src/hooks/useFormState.ts): reactive form-level snapshot — `{ isValid, isDirty, isSubmitting, isSubmitted, isValidating, formErrors }`.
 - [`useSubmitButton` hook](./src/hooks/useSubmitButton.tsx): wire a submit button — exposes `disabled` (auto-tracks validity + in-flight submit) and `isSubmitting`.
 - [`useRadioInput` hook](./src/hooks/useRadioInput.tsx): for radio-group children.
 - [Standard Schema interop](./src/standard-schema/adapter.ts): consume any Standard-Schema validator (`@warlock.js/seal`, `zod`, `valibot`, …) with **zero runtime dependency** — `isStandardSchema`, `standardSchemaToRule`, `runStandardSchema`, `issuePathToName`, plus `InferFormValues` / `InferFormInput` / `StandardSchemaV1` type helpers.
@@ -70,6 +74,16 @@ This installs invokable skills that load on demand when relevant to the task at 
   - *Auto-trigger:* loaded when importing `NativeForm`, or using `useFormControl` alongside imports from `react-native`.
 - `form-events` — subscribing to lifecycle events (`submit`, `validating`, `dirty`, `invalidControls`, per-control `onChange`).
   - *Auto-trigger:* loaded when calling `form.on(...)`, `useForm()`, `getActiveForm()`, or referencing `FormEventType` events.
+- `field-arrays` — dynamic repeated field rows with `useFieldArray` (`append` / `prepend` / `remove` / `insert` / `move` / `swap` / `replace`, stable keys).
+  - *Auto-trigger:* loaded when importing `useFieldArray` or building an add/remove/reorder list of inputs.
+- `form-hydration` — seeding a form with initial or late-arriving data: `defaultValue` vs the reactive `values` prop, `form.fill` / `setValues` / `setErrors`.
+  - *Auto-trigger:* loaded when passing `values` or `defaultValue` to `<Form>`, or calling `form.fill(...)` / `form.setValues(...)` / `form.setErrors(...)`.
+- `standard-schema-validation` — whole-form and per-field validation with any Standard Schema validator (zod, valibot, arktype, `@warlock.js/seal`).
+  - *Auto-trigger:* loaded when passing a `schema` prop to `<Form>` or `useFormControl`, or importing `InferFormValues` / `InferFormInput` / `StandardSchemaV1`.
+- `watching-values` — reactively reading field values with `useWatch` (whole form, one name, or several names).
+  - *Auto-trigger:* loaded when importing `useWatch` or building dependent fields / live previews / computed summaries.
+- `recipes` — idiomatic composition recipes: server-error mapping, debounced async validation, wizards, autosave, cross-field validation.
+  - *Auto-trigger:* loaded when the task spans multiple concerns above and needs an end-to-end pattern rather than a single API.
 
 ## Optional setup
 
